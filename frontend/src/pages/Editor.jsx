@@ -768,7 +768,7 @@ useEffect(() => {
       </div>
     );
   }
-
+//
 return (
   <DndContext 
     sensors={sensors} 
@@ -781,7 +781,7 @@ if (e.active.data.current?.isElement)
 
     }}
     onDragEnd={(e) => {
-      setIsMovingElement(false); // 👈 إيقاف حالة التحريك
+      setIsMovingElement(false);
       const { active, over } = e;
       setActiveSidebarItem(null);
       setActiveDragItem(null);
@@ -794,7 +794,6 @@ if (!over || !active) return;
   return;
 }
 if (active.data.current?.isAtomic || active.data.current?.isSidebarItem) {
-        // البحث عن السكشن المستهدف بدقة
         const targetSectionId = over.data.current?.sectionId || over.id;
         if (active.data.current?.isAtomic) {
              addAtomicElementToSection(active.data.current.type, targetSectionId);
