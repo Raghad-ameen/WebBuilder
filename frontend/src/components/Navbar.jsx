@@ -11,15 +11,13 @@ export const Navbar = () => {
       
       <div className="flex items-center gap-3">
         {/* حاوية اللوجو */}
-        <div className="w-11 h-11 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 shadow-inner"> 
-          <img 
-            src={MyLogo} 
-            alt="Company Logo" 
-            className="w-8 h-8 object-contain"
-          />
+        <div className="w-11 h-11 flex items-center justify-center"> 
+
+         <p className=' text-white text-2xl'  style={{fontFamily:'fantasy'}}>
+          SP</p>
         </div>
 
-        <span className="text-2xl font-black text-white tracking-tighter uppercase">
+        <span className="text-1xl font-black text-white tracking-tighter uppercase">
           StructPeak
         </span>
       </div>

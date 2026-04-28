@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-
 const safeClone = (obj) => {
   try {
     return obj ? JSON.parse(JSON.stringify(obj)) : null;
@@ -7,7 +6,6 @@ const safeClone = (obj) => {
     return null;
   }
 };
-
 export function useEditorStore(initialState) {
   const [state, setState] = useState({
     projectName: "Shops Project", 
@@ -17,6 +15,9 @@ export function useEditorStore(initialState) {
       type: null, 
       data: null, 
     },
+    canvasStyles: {
+        backgroundColor: "#ffffff", // اللون الافتراضي للكانفاس
+    },
     canvasWidth: '100%', 
     canvasHeight: '800px', 
     pages: [],
@@ -25,22 +26,16 @@ export function useEditorStore(initialState) {
     clipboard: [], 
     ...initialState
   });
-
 const [history, setHistory] = useState([]);
 const [redoStack, setRedoStack] = useState([]);
-
 const saveToHistory = useCallback((stateToSave) => {
     if (!stateToSave) return;
-
+    // لا تقومي بعمل JSON.stringify مرتين!
     const clone = safeClone(stateToSave);
-    const cloneString = JSON.stringify(clone); // حوليه مرة واحدة فقط
-
+    
     setHistory(prev => {
-        if (prev.length > 0) {
-            // قارني الستريج الجاهز بآخر عنصر في التاريخ
-            if (JSON.stringify(prev[prev.length - 1]) === cloneString) return prev;
-        }
-        return [...prev, clone].slice(-40);
+        // نكتفي بحفظ آخر 30 خطوة بدلاً من 40 لزيادة السرعة
+        return [...prev, clone].slice(-30);
     });
     setRedoStack([]); 
 }, []);
@@ -58,9 +53,7 @@ const copyElements = useCallback((elementIds) => {
                 }
             });
         });
-
         if (elementsToCopy.length > 0) {
-            console.log("تم النسخ للـ clipboard:", elementsToCopy);
             return { ...prev, clipboard: elementsToCopy };
         }
         return prev;
@@ -75,12 +68,8 @@ const pasteElements = useCallback(() => {
 
         const activePage = prev.pages.find(p => p.id === prev.activePageId);
         if (!activePage || activePage.sections.length === 0) return prev;
-
-        // تحديد السكشن المستهدف (أول سكشن كمثال)
         const targetSection = activePage.sections[0]; 
-        
-        // إنشاء العناصر الجديدة مع معرفات (IDs) فريدة وإزاحة بسيطة
-        const newItems = prev.clipboard.map(item => ({
+                const newItems = prev.clipboard.map(item => ({
             ...item,
             id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             x: item.x + 40, 
@@ -100,20 +89,15 @@ const pasteElements = useCallback(() => {
                     data: { ...s.data, items: [...(s.data.items || []), ...newItems] }
                 } : s)
             } : p),
-            // التعديل هنا: استخدام الاسم الصحيح للمصفوفة التي تراقبها الواجهة
             selectedElementIds: newItemIds,
-            activeElementId: newItemIds[0] || null // اختيار أول عنصر ملصق كعنصر نشط
+            activeElementId: newItemIds[0] || null 
         };
     });
 }, [saveToHistory, setState]);
-
- 
-
 const updateState = useCallback((newState) => {
     saveToHistory(state);
     setState(newState);
   }, [state, saveToHistory]);
-
   const setCanvasSize = useCallback((width, height) => {
   setState(prev => ({
     ...prev,
@@ -121,11 +105,9 @@ const updateState = useCallback((newState) => {
     canvasHeight: height
   }));
 }, []);
-
-// مثال لتصحيح دالة addPage في ملفك:
 const addPage = useCallback((name = "New Page") => {
   setState(prev => {
-    saveToHistory(prev); // نحفظ الحالة الحالية الحقيقية (prev)
+    saveToHistory(prev); 
     const newPage = { id: `p-${Date.now()}`, name, sections: [] };
     return {
       ...prev,
@@ -133,7 +115,7 @@ const addPage = useCallback((name = "New Page") => {
       activePageId: newPage.id
     };
   });
-}, [saveToHistory]); // لاحظي حذفنا [state] من التبعيات
+}, [saveToHistory]); 
 
 const deletePage = useCallback((pageId) => {
     setState(prev => {
@@ -154,7 +136,12 @@ const deletePage = useCallback((pageId) => {
       pages: prev.pages.map(p => p.id === pageId ? { ...p, name: newName } : p)
     }));
   }, [state, saveToHistory]);
-
+const updateCanvasStyles = useCallback((newStyles) => {
+  setState(prev => ({
+    ...prev,
+    canvasStyles: { ...prev.canvasStyles, ...newStyles }
+  }));
+}, []);
 
 const openModal = useCallback((type, data = null) => {
   setState(prev => ({
@@ -171,15 +158,32 @@ const closeModal = useCallback(() => {
 }, []);
 
 const updateSection = useCallback((sectionId, data) => {
-  saveToHistory(state);
-  setState(prev => ({
-    ...prev,
-    pages: prev.pages.map(p => ({
-      ...p,
-      sections: p.sections.map(s => s.id === sectionId ? { ...s, data: { ...s.data, ...data } } : s)
-    }))
-  }));
-}, [state]); 
+  setState(prev => {
+    saveToHistory(prev);
+    return {
+      ...prev,
+      pages: prev.pages.map(p => ({
+        ...p,
+        sections: p.sections.map(s => 
+          s.id === sectionId 
+            ? { 
+                ...s, 
+                data: { 
+                  ...s.data, 
+                  // نضمن دمج الستايلات بدلاً من استبدالها
+                  styles: { ...(s.data.styles || {}), ...(data.styles || {}) },
+                  // نضمن بقاء العناصر إذا لم نرسل items جديدة
+                  items: data.items || s.data.items 
+                } 
+              } 
+            : s
+        )
+      }))
+    };
+  });
+}, [saveToHistory]);
+
+
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
   setState(prev => {
@@ -188,8 +192,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    const newId = `e-${Date.now()}`; // توليد الـ ID هنا لنستخدمه في التحديد لاحقاً
-
+    const newId = `e-${Date.now()}`; 
     const baseItem = {
       id: newId,
       type: type,
@@ -199,16 +202,61 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
       height: 50,
       styles: { display: "flex", alignItems: "center", justifyContent: "center" }
     };
-
     let specificData = {};
     if(type === "text") {
         specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333" } };
-    } else if(type === "button") {
-        specificData = { text: "Click Me", styles: { ...baseItem.styles, backgroundColor: "#4f46e5", color: "white", borderRadius: "6px" } };
-    } else if(type === "image") {
-        specificData = { src: "https://via.placeholder.com/150", styles: { ...baseItem.styles, objectFit: "cover" } };
-    }
-    
+   // داخل useEditorStore.js -> addItemAtPosition
+} else if(type === "button") {
+    specificData = { 
+        text: "New Button", 
+        action: { type: 'link', url: '' }, 
+        
+        styles: { 
+            ...baseItem.styles, 
+            backgroundColor: "#4f46e5", 
+            color: "white", 
+            borderRadius: "6px",
+            fontSize: "14px", 
+            fontWeight: "bold",
+            textAlign: "center", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            lineHeight: "1", 
+            padding: "0 16px", 
+            cursor: "pointer",
+            border: "0px solid #000000",
+            transition: "all 0.2s" 
+        },
+        hoverStyles: {
+            backgroundColor: "#4338ca",
+            color: "white"
+        }
+    };
+}
+     else if(type === "image") {
+    specificData = { 
+        src: null, 
+        styles: { 
+            ...baseItem.styles, 
+            objectFit: "cover",
+            borderRadius: "8px", 
+            border: "0px solid #000000" 
+        } 
+    };
+}
+// داخل addItemAtPosition في useEditorStore.js
+else if(type === "shape") {
+    specificData = { 
+        shapeType: 'rect', // النوع الافتراضي
+        styles: { 
+            ...baseItem.styles, 
+            backgroundColor: "#4f46e5", 
+            borderRadius: "0px",
+            clipPath: "none" // سنستخدم هذا لرسم الأشكال المعقدة
+        } 
+    };
+}
     const newItem = { ...baseItem, ...specificData };
 
     let updatedSections = [...activePage.sections];
@@ -239,22 +287,17 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      // التعديل الجوهري هنا:
-      selectedElementIds: [newId], // نستخدم الاسم الصحيح الذي يراقبه المكون
-      activeElementId: newId      // احتياطاً إذا كان الستور يستخدم هذا الاسم أيضاً
+      selectedElementIds: [newId], 
+      activeElementId: newId      
     };
   });
-}, [saveToHistory, setState]); // أضيفي setState للمصفوفة لضمان الاستقرار
+}, [saveToHistory, setState]); 
 const selectItems = useCallback((ids) => {
   setState(prev => {
     const newSelected = Array.isArray(ids) ? ids : [ids];
-    
-    // مقارنة بسيطة: إذا كان التحديد الجديد هو نفس القديم، لا تفعل شيئاً
-    // هذا السطر "سحري" لأنه يمنع الـ Re-render ويجعل السحب ناعماً جداً
     if (JSON.stringify(prev.selected) === JSON.stringify(newSelected)) {
       return prev;
     }
-
     return { ...prev, selected: newSelected };
   });
 }, []);
@@ -329,10 +372,7 @@ const loadProject = useCallback(() => {
 
 const clearCanvas = useCallback(() => {
   setState(prev => {
-    // 1. حفظ الحالة للتراجع
     saveToHistory(prev);
-
-    // 2. الوصول للصفحة النشطة وتفريغ الـ items في كل section
     const updatedPages = prev.pages.map(page => {
       if (page.id === prev.activePageId) {
         return {
@@ -341,7 +381,7 @@ const clearCanvas = useCallback(() => {
             ...section,
             data: { 
               ...section.data, 
-              items: [] // تفريغ العناصر تماماً
+              items: [] 
             }
           }))
         };
@@ -352,7 +392,7 @@ const clearCanvas = useCallback(() => {
     return {
       ...prev,
       pages: updatedPages,
-      selected: [] // إزالة أي تحديد نشط
+      selected: [] 
     };
   });
 }, [saveToHistory]);
@@ -395,7 +435,6 @@ const deleteElement = useCallback((itemId) => {
 }, [state, saveToHistory]);
 
 const undo = useCallback(() => {
-  // نستخدم التحديث الوظيفي للـ History والـ State لضمان الثبات
   setHistory((prevHistory) => {
     if (prevHistory.length === 0) return prevHistory;
 
@@ -408,8 +447,7 @@ const undo = useCallback(() => {
 
     return prevHistory.slice(0, -1);
   });
-}, []); // مصفوفة فارغة تعني أن الدالة لا تتغير أبداً
-
+}, []); 
 const redo = useCallback(() => {
   setRedoStack((prevRedo) => {
     if (prevRedo.length === 0) return prevRedo;
@@ -423,12 +461,9 @@ const redo = useCallback(() => {
 
     return prevRedo.slice(1);
   });
-}, []); // مصفوفة فارغة أيضاً
-
+}, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
   setState(prev => {
-    saveToHistory(prev); 
-
     return {
       ...prev,
       pages: prev.pages.map(p => {
@@ -441,54 +476,48 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
               ...s,
               data: {
                 ...s.data,
-                items: (s.data.items || []).map(it => {
+                items: s.data.items.map(it => {
                   if (it.id === itemId) {
-                    return { 
-                      ...it, 
-                      ...data, 
-                      styles: { 
-                        ...it.styles, 
-                        ...(data.styles || {}) 
-                      } 
+                    return {
+                      ...it,
+                      ...data,
+                      // هذا السطر هو الأهم لضمان وصول الـ clipPath من الـ data
+                      styles: { ...it.styles, ...(data.styles || {}) }
                     };
                   }
                   return it;
-                }),
-              },
+                })
+              }
             };
-          }),
+          })
         };
-      }),
-    };
-  });
-}, [saveToHistory]);
-
-// داخل useEditorStore.js
-const previewUpdateItem = useCallback((pageId, sectionId, itemId, data) => {
-  setState(prev => {
-    // تحديث سريع جداً لا يلمس بقية الصفحات أو السكاشن غير المعنية
-    const activePage = prev.pages.find(p => p.id === pageId);
-    if (!activePage) return prev;
-
-    return {
-      ...prev,
-      pages: prev.pages.map(p => p.id === pageId ? {
-        ...p,
-        sections: p.sections.map(s => s.id === sectionId ? {
-          ...s,
-          data: {
-            ...s.data,
-            items: s.data.items.map(it => it.id === itemId ? { ...it, ...data } : it)
-          }
-        } : s)
-      } : p)
+      })
     };
   });
 }, []);
 
+const previewUpdateItem = useCallback((pageId, sectionId, itemId, data) => {
+  setState(prev => ({
+    ...prev,
+    pages: prev.pages.map(p => p.id === pageId ? {
+      ...p,
+      sections: p.sections.map(s => s.id === sectionId ? {
+        ...s,
+        data: {
+          ...s.data,
+          items: s.data.items.map(it => it.id === itemId ? { 
+            ...it, 
+            ...data, 
+            styles: { ...it.styles, ...(data.styles || {}) } 
+          } : it)
+        }
+      } : s)
+    } : p)
+  }));
+}, []);
+
 const cutElements = useCallback((elementIds) => {
   setState(prev => {
-    // 1. نسخ العناصر أولاً
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
@@ -498,13 +527,9 @@ const cutElements = useCallback((elementIds) => {
         if (elementIds.includes(item.id)) elementsToCopy.push(safeClone(item));
       });
     });
-
     if (elementsToCopy.length === 0) return prev;
-
-    // 2. حفظ الحالة للتراجع
     saveToHistory(prev);
 
-    // 3. حذف العناصر من الصفحات في خطوة واحدة
     const updatedPages = prev.pages.map(p => ({
       ...p,
       sections: p.sections.map(s => ({
@@ -520,7 +545,7 @@ const cutElements = useCallback((elementIds) => {
       ...prev,
       pages: updatedPages,
       clipboard: elementsToCopy,
-      selected: [] // إلغاء التحديد بعد القص
+      selected: [] 
     };
   });
 }, [saveToHistory]);
@@ -565,6 +590,7 @@ setViewMode: (mode) => {
     closeModal,
     saveProject,
     loadProject,
-    updateSection
+    updateSection,
+    updateCanvasStyles,
   };
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useState} from "react";
 import { 
   Type, 
   Image as ImageIcon, 
@@ -10,12 +10,26 @@ import {
   Plus, 
   Link as LinkIcon, 
   Trash2 ,
-  Pencil
+  Pencil,
+  Circle, Triangle, Star, Hexagon, Diamond 
 } from "lucide-react";
+
+
+
+const SHAPE_LIBRARY = [
+  { id: 'rect', label: 'Square', icon: <Square />, path: 'none', radius: '0px' },
+  { id: 'circle', label: 'Circle', icon: <Circle />, path: 'none', radius: '50%' },
+  { id: 'triangle', label: 'Triangle', icon: <Triangle />, path: 'polygon(50% 0%, 0% 100%, 100% 100%)', radius: '0px' },
+  { id: 'pentagon', label: 'Pentagon', icon: <Hexagon />, path: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)', radius: '0px' },
+  { id: 'star', label: 'Star', icon: <Star />, path: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', radius: '0px' },
+  { id: 'rhombus', label: 'Rhombus', icon: <Diamond />, path: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', radius: '0px' },
+];
+
 
 export default function LeftSidebar({ store }) {
 // أضف setState بدلاً من updateState إذا لم تكن معرفة
 const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, setState } = store;
+const [isShapesOpen, setIsShapesOpen] = React.useState(false);
   const basicElements = [
     { id: 'text', label: 'Text', icon: <Type size={18} /> },
     { id: 'image', label: 'Image', icon: <ImageIcon size={18} /> },
@@ -31,6 +45,25 @@ const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, s
     { id: 'features', label: 'Features', icon: <Plus size={18} /> },
     { id: 'footer', label: 'Footer', icon: <Smartphone size={18} /> },
   ];
+const handleAddShape = (shape) => {
+  const newId = `shape_${Date.now()}`;
+  const activePage = state.pages.find(p => p.id === state.activePageId);
+  const targetId = activePage?.sections[0]?.id || null;
+
+  store.addItemAtPosition("shape", 150, 150, targetId, newId);
+  
+  // نحدث الستايل فوراً بناءً على الشكل المختار
+  store.updateItem(state.activePageId, targetId, newId, {
+    shapeType: shape.id,
+    styles: { 
+      clipPath: shape.path, 
+      borderRadius: shape.radius 
+    }
+  });
+  
+  setIsShapesOpen(false);
+  setState(prev => ({ ...prev, selectedElementIds: [newId] }));
+};
 
 const handleElementClick = (type) => {
   const currentPage = state.pages.find(p => p.id === state.activePageId);
@@ -48,6 +81,8 @@ const handleElementClick = (type) => {
   // سيقوم الـ Store بالباقي (إضافة سكشن لو لزم الأمر + إضافة العنصر) في ضغطة واحدة!
   addItemAtPosition(type, 150, 150, targetSectionId);
 };
+
+
 
   return (
     <div style={styles.sidebar}>
@@ -110,52 +145,50 @@ const handleElementClick = (type) => {
       </section>
 
       {/* قسم العناصر */}
-      <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>Basic Elements</h3>
-        <div style={styles.grid}>
-          {basicElements.map((el) => (
-           // داخل LeftSidebar.jsx في جزء الـ basicElements.map
-<button 
-    key={el.id} 
-    style={styles.elementBtn}
-    onClick={(e) => {
-      // 1. توليد ID فريد للعنصر قبل إضافته لكي نتمكن من تحديده فوراً
-      const newElementId = `item_${Date.now()}`; 
+<section style={styles.section}>
+  <h3 style={styles.sectionTitle}>Basic Elements</h3>
+  <div style={styles.grid}>
+    {/* 1. العناصر العادية */}
+    {basicElements.map((el) => (
+      <button 
+        key={el.id} 
+        style={styles.elementBtn}
+        onClick={() => {
+          const newId = `item_${Date.now()}`;
+          const activePage = state.pages.find(p => p.id === state.activePageId);
+          const targetId = activePage?.sections[0]?.id || null;
+          store.addItemAtPosition(el.id, 100, 100, targetId, newId);
+          setState(prev => ({ ...prev, selectedElementIds: [newId] }));
+        }}
+      >
+        {el.icon}
+        <span style={styles.label}>{el.label}</span>
+      </button>
+    ))}
 
-      // 2. تحديد الصفحة والسكشن المستهدف
-      const activePage = state.pages.find(p => p.id === state.activePageId);
-      const targetSectionId = activePage?.sections[0]?.id || null;
+    {/* 2. زر الأشكال المطور (هنا نضع الكود الذي سألتِ عنه) */}
+    <div style={{ position: 'relative' }}>
+      <button 
+        style={{...styles.elementBtn, width: '100%'}} 
+        onClick={() => setIsShapesOpen(!isShapesOpen)}
+      >
+        <Square size={18} />
+        <span style={styles.label}>Shapes</span>
+      </button>
 
-      // 3. إضافة العنصر مع تمرير الـ ID الذي اخترناه
-      // ملاحظة: تأكدي أن دالة addItemAtPosition في الـ Store تقبل الـ ID كباراميتر
-      store.addItemAtPosition(el.id, 100, 100, targetSectionId, newElementId);
-      
-      // 4. السطر السحري: نطلب من الـ Store تحديد العنصر الجديد فوراً
-      // هذا هو السطر الذي سيجعل مربعات التحديد تظهر
-      if (typeof setState === 'function') {
-        setState(prev => ({ 
-          ...prev, 
-          selectedElementIds: [newElementId], // نضع الـ ID الجديد في مصفوفة التحديد
-          isDraggingNow: false, 
-          draggingType: null 
-        }));
-      }
-    }}
-    onMouseDown={(e) => {
-        e.preventDefault(); 
-        setState(prev => ({ 
-            ...prev, 
-            isDraggingNow: true, 
-            draggingType: el.id 
-        }));
-    }}
-  >
-    {el.icon}
-    <span style={styles.label}>{el.label}</span>
-  </button>
+      {isShapesOpen && (
+        <div style={styles.shapesGridPopup}>
+          {SHAPE_LIBRARY.map(s => (
+            <div key={s.id} style={styles.shapeIconItem} onClick={() => handleAddShape(s)}>
+              {s.icon}
+              <span style={{fontSize: '10px'}}>{s.label}</span>
+            </div>
           ))}
         </div>
-      </section>
+      )}
+    </div>
+  </div>
+</section>
 
       {/* قسم الـ Sections */}
       <section style={styles.section}>
@@ -205,4 +238,31 @@ const styles = {
   opacity: 0.6, // ستظهر بشكل باهت قليلاً وتتضح عند التركيز
   transition: '0.2s',
 },
+shapesGridPopup: {
+    position: 'absolute',
+    top: '40px', // تظهر أسفل الزر مباشرة
+    right: '10px', // تظهر من جهة اليمين داخل حدود السايدبار
+    background: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', // زيادة الظل لتبرز
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '8px',
+    padding: '12px',
+    width: '220px', // عرض القائمة
+    zIndex: 9999, // تأكدي أنها فوق كل شيء
+  },
+  shapeIconItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '8px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    gap: '4px',
+    transition: '0.2s',
+    border: '1px solid transparent',
+    ':hover': { background: '#f8fafc', borderColor: '#e2e8f0' }
+  }
 };

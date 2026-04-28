@@ -54,7 +54,7 @@ const Dashboard = () => {
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -62,7 +62,7 @@ const Dashboard = () => {
               <div key={site.id} className="group bg-white rounded-4xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
                 {/* Site Preview Placeholder */}
                 <div className="aspect-video bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 bg-linear-to-br from-indigo-500/10 to-fuchsia-500/10 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 to-teal-500/10 group-hover:opacity-100 transition-opacity"></div>
                   <span className="text-5xl group-hover:scale-110 transition-transform duration-500 opacity-20">🌐</span>
                 </div>
 
@@ -85,7 +85,7 @@ const Dashboard = () => {
                    alert("هذا الموقع معطل، تواصل مع الإدارة");
                 }
               }}
-                    className="flex-1 bg-slate-950 text-white py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors shadow-lg">
+                    className="flex-1 bg-slate-950 text-white py-3 rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors shadow-lg">
                       Edit Site
                     </button>
                     <a 
@@ -107,7 +107,7 @@ const Dashboard = () => {
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 text-3xl">🏗️</div>
                 <h3 className="text-2xl font-black text-slate-900">No sites yet</h3>
                 <p className="text-slate-400 mt-2 mb-8 max-w-sm">You haven't built any masterpieces yet. Start your journey with a single click.</p>
-                <Link to="/editor" className="text-indigo-600 font-bold hover:underline">Launch Editor →</Link>
+                <Link to="/editor" className="text-emerald-600 font-bold hover:underline">Launch Editor →</Link>
               </div>
             )}
           </div>

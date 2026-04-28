@@ -33,51 +33,56 @@ export default function EditorLayout({ store }) {
         
         <LeftSidebar store={store} />
 
-        <main style={{ 
+      <main style={{ 
   flex: 1, 
   backgroundColor: "#cbd5e1", 
-  padding: '40px', // حشوة ثابتة لضمان وجود مساحة
+  padding: '40px', 
   display: "flex", 
   justifyContent: "center", 
   alignItems: "flex-start",
   overflow: "auto",
 }}>
   
-  {/* إذا كان هناك صفحات، اعرض الكانفاس، وإلا اعرض زر الإضافة */}
   {state.pages.length > 0 ? (
-    <div style={{ 
-        width: width, 
-        transform: `scale(${scale})`, 
-        transformOrigin: "top center",
-        transition: 'transform 0.4s ease',
-        flexShrink: 0
-    }}>
+    /* طبقة واحدة فقط للتحكم في الحجم واللون والسكيل */
     <CanvasElement store={store}>
-  <div
-    style={{
-      width: width,
-      transform: `scale(${scale})`,
-      transformOrigin: "top center",
-      transition: "transform 0.4s ease",
-      flexShrink: 0,
-    }}
-  >
-    {activePage?.sections?.map((section) => (
-          <SectionRenderer
-            key={section.id}
-            section={section}
-            store={store}
-            // مرري الـ scale للـ SectionRenderer
-            canvasScale={scale} 
-            onSelect={(id) => store.selectItems([id])}
-            selectedElementIds={state.selected}
-          />
-        ))}
+      <div
+        className="main-canvas-area"
+        style={{
+          width: width, 
+          backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff",
+          minHeight: state.canvasHeight || "800px", 
+          transform: `scale(${scale})`,
+          transformOrigin: "top center",
+          transition: "transform 0.4s ease, background-color 0.3s ease",
+          position: "relative", 
+          flexShrink: 0,
+          boxShadow: "0 10px 40px rgba(0,0,0,0.1)", 
+          margin: "0 auto",
+          overflow: "visible", 
+        }}
+      >
+        {activePage?.sections?.length > 0 ? (
+          activePage.sections.map((section) => (
+            <SectionRenderer
+              key={section.id}
+              section={section}
+              store={store}
+              canvasScale={scale} 
+              onSelect={(id) => store.selectItems([id])}
+              selectedElementIds={state.selected}
+            />
+          ))
+        ) : (
+          /* تنبيه بسيط إذا كانت الصفحة فارغة فعلياً */
+          <div style={{ padding: "100px", textAlign: "center", color: "#94a3b8" }}>
+            This page is empty. Use the sidebar to add sections.
+          </div>
+        )}
       </div>
-</CanvasElement>
-    </div>
+    </CanvasElement>
   ) : (
-    /* واجهة الحالة الفارغة (Empty State) */
+    /* واجهة الحالة الفارغة (إضافة صفحة) */
     <div 
       onClick={() => store.addPage("Main Page")}
       style={{
@@ -96,15 +101,12 @@ export default function EditorLayout({ store }) {
         background: 'rgba(255,255,255,0.5)',
         transition: 'all 0.3s ease'
       }}
-      onMouseOver={(e) => e.currentTarget.style.background = '#fff'}
-      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.5)'}
     >
       <Plus size={48} strokeWidth={1.5} />
       <span style={{ fontWeight: '600' }}>Add your first page</span>
     </div>
   )}
-</main>     
-
+</main>
         <RightPanel store={store} />
       </div>
 {/* الحل الصحيح لاستدعاء المودال في EditorLayout */}

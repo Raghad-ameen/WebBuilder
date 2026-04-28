@@ -50,7 +50,7 @@ const Login = () => {
             <input 
               type="text" 
               required
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
               placeholder=""
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -61,7 +61,7 @@ const Login = () => {
             <input 
               type="password" 
               required
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
               placeholder=""
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -73,7 +73,7 @@ const Login = () => {
         </form>
 
         <p className="mt-8 text-center text-slate-500 font-medium">
-          Don't have an account? <Link to="/register" className="text-indigo-600 font-bold hover:underline">Create an account</Link>
+          Don't have an account? <Link to="/register" className="text-emerald-600 font-bold hover:underline">Create an account</Link>
         </p>
       </div>
     </div>

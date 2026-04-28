@@ -16,7 +16,7 @@ export const FeaturesPage = () => {
       <div className="max-w-7xl mx-auto text-center mb-20">
         <h1 className="text-white text-6xl font-black tracking-tighter mb-6">
           Everything you need to <br/>
-          <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-fuchsia-400">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 to-teal-400">
             scale your business
           </span>
         </h1>
@@ -27,8 +27,8 @@ export const FeaturesPage = () => {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {features.map((f, i) => (
-          <div key={i} className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-indigo-500/50 transition-all group">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
+          <div key={i} className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-emerald-500/50 transition-all group">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
                {/* هنا استبدل بالـ SVG اليدوي إذا استمرت مشاكل المكتبة */}
                <Icons.Zap className="w-6 h-6" /> 
             </div>

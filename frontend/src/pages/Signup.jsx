@@ -39,7 +39,7 @@ const Signup = () => {
             <input 
               type="text" 
               required
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               placeholder=""
               onChange={(e) => setFormData({...formData, name: e.target.value})}
             />
@@ -50,7 +50,7 @@ const Signup = () => {
             <input 
               type="email" 
               required
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               placeholder=""
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
@@ -61,19 +61,19 @@ const Signup = () => {
             <input 
               type="password" 
               required
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               placeholder=""
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
           </div>
 
-          <button className="w-full py-5 bg-slate-950 text-white rounded-2xl font-bold text-lg hover:bg-blue-950 shadow-lg shadow-indigo-100 transition-all active:scale-95">
+          <button className="w-full py-5 bg-slate-950 text-white rounded-2xl font-bold text-lg hover:bg-blue-950 shadow-lg shadow-emerald-100 transition-all active:scale-95">
             Create Account
           </button>
         </form>
 
         <p className="mt-8 text-center text-slate-500 font-medium text-sm">
-          Already have an account? <Link to="/login" className="text-indigo-600 font-bold hover:underline">Log in</Link>
+          Already have an account? <Link to="/login" className="text-emerald-600 font-bold hover:underline">Log in</Link>
         </p>
       </div>
     </div>

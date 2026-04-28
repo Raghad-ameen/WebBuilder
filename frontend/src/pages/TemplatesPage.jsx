@@ -21,11 +21,11 @@ export const TemplatesPage = () => {
         {[1, 2, 3, 4, 5, 6].map(i => (
           <div key={i} className="group cursor-pointer">
             <div className="aspect-video bg-white/5 rounded-3xl border border-white/10 overflow-hidden mb-6 relative">
-              <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="absolute inset-0 bg-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button className="bg-white text-black px-8 py-3 rounded-2xl font-black shadow-2xl">Preview Template</button>
               </div>
               {/* ضع صور القوالب هنا */}
-              <div className="w-full h-full bg-linear-to-br from-indigo-500/10 to-fuchsia-500/10" />
+              <div className="w-full h-full bg-linear-to-br from-emerald-500/10 to-fuchsia-500/10" />
             </div>
             <h3 className="text-white text-xl font-bold">Modern SaaS Template 0{i}</h3>
             <p className="text-white/30">Clean, Fast, Responsive</p>
