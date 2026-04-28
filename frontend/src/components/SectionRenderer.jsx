@@ -1,247 +1,199 @@
-import React, { useState } from 'react';
-import { DndContext, DragOverlay, rectIntersection, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-// أيقونات محسنة
-const MoveIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-4 h-4 text-indigo-700 " fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19" />
-  </svg>
-);
+import React, { useRef } from "react";
+import { Trash2 } from "lucide-react";
+import Moveable from "react-moveable";
 
-const TrashIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3">
-    <path d="M18 6L6 18M6 6l12 12" />
-  </svg>
-);
-
-const Handle = ({ type, position, onMouseDown }) => (
-  <div
-    onMouseDown={(e) => { e.stopPropagation(); onMouseDown(e, type); }}
-    className="absolute w-3 h-3 border-2 border-indigo-600 rounded-full z-150 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-    style={{ ...position, transform: 'translate(-50%, -50%)', cursor: `${type}-resize` }}
-  />
-);
-
-const FreeTransformElement = ({ id, item, updateItem, onRemove, isSelected, 
-  onSelect ,setIsMovingElement }) => {
-  const [activeHandle, setActiveHandle] = useState(null);
-  const safeId = String(id);
-
-  const handleMoveStart = (e) => {
-  e.stopPropagation();
-   setIsMovingElement(true);
-   if (e.button !== 0) return;
-
-  const startX = e.clientX;
-  const startY = e.clientY;
-
-  const origX = item.x || 0;
-  const origY = item.y || 0;
-
-  const move = (m) => {
-    updateItem(id, {
-      x: origX + (m.clientX - startX),
-      y: origY + (m.clientY - startY)
-    });
-  };
-
-  const up = () => {
-      setIsMovingElement(false);
-    window.removeEventListener('mousemove', move);
-    window.removeEventListener('mouseup', up);
-  };
-
-  window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', up);
-};
-
-  const handleResizeStart = (e, type) => {
-  e.stopPropagation();
+export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store }) {
+  const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem } = store;
+  const itemRefs = useRef({});
+  const sectionRef = useRef(null);
+  // أضيفي useEffect في بداية المكون (بعد الـ useRefs مباشرة)
+React.useEffect(() => {
+  // إذا كان هناك عناصر ولكن لا يوجد شيء محدد، أو أضيف عنصر جديد
+  const lastItem = section.data.items?.[section.data.items.length - 1];
   
-  // 🟢 1. حفظ الحالة الحالية في التاريخ قبل بدء التغيير
-  // استدعاء saveToHistory هنا يضمن أن الـ Undo سيعيدك للحجم الأصلي
-  if (typeof saveToHistory === 'function') {
-      saveToHistory(); 
+  if (lastItem && selectedElementIds.length === 0) {
+    // ننتظر ميلي ثانية واحدة لضمان أن الـ DOM أصبح جاهزاً
+    const timer = setTimeout(() => {
+      onSelect(lastItem.id);
+    }, 50);
+    return () => clearTimeout(timer);
   }
-
-  setActiveHandle(type);
-  onSelect(id);
-
-  const startW = item.width || 100;
-  const startH = item.height || 40;
-  const startX = e.clientX;
-  const startY = e.clientY;
-  const startPosX = item.x || 0;
-  const startPosY = item.y || 0;
-
-  const resize = (m) => {
-    let nW = startW;
-    let nH = startH;
-    let nX = startPosX;
-    let nY = startPosY;
-
-    if (type.includes('e')) nW = Math.max(30, startW + (m.clientX - startX));
-    if (type.includes('w')) {
-      nW = Math.max(30, startW - (m.clientX - startX));
-      nX = startPosX + (m.clientX - startX);
-    }
-    if (type.includes('s')) nH = Math.max(20, startH + (m.clientY - startY));
-    if (type.includes('n')) {
-      nH = Math.max(20, startH - (m.clientY - startY));
-      nY = startPosY + (m.clientY - startY);
-    }
-
-    // تحديث العنصر أثناء الحركة
-    updateItem(id, { width: nW, height: nH, x: nX, y: nY });
-  };
-
-  const stop = () => {
-    setActiveHandle(null);
-    window.removeEventListener('mousemove', resize);
-    window.removeEventListener('mouseup', stop);
-  };
-
-  window.addEventListener('mousemove', resize);
-  window.addEventListener('mouseup', stop);
-};
-
-  const handles = [
-    { type: 'nw', position: { top: '0%', left: '0%' } },
-    { type: 'ne', position: { top: '0%', left: '100%' } },
-    { type: 'se', position: { top: '100%', left: '100%' } },
-    { type: 'sw', position: { top: '100%', left: '0%' } }
-  ];
-
-  return (
-  <div
-    onClick={(e) => { e.stopPropagation(); onSelect(id, e); }}
-      className={`free-element absolute group 
-    `}
-    style={{
-      left: `${item.x}px`,
-      top: `${item.y}px`,
-      width: item.width ? `${item.width}px` : '200px', // 👈 يفضل وضع قيمة افتراضية
-      height: item.height ? `${item.height}px` : 'auto',
-      outline: isSelected ? '2px dashed #4f46e5' : 'none',
-      outlineOffset: '2px',
-      backgroundColor: 'transparent', // 👈 تأكد أن الخلفية شفافة دائماً
-      display: 'block', 
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: isSelected ? 9999 : 10,
-    }}
-  >
- 
-      {/* Move */}
-      <div
-        onMouseDown={handleMoveStart}
-        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-move z-110"
-      >
-        <MoveIcon />
-      </div>
-
-      {/* Delete */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="absolute -top-4 -right-4 bg-red-500 text-white w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 z-120"
-      >
-        <TrashIcon />
-      </button>
-
-      {/* Content */}
-      {/* Content الحاوية المسؤولة عن المحتوى */}
-<div className="w-full h-full relative z-100 flex items-center justify-center bg-transparent overflow-hidden">
-  {item.type === 'image' ? (
-    <img src={item.src} className="w-full h-full object-contain " alt="" />
-  ) : item.type === 'link' ? (
-    <a className="w-full h-full flex items-center justify-center text-center no-underline">
-      {item.text}
-    </a>
-  ) : (
-    <div
-      contentEditable
-      suppressContentEditableWarning
-      onBlur={(e) => updateItem(id, { text: e.target.innerText })}
-      className="w-full h-full outline-none bg-transparent bg-none shadow-none flex items-center justify-center text-center cursor-text"
-      style={{ 
-        // نضمن هنا أن النص لا يأخذ خلفية بيضاء من المتصفح
-        backgroundColor: 'transparent',
-        border: 'none',
-        wordBreak: 'break-word'
-      }}
-    >
-      {item.text}
-    </div>
-  )}
-</div>
-
-      {isSelected &&
-        handles.map((h) => (
-          <Handle key={h.type} type={h.type} position={h.position} onMouseDown={handleResizeStart} />
-        ))}
-    </div>
-  );
-};
-
-const SectionRenderer = ({ section, updateSectionData, isSelected, onElementClick, selectedElementIds, setIsMovingElement, ElementWrapper }) => {
-  const { data } = section;
-
-  const handleUpdate = (newData) => updateSectionData(section.id, newData);
+}, [section.data.items.length]); // يعمل فقط عند تغير عدد العناصر
+  const isBlank = section.type === "blank";
 
   return (
     <div
-      className="w-full relative group/section"
+      ref={sectionRef}
+      className={`section-container ${isBlank ? "is-blank-layer" : ""}`}
       style={{
-        backgroundColor: data.styles?.backgroundColor || 'transparent', 
-        minHeight: parseInt(data.styles?.height) || 400,
-        position: 'relative',
-        overflow: 'visible', // مهم جداً لبقاء المقابض (Handles) ظاهرة
-        zIndex: isSelected ? 10 : 1, // رفع السكشن المختار قليلاً
+        position: isBlank ? "absolute" : "relative",
+        width: "100%",
+        height: section.data?.styles?.height || (isBlank ? "100%" : "auto"),
+        minHeight: isBlank ? 0 : 400,
+        backgroundColor: isBlank ? "transparent" : (section.data?.styles?.backgroundColor || "transparent"),
+        borderBottom: isBlank ? "none" : "1px dashed #ddd",
+        overflow: "visible",
+        pointerEvents: "auto",
+        zIndex: isBlank ? 10 : 1,
       }}
     >
-      {/* 🟢 طبقة العناصر الذرية - تم تصحيح الطبقات والتفاعل */}
-      <div className="absolute inset-0 z-20 pointer-events-auto bg-transparent">
-        {(data.items || []).map((item) => (
-          <ElementWrapper
-            key={item.id}
-            element={item}
-            sectionId={section.id}
-            // تحويل الـ ID لنص لضمان المطابقة
-            onSelect={(id, e) => onElementClick(e, String(id), section.id)}
-            setIsMovingElement={setIsMovingElement}
-            updateItem={(id, newData) => {
-              const updated = data.items.map((it) =>
-                it.id === id ? { ...it, ...newData, styles: { ...(it.styles || {}), ...(newData.styles || {}) } } : it
-              );
-              handleUpdate({ items: updated });
-            }}
-            onRemove={() => {
-              const updated = data.items.filter((it) => it.id !== item.id);
-              handleUpdate({ items: updated });
-            }}
-            isSelected={selectedElementIds?.map(String).includes(String(item.id))}
-          />
-        ))}
-      </div>
+      {/* زر حذف السكشن */}
+      {!isBlank && (
+        <button
+          onClick={(e) => { e.stopPropagation(); deleteSection(section.id); }}
+          style={styles.deleteSectionBtn}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
 
-      {/* Resize Handle للسكشن */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-2 bg-indigo-500/0 hover:bg-indigo-500/40 cursor-ns-resize z-50 transition-colors"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          const startH = e.currentTarget.parentElement.offsetHeight;
-          const startY = e.clientY;
-          const move = (m) => handleUpdate({ styles: { ...data.styles, height: `${startH + (m.clientY - startY)}px` } });
-          const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-          window.addEventListener('mousemove', move);
-          window.addEventListener('mouseup', up);
+      {section.data.items?.map((item) => {
+        const isSelected = selectedElementIds.includes(item.id);
+        
+        return (
+          <React.Fragment key={item.id}>
+            <div
+              ref={(el) => (itemRefs.current[item.id] = el)}
+              // الحل السحري للتأخير: استخدمي onMouseDown للتحديد بدلاً من onClick
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                // التحديد هنا يكون أسرع بـ 300ms من الـ onClick
+                if (!isSelected) {
+                    onSelect(item.id);
+                }
+              }}
+              style={{
+                position: "absolute",
+                left: item.x,
+                top: item.y,  
+                width: item.width,
+                height: item.height,
+                zIndex: isSelected ? 2000 : 150,
+                cursor: "move",
+                pointerEvents: "auto",
+                ...item.styles,
+              }}
+            >
+              {item.type === 'text' && (
+                <span style={{ pointerEvents: "none", display: "block", ...item.styles }}>
+                  {item.text}
+                </span>
+              )}
+            </div>
+
+            {isSelected && itemRefs.current[item.id] && (
+              <>
+                <Moveable
+                  target={itemRefs.current[item.id]}
+                  draggable={true}
+                  resizable={true}
+                  origin={false}
+                  className="element-moveable-tool"
+                  // لمنع أي تعليق في البداية
+                  edgeDraggable={false}
+                  onDrag={({ target, left, top }) => {
+                    target.style.left = `${left}px`;
+                    target.style.top = `${top}px`;
+                    previewUpdateItem(state.activePageId, section.id, item.id, { x: left, y: top });
+                  }}
+                  onDragEnd={({ target }) => {
+                    updateItem(state.activePageId, section.id, item.id, {
+                      x: parseInt(target.style.left),
+                      y: parseInt(target.style.top)
+                    });
+                  }}
+                  onResize={({ target, width, height, drag }) => {
+                    target.style.width = `${width}px`;
+                    target.style.height = `${height}px`;
+                    target.style.left = `${drag.left}px`;
+                    target.style.top = `${drag.top}px`;
+                    previewUpdateItem(state.activePageId, section.id, item.id, {
+                      width, height, x: drag.left, y: drag.top
+                    });
+                  }}
+                />
+                
+                {/* زر حذف العنصر - معدل ليكون مستجيباً جداً */}
+                <div
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    deleteElement(item.id);
+                  }}
+                  style={{
+                    ...styles.deleteElementBtn,
+                    left: item.x + item.width - 10,
+                    top: item.y - 15,
+                  }}
+                >
+                  <Trash2 size={12} color="white" />
+                </div>
+              </>
+            )}
+          </React.Fragment>
+        );
+      })}
+
+      <Moveable
+        target={sectionRef.current}
+        resizable={true}
+        renderDirections={["s"]}
+        className="section-resizer-tool"
+        onResize={({ target, height }) => {
+          target.style.height = `${height}px`;
+          updateSection(section.id, { styles: { height } });
         }}
       />
+
+    <style>{`
+        /* تنسيق الخط المقطع */
+        .element-moveable-tool .moveable-line {
+            border-top: 1px dashed #4f46e5 !important;
+            background: transparent !important;
+        }
+
+        /* تنسيق المقابض: مربعة، أصغر، وموزونة */
+        .element-moveable-tool .moveable-control {
+            width: 6px !important; 
+            height: 6px !important;
+            background: white !important;
+            border: 1px solid #4f46e5 !important;
+            border-radius: 0% !important; /* تجعلها مربعة */
+            margin-top: -3px !important; /* لنصف العرض لضمان السنترة */
+            margin-left: -3px !important;
+        }
+
+        /* منع تأخير الماوس */
+        .moveable-control-box {
+            pointer-events: none !important;
+        }
+        .moveable-control, .moveable-line {
+            pointer-events: auto !important;
+        }
+
+        /* تنسيق أداة السكشن */
+        .section-resizer-tool .moveable-line { display: none !important; }
+        .section-resizer-tool .moveable-control { 
+          background: #4f46e5 !important; 
+          opacity: 0.5; 
+          height: 4px !important; 
+          width: 40px !important; 
+          border-radius: 2px !important;
+        }
+
+        .is-blank-layer { pointer-events: none !important; }
+        .is-blank-layer > div { pointer-events: auto !important; }
+      `}</style>
     </div>
   );
-};
+}
 
-export default SectionRenderer;
+const styles = {
+  deleteSectionBtn: { position: "absolute", right: 10, top: 10, zIndex: 2000, background: "#fee2e2", border: "none", cursor: "pointer", padding: 4, borderRadius: 4 },
+  deleteElementBtn: { 
+    position: "absolute", background: "#ef4444", borderRadius: "50%", 
+    width: 22, height: 22, zIndex: 9999, cursor: "pointer", 
+    display: "flex", alignItems: "center", justifyContent: "center",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)", pointerEvents: "auto"
+  },
+};

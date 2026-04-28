@@ -1,20 +1,18 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;900&family=Inter:wght@400;900&family=Montserrat:wght@400;900&family=Playfair+Display:wght@400;900&family=Poppins:wght@400;900&family=Roboto+Mono:wght@400;700&family=Tajawal:wght@400;900&family=Oswald:wght@400;700&family=Lalezar&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&family=Lalezar&display=swap');
+
 :root {
   --text: #334155;
   --text-h: #020617;
-  /* --bg: #ffffff; */
   --accent: #4f46e5;
-   --accent-bg: transparent;   /* أو لون خفيف */
+  --accent-bg: transparent;
   --social-bg: transparent;
   --border: #e2e8f0;
-  /* الخط العالمي الفخم */
   --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
   
   font: 17px/1.6 var(--sans);
-  direction: ltr; /* اتجاه إنجليزي */
-  /* background-color: var(--bg); */
+  direction: ltr;
 }
 
 /* حل مشكلة الهوامش السوداء الجذري */
@@ -41,6 +39,7 @@ h1, h2, h3 {
 .group\/resizer {
   position: relative;
 }
+
 ::-webkit-resizer {
   border: 10px solid transparent;
 }
@@ -65,6 +64,7 @@ body {
   overflow-x: hidden;
 }
 
+/* تنسيقات العناصر القابلة للتحرير */
 [contenteditable="true"] {
   background: transparent !important;
   outline: none !important;
@@ -72,7 +72,6 @@ body {
   -webkit-appearance: none;
 }
 
-/* أجبر أي عنصر contenteditable على أن يكون شفافاً */
 [contenteditable="true"]:focus {
   background-color: transparent !important;
   background: transparent !important;
@@ -80,21 +79,49 @@ body {
   outline: none !important;
 }
 
-/* حل مشكلة الخلفية البيضاء التي تظهر عند الضغط (Focus) */
 [contenteditable="true"]::selection {
   background: rgba(79, 70, 229, 0.3);
 }
 
-/* تأكد أن حاوية العناصر الذرية لا تملك خلفية */
+/* الحاويات والعناصر الحرة */
 .pointer-events-none {
-    background-color: transparent !important;
+  background-color: transparent !important;
 }
-
 
 .free-element,
 .free-element * {
-   background: transparent !important;
+  background: transparent !important;
   background-color: transparent !important;
   box-shadow: none !important;
 }
 
+/* --- القسم المدمج والمعدل لدعم جميع المتصفحات وسفاري --- */
+
+.selectable-item, 
+.selectable-item *,
+img, 
+span, 
+div {
+    /* منع سحب المتصفح الافتراضي (الدائرة الحمراء) */
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+    
+    /* منع تحديد النصوص لضمان سلاسة Moveable في سفاري وغيره */
+    -webkit-user-select: none !important; /* Safari */
+    -moz-user-select: none !important;    /* Firefox */
+    -ms-user-select: none !important;     /* IE/Edge */
+    user-select: none !important;         /* Standard */
+    
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* تعطيل خاصية draggable الافتراضية لمنع تداخل الأنظمة */
+[draggable="true"] {
+    -webkit-user-drag: none !important;
+    draggable: false !important;
+}
+
+/* تأكد أن الخلفية شفافة دائماً في حالة الـ root داخل المحرر */
+html, body, #root {
+  background: transparent !important;
+}
