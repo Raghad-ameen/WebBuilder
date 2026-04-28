@@ -93,14 +93,16 @@ const handleDoubleClick = (e) => {
               height: "100%",
               outline: "none",
               cursor: isSelected ? "text" : "move", // يظهر حرف I عند الاختيار للتعديل
-      display: "flex",                   // لضبط المحاذاة
+      display: "grid",     
+      placeItems: "center",      // تمركز أفقي وعمودي بكلمة واحدة              // لضبط المحاذاة
       alignItems: "center",              // محاذاة عمودية
       justifyContent: "center",  
       textAlign: "center",        // محاذاة أفقية (اختياري حسب رغبتك)
-      lineHeight: "1.5",                 // لضبط المسافات بين الأسطر
+      lineHeight: "1.5 !important",                 // لضبط المسافات بين الأسطر
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",    // للحفاظ على المسافات والأسطر
-              ...item.styles
+              ...item.styles,
+              display: "grid !important" // التأكيد على النوع
             }}
           >
             {item.text || "Type your text..."}

@@ -63,50 +63,46 @@ const initialData = useMemo(() => ({
 
   // --- 3. التعامل مع اختصارات الكيبورد (الإصلاح النهائي) ---
  useEffect(() => {
-  const handleKeyDown = (e) => {
-    const s = storeRef.current;
-    if (!s) return;
+ const handleKeyDown = (e) => {
+  const s = storeRef.current;
+  if (!s) return;
 
-    // 1. تحديد ما إذا كان المستخدم في وضع "إدخال" أو "تعديل نص"
-    const isInput = 
-      e.target.tagName === 'INPUT' || 
-      e.target.tagName === 'TEXTAREA' || 
-      e.target.isContentEditable || 
-      e.target.closest('[contenteditable="true"]') || 
-      e.target.closest('.properties-panel');
+  const isCtrl = e.ctrlKey || e.metaKey;
+  const code = e.code;
 
-    const isCtrl = e.ctrlKey || e.metaKey;
-    const code = e.code; 
+  // 1. فحص فوري وحاسم لوضع الكتابة
+  const activeEl = document.activeElement;
+  const isWriting = 
+    activeEl.isContentEditable || 
+    activeEl.tagName === 'INPUT' || 
+    activeEl.tagName === 'TEXTAREA' ||
+    e.target.closest('[contenteditable="true"]');
 
-    // 2. حماية وضع الكتابة: إذا كان المستخدم يكتب، نوقف اختصاراتنا (ما عدا التراجع)
-    if (isInput) {
-      // نسمح باختصارات التراجع/الإعادة الافتراضية للمتصفح داخل النصوص
-      if (isCtrl && (code === 'KeyZ' || code === 'KeyY')) {
-        return; 
-      }
-      // أي زر آخر (مثل Backspace) يجب أن يؤدي وظيفته الطبيعية داخل النص ولا يحذف العنصر
-      return; 
+  // 2. معالجة الـ Undo/Redo أولاً وقبل كل شيء (أولوية قصوى)
+  if (isCtrl && code === 'KeyZ') {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.shiftKey) {
+      s.redo();
+    } else {
+      s.undo();
     }
+    return; // اخرج فوراً بعد التنفيذ
+  }
 
-    // --- الاختصارات العالمية (تعمل فقط عندما لا نكون في وضع كتابة) ---
+  if (isCtrl && code === 'KeyY') {
+    e.preventDefault();
+    e.stopPropagation();
+    s.redo();
+    return;
+  }
 
-    // 1. التراجع (Undo)
-    if (isCtrl && code === 'KeyZ' && !e.shiftKey) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof s.undo === 'function') s.undo();
-    }
-
-    // 2. الإعادة (Redo)
-    if (isCtrl && (code === 'KeyY' || (code === 'KeyZ' && e.shiftKey))) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof s.redo === 'function') s.redo();
-    }
-
-    // 3. الحذف (Delete و Backspace)
-    if (code === 'Delete' || code === 'Backspace') {
-      // نتحقق من وجود عناصر محددة (استخدمي المسمى الموجود في الستور لديكِ)
+  // 3. منع الحذف إذا كنا في وضع الكتابة
+  if (code === 'Backspace' || code === 'Delete') {
+    if (isWriting) {
+      return; // اترك المتصفح يمسح الحروف فقط
+    } else {
+      // إذا لم نكن نكتب، احذف العنصر المختار
       const selectedIds = s.state.selectedElementIds || s.state.selected || [];
       if (selectedIds.length > 0) {
         e.preventDefault();
@@ -114,26 +110,16 @@ const initialData = useMemo(() => ({
         selectedIds.forEach(id => s.deleteElement(id));
       }
     }
+  }
 
-    // 4. النسخ والقص واللصق
-    if (isCtrl) {
-      const selectedIds = s.state.selectedElementIds || s.state.selected || [];
-      
-      if (code === 'KeyC') { 
-        e.preventDefault(); 
-        if (s.copyElements) s.copyElements(selectedIds); 
-      }
-      if (code === 'KeyX') { 
-        e.preventDefault(); 
-        if (s.cutElements) s.cutElements(selectedIds); 
-      }
-      if (code === 'KeyV') { 
-        e.preventDefault(); 
-        if (s.pasteElements) s.pasteElements(); 
-      }
-    }
-  };
-
+  // 4. النسخ واللصق (فقط إذا لم نكن نكتب)
+  if (isCtrl && !isWriting) {
+    const selectedIds = s.state.selectedElementIds || s.state.selected || [];
+    if (code === 'KeyC') { e.preventDefault(); s.copyElements(selectedIds); }
+    if (code === 'KeyV') { e.preventDefault(); s.pasteElements(); }
+    if (code === 'KeyX') { e.preventDefault(); s.cutElements(selectedIds); }
+  }
+};
   // استخدام capture: true لضمان التقاط الحدث قبل أي معالجات أخرى
   window.addEventListener('keydown', handleKeyDown, { capture: true });
   return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
