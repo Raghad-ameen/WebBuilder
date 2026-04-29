@@ -47,20 +47,40 @@ const [isShapesOpen, setIsShapesOpen] = React.useState(false);
 const handleAddShape = (shape) => {
   const newId = `shape_${Date.now()}`;
   const activePage = state.pages.find(p => p.id === state.activePageId);
-  const targetId = activePage?.sections[0]?.id || null;
+  const targetSectionId = activePage?.sections[0]?.id || null;
 
-  store.addItemAtPosition("shape", 150, 150, targetId, newId);
-  
-  store.updateItem(state.activePageId, targetId, newId, {
+  if (!targetSectionId) return;
+
+  // 1. إضافة العنصر مع البيانات الأساسية في خطوة واحدة إذا كان الـ Store يدعم ذلك
+  // أو القيام بها بالتتابع مع ضمان الـ ID
+addItemAtPosition("shape", 150, 150, targetSectionId, {
     shapeType: shape.id,
     styles: { 
       clipPath: shape.path, 
-      borderRadius: shape.radius 
+      borderRadius: shape.radius,
+      backgroundColor: "#4f46e5"
     }
   });
-  
   setIsShapesOpen(false);
-  setState(prev => ({ ...prev, selectedElementIds: [newId] }));
+  // 2. تحديث الخصائص فوراً
+  setTimeout(() => {
+    store.updateItem(state.activePageId, targetSectionId, newId, {
+      shapeType: shape.id,
+      text: "", // لضمان عدم ظهور نصوص افتراضية
+      styles: { 
+        width: 100,
+        height: 100,
+        backgroundColor: "#4f46e5",
+        clipPath: shape.path, 
+        borderRadius: shape.radius,
+        position: "absolute"
+      }
+    });
+    
+    // إغلاق القائمة واختيار العنصر الجديد
+    setIsShapesOpen(false);
+    setState(prev => ({ ...prev, selectedElementIds: [newId] }));
+  }, 10); 
 };
 
 const handleElementClick = (type) => {
@@ -169,17 +189,29 @@ const handleStartDrag = (e, type) => {
       {isShapesOpen && (
         <div style={styles.shapesGridPopup}>
           {SHAPE_LIBRARY.map(s => (
-            <div 
-              key={s.id} 
-              style={styles.shapeIconItem} 
-              // تعديل هنا ليشمل الكليك والسحب للأشكال أيضاً
-              onClick={() => handleAddShape(s)}
-              onMouseDown={(e) => handleStartDrag(e, 'shape')}
-            >
-              {s.icon}
-              <span style={{fontSize: '10px'}}>{s.label}</span>
-            </div>
-          ))}
+  <div 
+    key={s.id} 
+    style={styles.shapeIconItem} 
+    // عند الضغط العادي:
+    onClick={(e) => {
+      e.stopPropagation();
+      handleAddShape(s);
+    }}
+    // عند السحب: نمرر نوع الشكل للـ Drag State
+    onMouseDown={(e) => {
+      e.stopPropagation();
+      setState(prev => ({ 
+        ...prev, 
+        isDraggingNow: true, 
+        draggingType: 'shape',
+        draggingShapeData: s // تخزين بيانات الشكل المسحوب
+      }));
+    }}
+  >
+    {s.icon}
+    <span style={{fontSize: '10px'}}>{s.label}</span>
+  </div>
+))}
         </div>
       )}
     </div>

@@ -189,7 +189,7 @@ const updateSection = useCallback((sectionId, data) => {
 }, [saveToHistory]);
 
 
-const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
+const addItemAtPosition = useCallback((type, x, y, sectionId = null,extraData) => {
   const finalNewId = `e-${Date.now()}`;
   const finalX = (typeof x === 'number' ? x : 100) - 75;
   const finalY = (typeof y === 'number' ? y : 100) - 25;
@@ -204,16 +204,19 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
       type,
       x: finalX,
       y: finalY,
-      width: 150,
-      height: 50,
-      text: type === 'text' ? "New Text" : "New Button",
+      width: type === 'shape' ? 100 : 150, // إذا كان شكل، خليه مربع 100x100
+      height: type === 'shape' ? 100 : 50,
+      text: type === 'text' ? "New Text" : type === 'button' ? "New Button" : "", 
+      ...extraData, // هنا تدمج بيانات الشكل (مثل shapeType والـ path)
       styles: { 
         position: 'absolute', 
         zIndex: 100, 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        pointerEvents: 'auto' // تأكدي أن العناصر تستقبل الأحداث
+        backgroundColor: "#4f46e5",
+        pointerEvents: 'auto',
+        ...extraData.styles // دمج الستايلات القادمة مع الشكل
       }
     };
 

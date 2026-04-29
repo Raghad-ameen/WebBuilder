@@ -6,8 +6,9 @@ import CustomModal from "../components/CustomModal";
 export default function Editor() {
 const initialData = useMemo(() => ({
   projectName: "dnd",
-  canvasWidth: '100%',
-  canvasHeight: '800px',
+  // canvasWidth: '100%',
+  // canvasHeight: '800px',
+  viewMode: 'desktop',
 canvasStyles: { backgroundColor: '#ffffff' }, 
  pages: [{ id: "p1", name: "Home", sections: [] }],
   activePageId: "p1",

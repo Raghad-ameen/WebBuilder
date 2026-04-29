@@ -139,6 +139,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         zIndex: 5,
         pointerEvents: item.isEditing ? 'auto' : 'none', 
         userSelect: item.isEditing ? 'text' : 'none',
+        cursor: item.isEditing ? 'text' : 'move',    // إظهار حرف الـ I عند التعديل
         display: "grid",
         placeItems: "center",
         textAlign: "center",
@@ -152,28 +153,108 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     </div>
   </div>
 )}
-        {item.type === 'image' && (
-          <div style={{ width: "100%", height: "100%", overflow: "hidden", ...item.styles }}>
-            {item.src ? (
-              <img src={item.src} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <div style={{ width: "100%", height: "100%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#cbd5e1" }}>
-                 <ImageIcon size={24} />
-              </div>
-            )}
-          </div>
-        )}
+       {item.type === 'image' && (
+  <div 
+    style={{ 
+      width: "100%", 
+      height: "100%", 
+      overflow: "hidden", 
+      position: "relative", // مهم جداً لوضع الأيقونة في المنتصف
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: item.src ? "transparent" : "#f8fafc",
+      border: item.src ? "none" : "1px dashed #cbd5e1",
+      borderRadius: item.styles?.borderRadius || "8px",
+      ...item.styles 
+    }}
+  >
+    {item.src ? (
+      <img 
+        src={item.src} 
+        style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+        alt="Uploaded content"
+      />
+    ) : (
+      /* هذا الجزء يظهر فقط إذا لم تكن هناك صورة (Placeholder) */
+      <div
+        onClick={(e) => {
+          e.stopPropagation(); // منع اختيار العنصر عند الضغط على الزر
+          
+          // إنشاء Input مخفي لفتح الملفات
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*'; // قبول الصور فقط
+          
+          input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                // تحديث الـ Store بالصورة الجديدة
+                updateItem(activePageId, section.id, item.id, { 
+                  src: e.target.result 
+                });
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        }}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          gap: "8px",
+          color: "#64748b",
+          transition: "all 0.2s ease"
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+      >
+        {/* أيقونة الـ + الصغيره التي طلبتها */}
+        <div style={{
+          // width: "32px",
+          // height: "32px",
+          // borderRadius: "50%",
+          // backgroundColor: "#4f46e5",
+          // display: "flex",
+          // alignItems: "center",
+          // justifyContent: "center",
+          // color: "white",
+          // boxShadow: "0 4px 12px rgba(79, 70, 229, 0.2)"
+        }}>
+          <span style={{ fontSize: "20px", fontWeight: "bold", lineHeight: 1 }}>+</span>
+        </div>
+        <span style={{ fontSize: "12px", fontWeight: "500" }}>add image</span>
+      </div>
+    )}
+  </div>
+)}
 
-        {item.type === 'shape' && (
-          <div 
-            style={{ 
-              width: "100%", 
-              height: "100%", 
-              backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-              ...item.styles 
-            }} 
-          />
-        )}
+ {item.type === 'shape' && (
+  <div 
+    style={{ 
+      width: "100%", 
+      height: "100%", 
+      backgroundColor: item.styles?.backgroundColor || "#4f46e5",
+      
+      // الأولوية لما هو مخزن في الـ styles (المسار القادم من الـ sidebar)
+      clipPath: item.styles?.clipPath || (
+         item.shapeType === 'triangle' ? "polygon(50% 0%, 0% 100%, 100% 100%)" :
+         item.shapeType === 'star' ? "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" :
+         "none"
+      ),
+      
+      borderRadius: item.shapeType === 'circle' ? "50%" : (item.styles?.borderRadius || "0px"),
+      ...item.styles 
+    }} 
+  />
+)}
 
         {item.type === 'button' && (
           <div
@@ -210,8 +291,10 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
                 color: item.styles?.color || "white",
                 fontSize: item.styles?.fontSize || "16px",
                 pointerEvents: "auto",
-                userSelect: "none",
-                lineHeight: "1"
+                userSelect: isSelected ? "text" : "none", 
+cursor: isSelected ? "text" : "move",
+    lineHeight: "1",
+    outline: "none" // عشان ما يطلع إطار أسود بشع وقت الكتابة
               }}
             >
               {item.text || "Button"}

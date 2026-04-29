@@ -136,7 +136,6 @@ div {
 #main-canvas, 
 .section-container, 
 [class*="section-"] {
-    background-color: #ffffff !important;
     background: #ffffff !important;
     box-shadow: none !important;
     border-color: transparent !important;

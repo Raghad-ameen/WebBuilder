@@ -1,14 +1,16 @@
 import React from 'react';
 
-// CanvasElement.jsx
-// CanvasElement.jsx
+
 export default function CanvasElement({ store, children }) {
   const { state, setState, addItemAtPosition } = store;
 
+  // دالة لجلب العرض بناءً على المود الحالي
   const getCanvasWidth = () => {
-    if (state.viewMode === 'mobile') return '375px';
-    if (state.viewMode === 'tablet') return '768px';
-    return '100%';
+    switch (state.viewMode) {
+      case 'mobile': return '375px';
+      case 'tablet': return '768px';
+      default: return '100%';
+    }
   };
 
   const handleMouseUp = (e) => {
@@ -16,9 +18,12 @@ export default function CanvasElement({ store, children }) {
     const canvas = document.getElementById('main-canvas');
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
+    
+    // الحسابات بناءً على السكيل (مهم جداً للـ DND)
     const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
+
     addItemAtPosition(state.draggingType, x, y);
     setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
   };
@@ -26,16 +31,18 @@ export default function CanvasElement({ store, children }) {
   return (
     <div 
       id="canvas-wrapper"
+      key={state.viewMode} // 👈 هذا السطر سيجبر المكون على التحديث فوراً
       style={{
         flex: 1,
-        backgroundColor: '#ffffff', // فرض الأبيض هنا
+        backgroundColor: state.viewMode === 'desktop' ? '#ffffff' : '#f1f5f9', // أبيض في الديسكتوب، رمادي خفيف في الباقي
         display: 'flex',
         justifyContent: 'center', 
         alignItems: 'flex-start',
         height: '100vh', 
         position: 'relative',
         overflow: 'auto',
-        padding: '0'
+        padding: state.viewMode === 'desktop' ? '0' : '40px 0',
+        transition: 'background-color 0.3s ease'
       }}
     >
       <div 
@@ -44,16 +51,16 @@ export default function CanvasElement({ store, children }) {
         style={{ 
             width: getCanvasWidth(), 
             minHeight: "100vh", 
-            backgroundColor: "#ffffff", // فرض الأبيض هنا أيضاً
-            boxShadow: "none", // حذف الشادو تماماً
-            border: "none", 
+            backgroundColor: "#ffffff",
+            boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.1)", 
             position: "relative", 
             zIndex: 1,
             overflow: "visible", 
-            transition: "width 0.3s ease",
+            transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)", // أنيميشن ناعم جداً
             margin: '0 auto',
             display: 'flex',
-            flexDirection: 'column' 
+            flexDirection: 'column',
+            border: state.viewMode === 'desktop' ? "none" : "1px solid #e2e8f0"
         }}
       >
         {children}
