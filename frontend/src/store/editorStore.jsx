@@ -162,32 +162,25 @@ const closeModal = useCallback(() => {
   }));
 }, []);
 
-const updateSection = useCallback((sectionId, data) => {
+const updateSection = useCallback((sectionId, newData) => {
   setState(prev => {
-    saveToHistory(prev);
+    // لا نحفظ في الهيستوري إلا إذا كان التغيير نهائياً (عند انتهاء الـ Resize مثلاً)
+    // لذا يفضل استدعاء saveToHistory يدوياً عند الحاجة
     return {
       ...prev,
-      pages: prev.pages.map(p => ({
+      pages: prev.pages.map(p => p.id === prev.activePageId ? {
         ...p,
-        sections: p.sections.map(s => 
-          s.id === sectionId 
-            ? { 
-                ...s, 
-                // نحدث الـ styles في جذر السكشن لسهولة الوصول
-                styles: { ...(s.styles || {}), ...(data.styles || {}) },
-                // نحدث البيانات الأخرى إذا وجدت
-                data: { 
-                  ...s.data, 
-                  items: data.items || s.data.items 
-                } 
-              } 
-            : s
-        )
-      }))
+        sections: p.sections.map(s => s.id === sectionId ? {
+          ...s,
+          // دمج البيانات الجديدة: الارتفاع والتنسيقات
+          height: newData.height !== undefined ? newData.height : s.height,
+          styles: { ...(s.styles || {}), ...(newData.styles || {}) },
+          data: { ...s.data, ...(newData.data || {}) }
+        } : s)
+      } : p)
     };
   });
-}, [saveToHistory]);
-
+}, []);
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
@@ -326,39 +319,64 @@ const loadProject = useCallback(() => {
   const addSection = useCallback((type) => {
     saveToHistory(state); 
     
-    const templates = {
-     blank: {
-    id: `s-${Date.now()}`,
-    type: "blank",
-    data: {
+const templates = {
+    blank: {
+      id: `s-${Date.now()}`,
+      type: "blank",
+      height: 400, // الارتفاع الافتراضي للسكشن الفارغ
       styles: { 
-        minHeight: "0px", 
-        backgroundColor: "transparent", 
+        backgroundColor: "#ffffff", 
         padding: "0px" 
       },
-      items: [] 
-    }
-  },
-      hero: {
-        id: `s-${Date.now()}`,
-        type: "section",
-        data: {
-          styles: { padding: "80px 40px", backgroundColor: "#f8fafc" },
-          items: [
-            { id: `e-${Date.now()}-1`, type: "text", text: "Hero Title", x: 200, y: 50, width: 400, height: 60, styles: { fontSize: "42px", fontWeight: "bold", textAlign: "center" } }
-          ]
-        }
+      data: { items: [] }
+    },
+    hero: {
+      id: `s-${Date.now()}`,
+      type: "section",
+      height: 600, // السكشن الـ Hero يحتاج مساحة أكبر
+      styles: { 
+        backgroundColor: "#f8fafc", 
+        padding: "80px 40px" 
       },
-      navbar: {
-        id: `s-${Date.now()}`,
-        type: "section",
-        data: {
-          styles: { height: 80, backgroundColor: "#ffffff", borderBottom: "1px solid #eee" },
-          items: [{ id: `e-${Date.now()}-logo`, type: "text", text: "LOGO", x: 20, y: 25, width: 100, height: 30, styles: { fontWeight: "bold" } }]
-        }
+      data: {
+        items: [
+          { 
+            id: `e-${Date.now()}-1`, 
+            type: "text", 
+            text: "Hero Title", 
+            x: 200, 
+            y: 50, 
+            width: 400, 
+            height: 60, 
+            styles: { fontSize: "42px", fontWeight: "bold", textAlign: "center" } 
+          }
+        ]
       }
-    };
-
+    },
+    navbar: {
+      id: `s-${Date.now()}`,
+      type: "section",
+      height: 80, // النواف بار يكون نحيف دائماً
+      styles: { 
+        backgroundColor: "#ffffff", 
+        borderBottom: "1px solid #eee" 
+      },
+      data: {
+        items: [
+          { 
+            id: `e-${Date.now()}-logo`, 
+            type: "text", 
+            text: "LOGO", 
+            x: 20, 
+            y: 25, 
+            width: 100, 
+            height: 30, 
+            styles: { fontWeight: "bold" } 
+          }
+        ]
+      }
+    }
+  };
     const newSection = templates[type] || templates.blank;
 
     setState(prev => ({
@@ -551,6 +569,32 @@ selectedElementIds: [],    };
   });
 }, [saveToHistory]);
 
+const moveSection = useCallback((sectionId, direction) => {
+  setState(prev => {
+    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    if (!activePage) return prev;
+
+    const sections = [...activePage.sections];
+    const index = sections.findIndex(s => s.id === sectionId);
+    
+    // منع التحريك إذا كان السكشن في الأطراف
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections.length - 1)) {
+      return prev;
+    }
+
+    saveToHistory(prev);
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // عملية التبديل (Swap)
+    [sections[index], sections[newIndex]] = [sections[newIndex], sections[index]];
+
+    return {
+      ...prev,
+      pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections } : p)
+    };
+  });
+}, [saveToHistory]);
+
   return { 
     state, 
     setState,
@@ -593,5 +637,8 @@ setViewMode: (mode) => {
     loadProject,
     updateSection,
     updateCanvasStyles,
+    moveSection,
+    moveSectionUp: (id) => moveSection(id, 'up'),
+  moveSectionDown: (id) => moveSection(id, 'down'),
   };
 }

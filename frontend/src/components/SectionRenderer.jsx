@@ -5,7 +5,7 @@ import SectionWrapper from "./SectionWrapper";
 import CanvasElement from "./CanvasElement";
 
 export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store, canvasScale = 1 }) {
-  const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem } = store;
+  const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem,moveSectionUp, moveSectionDown } = store;
   const activePageId = state.activePageId; 
   const itemRefs = useRef({});
   const sectionRef = useRef(null);
@@ -37,42 +37,51 @@ const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
     <div
       ref={sectionRef}
       className={`section-container section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
-      onMouseUp={(e) => {
-    // إذا لم يكن هناك سحب، لا تفعل شيئاً
-    if (!state.isDraggingNow) return;
-    e.stopPropagation();
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);
-
-    // حساب الإحداثيات بالنسبة "للداخل" (داخل السكشن)
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-
-    // هنا نرسل الإحداثيات الحقيقية للـ Store
-    addItemAtPosition(state.draggingType, x, y, section.id);
-    setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+      onClick={(e) => {
+    if (e.target === e.currentTarget) {
+      store.selectItems([section.id]); 
+    }
   }}
-      style={{
-        position: "relative",
-        width: "100%",
-minHeight: section.data?.styles?.height ? `${section.data.styles.height}px` : "100vh",
-        backgroundColor: section.data?.styles?.backgroundColor || "transparent",
-        borderBottom: isBlank ? "none" : "1px dashed #ddd",
-        boxShadow: "none",
-        overflow: "visible",
-        pointerEvents: "auto",
-        zIndex: isBlank ? 10 : 1,
-      }}
+onMouseUp={(e) => {
+  if (!state.isDraggingNow) return;
+  e.stopPropagation();
+
+  const rect = e.currentTarget.getBoundingClientRect();
+  
+  // نستخدمcanvasScale لضبط الإحداثيات بدقة رغماً عن التصغير
+  const x = (e.clientX - rect.left) / canvasScale;
+  const y = (e.clientY - rect.top) / canvasScale;
+
+  // استدعاء الدالة من الستور
+  store.addItemAtPosition(state.draggingType, x, y, section.id);
+  
+  // إنهاء حالة السحب
+  store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+}}     style={{
+  position: "relative",
+  width: "100%",
+  // --- استبدلي القيم القديمة بهذه ---
+  height: section.height ? `${section.height}px` : "auto", 
+  minHeight: "100px", 
+  backgroundColor: section.styles?.backgroundColor || "transparent",
+  backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
+  overflow: "visible",
+  zIndex: isSectionSelected ? 100 : (isBlank ? 10 : 1),
+  pointerEvents: 'auto',
+}}
     >
-      {!isBlank && (
-        <button
-          onClick={(e) => { e.stopPropagation(); deleteSection(section.id); }}
-          style={styles.deleteSectionBtn}
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
+     {isSectionSelected && (
+  <div style={styles.sectionToolbar}>
+    <button onClick={() => store.moveSectionUp(section.id)} style={styles.toolBtn}>🔼</button>
+    <button onClick={() => store.moveSectionDown(section.id)} style={styles.toolBtn}>🔽</button>
+    <button onClick={() => deleteSection(section.id)} style={{...styles.toolBtn, color: 'red'}}>
+       <Trash2 size={14} />
+    </button>
+  </div>
+)}
 
 {section.data.items?.map((item) => {
 const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id);  return (
@@ -107,7 +116,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       height: "100%", 
       display: "flex",
       alignItems: item.styles?.alignItems || "center",
-      /* تعديل المحاذاة */
       justifyContent: 
         item.styles?.textAlign === 'right' ? 'flex-end' : 
         item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
@@ -337,19 +345,23 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
 
       {!state.isDraggingNow && isSectionSelected && (
   <Moveable
-    target={`.section-${section.id}`}
+    target={sectionRef} 
     resizable={true}
-    renderDirections={["s"]} 
-    onResize={({ target, width, height, dist, delta }) => {
+    keepRatio={false}
+    renderDirections={["s"]} // يظهر المقبض في الأسفل فقط
+    origin={false}
+    zoom={1 / canvasScale}
+    // هذا السطر يضمن أن المقبض قابل للسحب
+    edge={true} 
+    onResize={({ target, height }) => {
       target.style.height = `${height}px`;
     }}
-    snappable={true}
-    origin={false}
     onResizeEnd={({ target }) => {
-    updateSection(activePageId, section.id, { 
-      styles: { ...section.data.styles, height: parseInt(target.style.height) } 
-    });
-  }}
+      updateSection(section.id, { 
+        ...section, // الحفاظ على البيانات القديمة
+        height: parseInt(target.style.height) 
+      });
+    }}
   />
 )}
     <style>{`
@@ -416,4 +428,25 @@ const styles = {
     display: "flex", alignItems: "center", justifyContent: "center",
     boxShadow: "0 2px 8px rgba(0,0,0,0.3)", pointerEvents: "auto"
   },
+  sectionToolbar: {
+    position: "absolute",
+    right: "-50px", // يظهر خارج الكانفاس بجهة اليمين
+    top: "0",
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+    zIndex: 3000,
+  },
+  toolBtn: {
+    background: "white",
+    border: "1px solid #ddd",
+    borderRadius: "4px",
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+  }
 };
