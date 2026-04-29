@@ -81,51 +81,79 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         {/* --- بداية الدمج: رندرة الأنواع المختلفة --- */}
 
         {/* 1. رندرة النصوص */}
-       {item.type === 'text' && (
-  <div
-    // التعديل 1: لا يصبح Editable إلا إذا فعلنا ذلك برمجياً (Double Click)
-    contentEditable={item.isEditing} 
-    suppressContentEditableWarning
-    
-    // التعديل 2: عند فقدان التركيز نحدث النص ونغلق وضع التعديل
-    onBlur={(e) => {
-      const newText = e.target.innerText;
-      updateItem(activePageId, section.id, item.id, { 
-        text: newText,
-        isEditing: false // نغلق وضع التعديل في الـ Store
-      });
-    }}
-    
-    style={{
-      width: "100%",
-      height: "100%",
-      outline: "none",
-      
-      // التعديل 3: التحكم في المؤشر والتحديد
-      cursor: item.isEditing ? "text" : "move", 
-      userSelect: item.isEditing ? "text" : "none",
-      WebkitUserSelect: item.isEditing ? "text" : "none",
-      
-      display: "grid",     
-      placeItems: "center",
-      alignItems: "center",
-      justifyContent: "center",  
-      textAlign: "center",
-      wordBreak: "break-word",
-      whiteSpace: "pre-wrap",
-      
-      // التعديل 4: دمج الستايلات بدون !important (React سيعطيها الأولوية)
-      ...item.styles,
-      display: "grid", 
-    }}
-    // التعديل 5: منع أحداث الكيبورد من الوصول للمتصفح أثناء التعديل
-    onKeyDown={(e) => {
-      if (item.isEditing) {
-        e.stopPropagation(); // يمنع الـ Ctrl+C من نسخ العنصر أثناء كتابة نص
-      }
-    }}
+{item.type === 'text' && (
+  <div 
+    className="text-element-wrapper"
+    style={{ position: 'relative', width: "100%", height: "100%", display: "grid", placeItems: "center" }}
   >
-    {item.text || "Type your text..."}
+    {/* 1. طبقة التحكم والتحريك (الدرع الشفاف) */}
+    {!item.isEditing && (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 10,
+          cursor: 'move',
+          backgroundColor: 'transparent'
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          
+          // تفعيل وضع التعديل
+          updateItem(activePageId, section.id, item.id, { isEditing: true });
+
+          // الحل الذكي لضمان ظهور المؤشر
+          setTimeout(() => {
+            const input = document.getElementById(`text-input-${item.id}`);
+            if (input) {
+              input.style.pointerEvents = 'auto';
+              input.focus();
+              
+              const range = document.createRange();
+              const sel = window.getSelection();
+              range.selectNodeContents(input);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              
+              input.click(); // نقرة وهمية لتثبيت المؤشر
+            }
+          }, 20); // زيادة بسيطة للتأكيد
+        }}
+      />
+    )}
+
+    {/* 2. النص الحقيقي بكل تنسيقاته */}
+    <div
+      id={`text-input-${item.id}`}
+      contentEditable={item.isEditing}
+      suppressContentEditableWarning
+      onBlur={(e) => {
+        // حفظ النص + إغلاق التعديل (دمجناهم هنا)
+        updateItem(activePageId, section.id, item.id, { 
+          text: e.target.innerText, 
+          isEditing: false 
+        });
+      }}
+      style={{
+        width: "100%",
+        height: "100%",
+        outline: "none",
+        zIndex: 5,
+        pointerEvents: item.isEditing ? 'auto' : 'none', 
+        userSelect: item.isEditing ? 'text' : 'none',
+        display: "grid",
+        placeItems: "center",
+        textAlign: "center",
+        wordBreak: "break-word",
+        whiteSpace: "pre-wrap",
+        ...item.styles,
+        // تصحيح اللون للمتصفح
+        color: item.styles?.color === "#333" ? "#333333" : item.styles?.color,
+      }}
+    >
+      {item.text || "Type your text..."}
+    </div>
   </div>
 )}
         {/* 2. رندرة الصور */}

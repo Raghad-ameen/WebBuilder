@@ -75,6 +75,9 @@ const pasteElements = useCallback(() => {
       x: item.x + 40, 
       y: item.y + 40,
     }));
+    setTimeout(() => {
+      selectItems(newItems.map(i => i.id));
+    }, 50);
 
     return {
       ...prev,
@@ -209,7 +212,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
     // --- بداية قسم البيانات الخاصة (بدون أي حذف) ---
     let specificData = {};
     if(type === "text") {
-        specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333" } };
+        specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333333" } };
     } else if(type === "button") {
         specificData = { 
             text: "New Button", 
@@ -295,12 +298,19 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      selected: [newId],           // للوحة الخصائص
-      selectedElementIds: [newId],  // للتحريك (Moveable)
+      selected: [],           // للوحة الخصائص
+      selectedElementIds: [],  // للتحريك (Moveable)
       activeElementId: newId,
       isDraggingNow: false,         // إيقاف وضع السحب
       draggingType: null            // تنظيف نوع العنصر المسحوب
     };
+    setTimeout(() => {
+  setState(current => ({
+    ...current,
+    selected: [newId],
+    selectedElementIds: [newId]
+  }));
+}, 50);
   });
 }, [saveToHistory, setState]);
 
