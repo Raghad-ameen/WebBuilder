@@ -15,9 +15,8 @@
   direction: ltr;
 }
 
-/* حل مشكلة الهوامش السوداء الجذري */
 html, body, #root {
-  background-color: #f3f4f6 !important; /* لون رمادي فاتح للمحرر */
+  background-color: #f3f4f6 !important; 
   margin: 0;
   padding: 0;
   width: 100vw;
@@ -31,124 +30,73 @@ html, body, #root {
   flex-direction: column;
 }
 
-/* تباعد الحروف الإنجليزي الاحترافي */
+/* --- منطق الشفافية والكانفاس الموحد --- */
+
+#main-canvas {
+    /* الكانفاس هو الوحيد الأبيض والذي يحمل الظل */
+    background-color: #ffffff !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+    border: none;
+    transition: width 0.4s ease, transform 0.4s ease;
+    overflow: visible;
+    margin: 0 auto;
+    position: relative; /* 👈 هذا السطر هو مفتاح الحل */
+    padding: 0;
+}
+
+#canvas-wrapper, 
+.section-container, 
+[class*="section-"] {
+    /* جعل كل شيء داخل الكانفاس شفافاً تماماً */
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.section-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative;
+}
+
+/* --- باقي التنسيقات الأصلية دون تغيير --- */
+
 h1, h2, h3 {
   letter-spacing: -0.04em; 
   line-height: 1;
 }
 
-.group\/resizer {
-  position: relative;
-}
-
-::-webkit-resizer {
-  border: 10px solid transparent;
-}
-
-/* تحسين شكل التمرير */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #e2e8f0;
   border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6366f1;
-}
 
-/* لمنع ظهور Scrollbar أفقي عند السحب */
-body {
-  overflow-x: hidden;
-}
-
-/* تنسيقات العناصر القابلة للتحرير */
 [contenteditable="true"] {
   background: transparent !important;
   outline: none !important;
-  box-shadow: none !important;
-  -webkit-appearance: none;
 }
-
-[contenteditable="true"]:focus {
-  background-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-[contenteditable="true"]::selection {
-  background: rgba(79, 70, 229, 0.3);
-}
-
-/* الحاويات والعناصر الحرة */
-.pointer-events-none {
-  background-color: transparent !important;
-}
-
-.free-element,
-.free-element * {
-  background: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-/* --- القسم المدمج والمعدل لدعم جميع المتصفحات وسفاري --- */
 
 .selectable-item, 
 .selectable-item *,
 img, 
 span, 
 div {
-    /* منع سحب المتصفح الافتراضي (الدائرة الحمراء) */
     -webkit-user-drag: none !important;
     user-drag: none !important;
-    
-    /* منع تحديد النصوص لضمان سلاسة Moveable في سفاري وغيره */
-    -webkit-user-select: none !important; /* Safari */
-    -moz-user-select: none !important;    /* Firefox */
-    -ms-user-select: none !important;     /* IE/Edge */
-    user-select: none !important;         /* Standard */
-    
-    -webkit-tap-highlight-color: transparent;
+    user-select: none !important;         
 }
 
-/* تعطيل خاصية draggable الافتراضية لمنع تداخل الأنظمة */
 [draggable="true"] {
     -webkit-user-drag: none !important;
     draggable: false !important;
 }
 
-/* تأكد أن الخلفية شفافة دائماً في حالة الـ root داخل المحرر */
-/* html, body, #root {
-  background: transparent !important;
-} */
 .text-element {
-  user-select: none !important;/* يمنع ظهور مؤشر النص عند الضغط العادي */
-  cursor: move;      /* يظهر المؤشر الرباعي فوراً */
-}
-
-/* فرض اللون الأبيض ومنع أي تداخلات */
-#canvas-wrapper, 
-#main-canvas, 
-.section-container, 
-[class*="section-"] {
-    background: #ffffff !important;
-    box-shadow: none !important;
-    border-color: transparent !important;
-}
-
-/* إخفاء الحدود المنقطة البشعة التي تظهر في الصور */
-.section-container {
-    border-bottom: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* تعديل خلفية الـ root لضمان عدم ظهور أي فجوات رمادية */
-#root {
-    background-color: #ffffff !important;
+  user-select: none !important;
+  cursor: move;    
 }

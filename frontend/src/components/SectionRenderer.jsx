@@ -1,15 +1,16 @@
 import React, { useRef ,useState} from "react";
 import { Trash2 ,Image as ImageIcon} from "lucide-react";
 import Moveable from "react-moveable";
-import SectionWrapper from "./SectionWrapper"; // استيراد المكون الجديد
+import SectionWrapper from "./SectionWrapper";
 import CanvasElement from "./CanvasElement";
 
-export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store }) {
+export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store, canvasScale = 1 }) {
   const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem } = store;
   const activePageId = state.activePageId; 
   const itemRefs = useRef({});
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
+
 React.useEffect(() => {
   const lastItem = section.data.items?.[section.data.items.length - 1];
   
@@ -30,19 +31,32 @@ const handleDoubleClick = (e) => {
   sel.addRange(range);
 };
   const isBlank = section.type === "blank";
-const isSectionSelected = state.selectedElementIds.includes(section.id);
+const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 
   return (
     <div
       ref={sectionRef}
-      className={`section-container ${isBlank ? "is-blank-layer" : ""}`}
+      className={`section-container section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
+      onMouseUp={(e) => {
+    // إذا لم يكن هناك سحب، لا تفعل شيئاً
+    if (!state.isDraggingNow) return;
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);
+
+    // حساب الإحداثيات بالنسبة "للداخل" (داخل السكشن)
+    const x = (e.clientX - rect.left) / scale;
+    const y = (e.clientY - rect.top) / scale;
+
+    // هنا نرسل الإحداثيات الحقيقية للـ Store
+    addItemAtPosition(state.draggingType, x, y, section.id);
+    setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+  }}
       style={{
         position: "relative",
         width: "100%",
-        // height: section.data?.styles?.height || (isBlank ? "100%" : "auto"),
-        // minHeight: isBlank ? 0 : 400,
-        minHeight: "200px",
-        // backgroundColor: isBlank ? "transparent" : (section.data?.styles?.backgroundColor || "transparent"),
+minHeight: section.data?.styles?.height ? `${section.data.styles.height}px` : "100vh",
         backgroundColor: section.data?.styles?.backgroundColor || "transparent",
         borderBottom: isBlank ? "none" : "1px dashed #ddd",
         boxShadow: "none",
@@ -65,19 +79,20 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     <React.Fragment key={item.id}>
       <div
         ref={(el) => (itemRefs.current[item.id] = el)}
+        id={item.id}
         onMouseDown={(e) => {
           e.stopPropagation();
-          onSelect(item.id);
-          if (!isSelected) onSelect(item.id);
+          if (!item.isEditing) onSelect(item.id);
         }}
         style={{
           position: "absolute",
-          left: `${item.x}px`,  
-  top: `${item.y}px`,  
-  width: `${item.width}px`,
-  height: `${item.height}px`,
+         left: `${item.x}px`,   
+        top: `${item.y}px`,   
+        width: `${item.width}px`,
+        height: `${item.height}px`,
+        transform: 'translate(0, 0)',
           zIndex: isSelected ? 2000 : 150,
-          cursor: "move",
+          cursor: item.isEditing ? "text" : "move",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
           ...item.styles, 
@@ -86,38 +101,24 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
 {item.type === 'text' && (
   <div 
     className="text-element-wrapper"
-    style={{ position: 'relative', width: "100%", height: "100%", display: "grid", placeItems: "center" }}
+    style={{ 
+      position: 'relative', 
+      width: "100%", 
+      height: "100%", 
+      display: "flex",
+      alignItems: item.styles?.alignItems || "center",
+      /* تعديل المحاذاة */
+      justifyContent: 
+        item.styles?.textAlign === 'right' ? 'flex-end' : 
+        item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
+    }}
   >
     {!item.isEditing && (
       <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 10,
-          cursor: 'move',
-          backgroundColor: 'transparent'
-        }}
+        style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'move' }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          
-          updateItem(activePageId, section.id, item.id, { isEditing: true });
-
-          setTimeout(() => {
-            const input = document.getElementById(`text-input-${item.id}`);
-            if (input) {
-              input.style.pointerEvents = 'auto';
-              input.focus();
-              
-              const range = document.createRange();
-              const sel = window.getSelection();
-              range.selectNodeContents(input);
-              range.collapse(false);
-              sel.removeAllRanges();
-              sel.addRange(range);
-              
-              input.click(); 
-            }
-          }, 20); 
+          store.updateItem(state.activePageId, section.id, item.id, { isEditing: true });
         }}
       />
     )}
@@ -127,26 +128,23 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       contentEditable={item.isEditing}
       suppressContentEditableWarning
       onBlur={(e) => {
-        updateItem(activePageId, section.id, item.id, { 
+        store.updateItem(state.activePageId, section.id, item.id, { 
           text: e.target.innerText, 
           isEditing: false 
         });
       }}
       style={{
-        width: "100%",
-        height: "100%",
+        width: "100%", 
         outline: "none",
         zIndex: 5,
-        pointerEvents: item.isEditing ? 'auto' : 'none', 
-        userSelect: item.isEditing ? 'text' : 'none',
-        cursor: item.isEditing ? 'text' : 'move',    // إظهار حرف الـ I عند التعديل
-        display: "grid",
-        placeItems: "center",
-        textAlign: "center",
+        pointerEvents: "auto", 
+        userSelect: "text", 
+        WebkitUserSelect: "text",
+        textAlign: item.styles?.textAlign || "left",
+        lineHeight: item.styles?.lineHeight || "1.5", 
         wordBreak: "break-word",
         whiteSpace: "pre-wrap",
-        ...item.styles,
-        color: item.styles?.color === "#333" ? "#333333" : item.styles?.color,
+        ...item.styles, 
       }}
     >
       {item.text || "Type your text..."}
@@ -159,7 +157,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       width: "100%", 
       height: "100%", 
       overflow: "hidden", 
-      position: "relative", // مهم جداً لوضع الأيقونة في المنتصف
+      position: "relative", 
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -176,22 +174,17 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         alt="Uploaded content"
       />
     ) : (
-      /* هذا الجزء يظهر فقط إذا لم تكن هناك صورة (Placeholder) */
       <div
         onClick={(e) => {
-          e.stopPropagation(); // منع اختيار العنصر عند الضغط على الزر
-          
-          // إنشاء Input مخفي لفتح الملفات
+          e.stopPropagation(); 
           const input = document.createElement('input');
           input.type = 'file';
-          input.accept = 'image/*'; // قبول الصور فقط
-          
+          input.accept = 'image/*'; 
           input.onchange = (event) => {
             const file = event.target.files[0];
             if (file) {
               const reader = new FileReader();
               reader.onload = (e) => {
-                // تحديث الـ Store بالصورة الجديدة
                 updateItem(activePageId, section.id, item.id, { 
                   src: e.target.result 
                 });
@@ -216,18 +209,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
       >
-        {/* أيقونة الـ + الصغيره التي طلبتها */}
-        <div style={{
-          // width: "32px",
-          // height: "32px",
-          // borderRadius: "50%",
-          // backgroundColor: "#4f46e5",
-          // display: "flex",
-          // alignItems: "center",
-          // justifyContent: "center",
-          // color: "white",
-          // boxShadow: "0 4px 12px rgba(79, 70, 229, 0.2)"
-        }}>
+        <div>
           <span style={{ fontSize: "20px", fontWeight: "bold", lineHeight: 1 }}>+</span>
         </div>
         <span style={{ fontSize: "12px", fontWeight: "500" }}>add image</span>
@@ -242,9 +224,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       width: "100%", 
       height: "100%", 
       backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-      
-      // الأولوية لما هو مخزن في الـ styles (المسار القادم من الـ sidebar)
-      clipPath: item.styles?.clipPath || (
+            clipPath: item.styles?.clipPath || (
          item.shapeType === 'triangle' ? "polygon(50% 0%, 0% 100%, 100% 100%)" :
          item.shapeType === 'star' ? "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" :
          "none"
@@ -270,7 +250,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
               cursor: isSelected ? "move" : "pointer",
             }}
             onMouseEnter={(e) => {
-              console.log("Mouse Entered!"); 
               if (!isSelected && item.hoverStyles?.backgroundColor) {
                 e.currentTarget.style.backgroundColor = item.hoverStyles.backgroundColor;
               }
@@ -292,9 +271,9 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
                 fontSize: item.styles?.fontSize || "16px",
                 pointerEvents: "auto",
                 userSelect: isSelected ? "text" : "none", 
-cursor: isSelected ? "text" : "move",
-    lineHeight: "1",
-    outline: "none" // عشان ما يطلع إطار أسود بشع وقت الكتابة
+                cursor: isSelected ? "text" : "move",
+                lineHeight: "1",
+                outline: "none" 
               }}
             >
               {item.text || "Button"}
@@ -304,7 +283,7 @@ cursor: isSelected ? "text" : "move",
         
       </div>
 
-      {isSelected && itemRefs.current[item.id] && (
+      {isSelected && itemRefs.current[item.id] && !item.isEditing && (
         <>
           <Moveable
             target={itemRefs.current[item.id]}
@@ -313,6 +292,7 @@ cursor: isSelected ? "text" : "move",
             origin={false}
             throttleDrag={1} 
             throttleResize={1} 
+            zoom={1 / canvasScale}
             className="element-moveable-tool"
             onDrag={({ target, left, top }) => {
               target.style.left = `${left}px`;
@@ -362,31 +342,16 @@ cursor: isSelected ? "text" : "move",
     renderDirections={["s"]} 
     onResize={({ target, width, height, dist, delta }) => {
       target.style.height = `${height}px`;
-      updateSection(activePageId, section.id, { height: `${height}px` });
     }}
-
     snappable={true}
     origin={false}
     onResizeEnd={({ target }) => {
-    // تأكد من تحديث الـ state هنا لكي لا يعود الحجم القديم عند إعادة الرسم
     updateSection(activePageId, section.id, { 
       styles: { ...section.data.styles, height: parseInt(target.style.height) } 
     });
   }}
   />
 )}
-{/* <SectionWrapper
-      section={section}
-      isSelected={state.selectedSectionId === section.id}
-      onSelect={() => setSelectedSection(section.id)}
-      updateSection={updateSection}
-    >
-      <div className="internal-section-content">
-        {section.data.items.map((item) => (
-          <CanvasElement key={item.id} item={item} store={store} />
-        ))}
-      </div>
-    </SectionWrapper> */}
     <style>{`
         .element-moveable-tool .moveable-line {
             border-top: 1px dashed #4f46e5 !important;
@@ -438,7 +403,6 @@ cursor: isSelected ? "text" : "move",
     box-sizing: border-box !important;
     overflow: hidden;
 }
-    
       `}</style>
     </div>
   );

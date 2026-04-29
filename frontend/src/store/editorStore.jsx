@@ -191,47 +191,49 @@ const updateSection = useCallback((sectionId, data) => {
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
-  const finalX = (typeof x === 'number' ? x : 100) - 75;
-  const finalY = (typeof y === 'number' ? y : 100) - 25;
+  // الخطوة 1: تحديد الأبعاد الافتراضية قبل الحساب لضمان دقة الموقع
+  let defaultWidth = 150;
+  let defaultHeight = 50;
+  let defaultStyles = { backgroundColor: "transparent", color: "#000000" };
+  let defaultText = "";
 
-  // الخطوة 1: إضافة العنصر بدون تحديده فوراً
+  if (type === 'button') {
+    defaultStyles = { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px" };
+    defaultText = "Click Me";
+    defaultHeight = 45;
+  } else if (type === 'text') {
+    defaultText = "New Text";
+  } else if (type === 'shape') {
+    defaultStyles = { backgroundColor: "#4f46e5", borderRadius: "0px" };
+    defaultWidth = 100;
+    defaultHeight = 100;
+  } else if (type === 'image') {
+    defaultStyles = { backgroundColor: "#f1f5f9" };
+    defaultWidth = 200;
+    defaultHeight = 150;
+  }
+
+  const finalWidth = extraData.width || defaultWidth;
+  const finalHeight = extraData.height || defaultHeight;
+
+  // الخطوة 2: الحساب الذكي للموقع (الماوس في منتصف العنصر تماماً)
+  // تم إلغاء الـ -75 و -25 الثابتة واستبدالها بنصف الحجم الفعلي
+  const finalX = (typeof x === 'number' ? x : 100) - (finalWidth / 2);
+  const finalY = (typeof y === 'number' ? y : 100) - (finalHeight / 2);
+
   setState(prev => {
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
     const safeExtraData = extraData || {};
 
-    // --- منطق تحديد التنسيقات الابتدائية حسب النوع لضمان عدم التداخل ---
-    let defaultStyles = { backgroundColor: "transparent", color: "#000000" };
-    let defaultText = "";
-    let defaultWidth = 150;
-    let defaultHeight = 50;
-
-    if (type === 'button') {
-      defaultStyles = { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px" };
-      defaultText = "Click Me";
-      defaultHeight = 45;
-    } else if (type === 'text') {
-      defaultText = "New Text";
-    } else if (type === 'shape') {
-      defaultStyles = { backgroundColor: "#4f46e5", borderRadius: "0px" };
-      defaultWidth = 100;
-      defaultHeight = 100;
-    } else if (type === 'image') {
-      defaultStyles = { backgroundColor: "#f1f5f9" };
-      defaultWidth = 200;
-      defaultHeight = 150;
-    }
-
     const newItem = {
       id: finalNewId,
       type: type,
       x: finalX,
       y: finalY,
-      // نستخدم العرض والارتفاع حسب النوع إلا إذا جاء شيء في extraData
-      width: safeExtraData.width || defaultWidth,
-      height: safeExtraData.height || defaultHeight,
-      // الأولوية لـ extraData.text ثم الافتراضي الخاص بالنوع
+      width: finalWidth,
+      height: finalHeight,
       text: safeExtraData.text !== undefined ? safeExtraData.text : defaultText, 
       ...safeExtraData, 
       styles: { 
@@ -241,8 +243,8 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
         alignItems: 'center', 
         justifyContent: 'center',
         pointerEvents: 'auto',
-        ...defaultStyles, // التنسيقات الافتراضية للنوع (مثل خلفية الزر الزرقاء)
-        ...(safeExtraData?.styles || {}) // دمج أي ستايلات مخصصة (مثل الـ clipPath للأشكال)
+        ...defaultStyles,
+        ...(safeExtraData?.styles || {})
       }
     };
 
@@ -273,8 +275,9 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
       draggingType: null
     };
   });
+  console.log("X:", x, "Y:", y, "Scale:", state.viewMode);
 
-  // الخطوة 2: التحديد بعد فجوة زمنية بسيطة جداً لكسر تعليق المتصفح
+  // الخطوة 3: التحديد التلقائي للعنصر الجديد
   setTimeout(() => {
     setState(current => ({
       ...current,
