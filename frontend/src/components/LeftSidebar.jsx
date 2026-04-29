@@ -33,12 +33,12 @@ const [isShapesOpen, setIsShapesOpen] = React.useState(false);
     { id: 'text', label: 'Text', icon: <Type size={18} /> },
     { id: 'image', label: 'Image', icon: <ImageIcon size={18} /> },
     { id: 'button', label: 'Button', icon: <CreditCard size={18} /> },
-    { id: 'rect', label: 'Shape', icon: <Square size={18} /> },
+    // { id: 'rect', label: 'Shape', icon: <Square size={18} /> },
     { id: 'link', label: 'Link', icon: <LinkIcon size={18} /> },
   ];
 
   const sections = [
-    { id: 'blank', label: 'Blank Canvas', icon: <Square size={18} /> },
+    // { id: 'blank', label: 'Blank Canvas', icon: <Square size={18} /> },
     { id: 'navbar', label: 'Navbar', icon: <Layout size={18} /> },
     { id: 'hero', label: 'Hero', icon: <Columns size={18} /> },
     { id: 'features', label: 'Features', icon: <Plus size={18} /> },

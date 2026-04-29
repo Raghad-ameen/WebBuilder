@@ -189,7 +189,7 @@ const updateSection = useCallback((sectionId, data) => {
 }, [saveToHistory]);
 
 
-const addItemAtPosition = useCallback((type, x, y, sectionId = null,extraData) => {
+const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
   const finalX = (typeof x === 'number' ? x : 100) - 75;
   const finalY = (typeof y === 'number' ? y : 100) - 25;
@@ -199,37 +199,70 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null,extraData) =
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
+    const safeExtraData = extraData || {};
+
+    // --- منطق تحديد التنسيقات الابتدائية حسب النوع لضمان عدم التداخل ---
+    let defaultStyles = { backgroundColor: "transparent", color: "#000000" };
+    let defaultText = "";
+    let defaultWidth = 150;
+    let defaultHeight = 50;
+
+    if (type === 'button') {
+      defaultStyles = { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px" };
+      defaultText = "Click Me";
+      defaultHeight = 45;
+    } else if (type === 'text') {
+      defaultText = "New Text";
+    } else if (type === 'shape') {
+      defaultStyles = { backgroundColor: "#4f46e5", borderRadius: "0px" };
+      defaultWidth = 100;
+      defaultHeight = 100;
+    } else if (type === 'image') {
+      defaultStyles = { backgroundColor: "#f1f5f9" };
+      defaultWidth = 200;
+      defaultHeight = 150;
+    }
+
     const newItem = {
       id: finalNewId,
-      type,
+      type: type,
       x: finalX,
       y: finalY,
-      width: type === 'shape' ? 100 : 150, // إذا كان شكل، خليه مربع 100x100
-      height: type === 'shape' ? 100 : 50,
-      text: type === 'text' ? "New Text" : type === 'button' ? "New Button" : "", 
-      ...extraData, // هنا تدمج بيانات الشكل (مثل shapeType والـ path)
+      // نستخدم العرض والارتفاع حسب النوع إلا إذا جاء شيء في extraData
+      width: safeExtraData.width || defaultWidth,
+      height: safeExtraData.height || defaultHeight,
+      // الأولوية لـ extraData.text ثم الافتراضي الخاص بالنوع
+      text: safeExtraData.text !== undefined ? safeExtraData.text : defaultText, 
+      ...safeExtraData, 
       styles: { 
         position: 'absolute', 
         zIndex: 100, 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        backgroundColor: "#4f46e5",
         pointerEvents: 'auto',
-        ...extraData.styles // دمج الستايلات القادمة مع الشكل
+        ...defaultStyles, // التنسيقات الافتراضية للنوع (مثل خلفية الزر الزرقاء)
+        ...(safeExtraData?.styles || {}) // دمج أي ستايلات مخصصة (مثل الـ clipPath للأشكال)
       }
     };
 
     const updatedSections = [...activePage.sections];
     if (updatedSections.length === 0) {
-      updatedSections.push({ id: `s-${Date.now()}`, type: "blank", data: { items: [newItem], styles: { minHeight: "100vh" } } });
+      updatedSections.push({ 
+        id: `s-${Date.now()}`, 
+        type: "blank", 
+        data: { items: [newItem], styles: { minHeight: "100vh" } } 
+      });
     } else {
       const targetId = sectionId || updatedSections[0].id;
       const idx = updatedSections.findIndex(s => s.id === targetId);
       const sIdx = idx === -1 ? 0 : idx;
       updatedSections[sIdx] = {
         ...updatedSections[sIdx],
-        data: { ...updatedSections[sIdx].data, items: [...(updatedSections[sIdx].data.items || []), newItem] }
+        data: { 
+          ...updatedSections[sIdx].data, 
+          items: [...(updatedSections[sIdx].data.items || []), newItem] 
+        }
       };
     }
 
@@ -248,7 +281,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null,extraData) =
       selectedElementIds: [finalNewId],
       activeElementId: finalNewId
     }));
-  }, 50); // 50ms كافية جداً لفك أي "تعليق" في الأحداث
+  }, 50); 
   
 }, [setState]);
 
