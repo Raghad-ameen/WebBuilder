@@ -25,7 +25,7 @@ const SHAPE_LIBRARY = [
   { id: 'rhombus', label: 'Rhombus', icon: <Diamond />, path: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', radius: '0px' },
 ];
 
-
+//t
 export default function LeftSidebar({ store }) {
 const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, setState } = store;
 const [isShapesOpen, setIsShapesOpen] = React.useState(false);
