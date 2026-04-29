@@ -1,6 +1,8 @@
 import React, { useRef ,useState} from "react";
 import { Trash2 ,Image as ImageIcon} from "lucide-react";
 import Moveable from "react-moveable";
+import SectionWrapper from "./SectionWrapper"; // استيراد المكون الجديد
+import CanvasElement from "./CanvasElement";
 
 export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store }) {
   const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem } = store;
@@ -35,12 +37,15 @@ const isSectionSelected = state.selectedElementIds.includes(section.id);
       ref={sectionRef}
       className={`section-container ${isBlank ? "is-blank-layer" : ""}`}
       style={{
-        position: isBlank ? "absolute" : "relative",
+        position: "relative",
         width: "100%",
-        height: section.data?.styles?.height || (isBlank ? "100%" : "auto"),
-        minHeight: isBlank ? 0 : 400,
-        backgroundColor: isBlank ? "transparent" : (section.data?.styles?.backgroundColor || "transparent"),
+        // height: section.data?.styles?.height || (isBlank ? "100%" : "auto"),
+        // minHeight: isBlank ? 0 : 400,
+        minHeight: "200px",
+        // backgroundColor: isBlank ? "transparent" : (section.data?.styles?.backgroundColor || "transparent"),
+        backgroundColor: section.data?.styles?.backgroundColor || "transparent",
         borderBottom: isBlank ? "none" : "1px dashed #ddd",
+        boxShadow: "none",
         overflow: "visible",
         pointerEvents: "auto",
         zIndex: isBlank ? 10 : 1,
@@ -276,11 +281,29 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       target.style.height = `${height}px`;
       updateSection(activePageId, section.id, { height: `${height}px` });
     }}
+
     snappable={true}
     origin={false}
+    onResizeEnd={({ target }) => {
+    // تأكد من تحديث الـ state هنا لكي لا يعود الحجم القديم عند إعادة الرسم
+    updateSection(activePageId, section.id, { 
+      styles: { ...section.data.styles, height: parseInt(target.style.height) } 
+    });
+  }}
   />
 )}
-
+{/* <SectionWrapper
+      section={section}
+      isSelected={state.selectedSectionId === section.id}
+      onSelect={() => setSelectedSection(section.id)}
+      updateSection={updateSection}
+    >
+      <div className="internal-section-content">
+        {section.data.items.map((item) => (
+          <CanvasElement key={item.id} item={item} store={store} />
+        ))}
+      </div>
+    </SectionWrapper> */}
     <style>{`
         .element-moveable-tool .moveable-line {
             border-top: 1px dashed #4f46e5 !important;

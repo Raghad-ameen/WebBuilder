@@ -8,8 +8,8 @@ const initialData = useMemo(() => ({
   projectName: "dnd",
   canvasWidth: '100%',
   canvasHeight: '800px',
-  canvasStyles: { backgroundColor: '#f3f4f6' }, 
-  pages: [{ id: "p1", name: "Home", sections: [] }],
+canvasStyles: { backgroundColor: '#ffffff' }, 
+ pages: [{ id: "p1", name: "Home", sections: [] }],
   activePageId: "p1",
   selectedElementIds: [],
 }), []);

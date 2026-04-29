@@ -17,6 +17,7 @@
 
 /* حل مشكلة الهوامش السوداء الجذري */
 html, body, #root {
+  background-color: #f3f4f6 !important; /* لون رمادي فاتح للمحرر */
   margin: 0;
   padding: 0;
   width: 100vw;
@@ -122,9 +123,9 @@ div {
 }
 
 /* تأكد أن الخلفية شفافة دائماً في حالة الـ root داخل المحرر */
-html, body, #root {
+/* html, body, #root {
   background: transparent !important;
-}
+} */
 .text-element {
   user-select: none !important;/* يمنع ظهور مؤشر النص عند الضغط العادي */
   cursor: move;      /* يظهر المؤشر الرباعي فوراً */

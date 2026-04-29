@@ -44,16 +44,24 @@ const copyElements = useCallback((elementIds) => {
         activePage.sections.forEach(section => {
             section.data.items.forEach(item => {
                 if (elementIds.includes(item.id)) {
-                    elementsToCopy.push(safeClone(item));
+                    // نقوم بعمل نسخة عميقة للعنصر
+                    const clonedItem = safeClone(item);
+                    
+                    // توليد معرف جديد كلياً عند النسخ لتجنب التكرار لاحقاً
+                    // أضفنا Math.random لضمان التفرد حتى لو تمت العملية في نفس الجزء من الثانية
+                    clonedItem.id = `e-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+                    
+                    elementsToCopy.push(clonedItem);
                 }
             });
         });
+
         if (elementsToCopy.length > 0) {
             return { ...prev, clipboard: elementsToCopy };
         }
         return prev;
     });
-}, []); 
+}, []);
 
 const pasteElements = useCallback(() => {
   setState(prev => {
@@ -165,9 +173,11 @@ const updateSection = useCallback((sectionId, data) => {
           s.id === sectionId 
             ? { 
                 ...s, 
+                // نحدث الـ styles في جذر السكشن لسهولة الوصول
+                styles: { ...(s.styles || {}), ...(data.styles || {}) },
+                // نحدث البيانات الأخرى إذا وجدت
                 data: { 
                   ...s.data, 
-                  styles: { ...(s.data.styles || {}), ...(data.styles || {}) },
                   items: data.items || s.data.items 
                 } 
               } 
@@ -177,7 +187,6 @@ const updateSection = useCallback((sectionId, data) => {
     };
   });
 }, [saveToHistory]);
-
 
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
