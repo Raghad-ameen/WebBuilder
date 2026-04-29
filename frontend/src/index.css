@@ -125,3 +125,7 @@ div {
 html, body, #root {
   background: transparent !important;
 }
+.text-element {
+  user-select: none !important;/* يمنع ظهور مؤشر النص عند الضغط العادي */
+  cursor: move;      /* يظهر المؤشر الرباعي فوراً */
+}

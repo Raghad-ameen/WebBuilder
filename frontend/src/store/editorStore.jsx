@@ -7,34 +7,29 @@ const safeClone = (obj) => {
   }
 };
 export function useEditorStore(initialState) {
-  const [state, setState] = useState({
+ const [state, setState] = useState({
     projectName: "Shops Project", 
     viewMode: 'desktop',
-    modal: {
-      isOpen: false,
-      type: null, 
-      data: null, 
-    },
-    canvasStyles: {
-        backgroundColor: "#ffffff", // اللون الافتراضي للكانفاس
-    },
+    modal: { isOpen: false, type: null, data: null },
+    canvasStyles: { backgroundColor: "#ffffff" },
     canvasWidth: '100%', 
     canvasHeight: '800px', 
     pages: [],
     activePageId: null,
-    selected: [],
+    selected: [],           // المسمى القديم (للوحة الخصائص)
+    selectedElementIds: [], // المسمى الجديد (للتحريك والـ Moveable)
     clipboard: [], 
+    isDraggingNow: false,   // ضروري لعمل الـ DnD
+  draggingType: null,
     ...initialState
-  });
+});
 const [history, setHistory] = useState([]);
 const [redoStack, setRedoStack] = useState([]);
 const saveToHistory = useCallback((stateToSave) => {
     if (!stateToSave) return;
-    // لا تقومي بعمل JSON.stringify مرتين!
     const clone = safeClone(stateToSave);
     
     setHistory(prev => {
-        // نكتفي بحفظ آخر 30 خطوة بدلاً من 40 لزيادة السرعة
         return [...prev, clone].slice(-30);
     });
     setRedoStack([]); 
@@ -61,39 +56,39 @@ const copyElements = useCallback((elementIds) => {
 }, []); 
 
 const pasteElements = useCallback(() => {
-    setState(prev => {
-        if (!prev.clipboard || prev.clipboard.length === 0) {
-            return prev;
-        }
+  setState(prev => {
+    if (!prev.clipboard || prev.clipboard.length === 0) return prev;
 
-        const activePage = prev.pages.find(p => p.id === prev.activePageId);
-        if (!activePage || activePage.sections.length === 0) return prev;
-        const targetSection = activePage.sections[0]; 
-                const newItems = prev.clipboard.map(item => ({
-            ...item,
-            id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            x: item.x + 40, 
-            y: item.y + 40,
-        }));
+    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    if (!activePage) return prev;
 
-        const newItemIds = newItems.map(ni => ni.id);
+    saveToHistory(prev);
 
-        saveToHistory(prev); 
+    // البحث عن السيكشن المختار أو آخر سيكشن مضاف
+    const targetSection = activePage.sections.find(s => s.id === prev.activeSectionId) || activePage.sections[activePage.sections.length - 1];
+    
+    if (!targetSection) return prev;
 
-        return {
-            ...prev,
-            pages: prev.pages.map(p => p.id === prev.activePageId ? {
-                ...p,
-                sections: p.sections.map(s => s.id === targetSection.id ? {
-                    ...s,
-                    data: { ...s.data, items: [...(s.data.items || []), ...newItems] }
-                } : s)
-            } : p),
-            selectedElementIds: newItemIds,
-            activeElementId: newItemIds[0] || null 
-        };
-    });
-}, [saveToHistory, setState]);
+    const newItems = prev.clipboard.map(item => ({
+      ...item,
+      id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      x: item.x + 40, 
+      y: item.y + 40,
+    }));
+
+    return {
+      ...prev,
+      pages: prev.pages.map(p => p.id === prev.activePageId ? {
+        ...p,
+        sections: p.sections.map(s => s.id === targetSection.id ? {
+          ...s,
+          data: { ...s.data, items: [...(s.data.items || []), ...newItems] }
+        } : s)
+      } : p),
+      selectedElementIds: newItems.map(ni => ni.id)
+    };
+  });
+}, [saveToHistory]);
 const updateState = useCallback((newState) => {
     saveToHistory(state);
     setState(newState);
@@ -170,9 +165,7 @@ const updateSection = useCallback((sectionId, data) => {
                 ...s, 
                 data: { 
                   ...s.data, 
-                  // نضمن دمج الستايلات بدلاً من استبدالها
                   styles: { ...(s.data.styles || {}), ...(data.styles || {}) },
-                  // نضمن بقاء العناصر إذا لم نرسل items جديدة
                   items: data.items || s.data.items 
                 } 
               } 
@@ -193,6 +186,8 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
     if (!activePage) return prev;
 
     const newId = `e-${Date.now()}`; 
+    
+    // الإحداثيات والستايل الأساسي
     const baseItem = {
       id: newId,
       type: type,
@@ -200,77 +195,90 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
       y: y - 25,
       width: 150,
       height: 50,
-      styles: { display: "flex", alignItems: "center", justifyContent: "center" }
+      styles: { 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        zIndex: 100 ,
+        userSelect: 'none', 
+  WebkitUserSelect: 'none',
+  cursor: 'move'
+      }
     };
+
+    // --- بداية قسم البيانات الخاصة (بدون أي حذف) ---
     let specificData = {};
     if(type === "text") {
         specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333" } };
-   // داخل useEditorStore.js -> addItemAtPosition
-} else if(type === "button") {
-    specificData = { 
-        text: "New Button", 
-        action: { type: 'link', url: '' }, 
-        
-        styles: { 
-            ...baseItem.styles, 
-            backgroundColor: "#4f46e5", 
-            color: "white", 
-            borderRadius: "6px",
-            fontSize: "14px", 
-            fontWeight: "bold",
-            textAlign: "center", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            lineHeight: "1", 
-            padding: "0 16px", 
-            cursor: "pointer",
-            border: "0px solid #000000",
-            transition: "all 0.2s" 
-        },
-        hoverStyles: {
-            backgroundColor: "#4338ca",
-            color: "white"
-        }
-    };
-}
-     else if(type === "image") {
-    specificData = { 
-        src: null, 
-        styles: { 
-            ...baseItem.styles, 
-            objectFit: "cover",
-            borderRadius: "8px", 
-            border: "0px solid #000000" 
-        } 
-    };
-}
-// داخل addItemAtPosition في useEditorStore.js
-else if(type === "shape") {
-    specificData = { 
-        shapeType: 'rect', // النوع الافتراضي
-        styles: { 
-            ...baseItem.styles, 
-            backgroundColor: "#4f46e5", 
-            borderRadius: "0px",
-            clipPath: "none" // سنستخدم هذا لرسم الأشكال المعقدة
-        } 
-    };
-}
-    const newItem = { ...baseItem, ...specificData };
+    } else if(type === "button") {
+        specificData = { 
+            text: "New Button", 
+            action: { type: 'link', url: '' }, 
+            styles: { 
+                ...baseItem.styles, 
+                backgroundColor: "#4f46e5", 
+                color: "white", 
+                borderRadius: "6px",
+                fontSize: "14px", 
+                fontWeight: "bold",
+                textAlign: "center", 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center",
+                lineHeight: "1", 
+                padding: "0 16px", 
+                cursor: "pointer",
+                border: "0px solid #000000",
+                transition: "all 0.2s" 
+            },
+            hoverStyles: {
+                backgroundColor: "#4338ca",
+                color: "white"
+            }
+        };
+    } else if(type === "image") {
+        specificData = { 
+            src: null, 
+            styles: { 
+                ...baseItem.styles, 
+                objectFit: "cover",
+                borderRadius: "8px", 
+                border: "0px solid #000000" 
+            } 
+        };
+    } else if(type === "shape") {
+        specificData = { 
+            shapeType: 'rect', 
+            styles: { 
+                ...baseItem.styles, 
+                backgroundColor: "#4f46e5", 
+                borderRadius: "0px",
+                clipPath: "none" 
+            } 
+        };
+    }
+    // --- نهاية قسم البيانات الخاصة ---
 
+    const newItem = { ...baseItem, ...specificData };
     let updatedSections = [...activePage.sections];
     
-    if (!sectionId || !activePage.sections.some(s => s.id === sectionId)) {
+    // منطق اختيار السيكشن المستهدف (ذكي)
+    let targetSectionId = sectionId;
+    if (!targetSectionId && updatedSections.length > 0) {
+        targetSectionId = updatedSections[0].id; 
+    }
+
+    if (!targetSectionId || !activePage.sections.some(s => s.id === targetSectionId)) {
       const newBlankSection = {
         id: `s-${Date.now()}`,
         type: "blank", 
         data: {
           styles: { 
-            minHeight: "0px", 
+            minHeight: "500px", // زدنا الارتفاع ليظهر بوضوح عند السحب لأول مرة
             backgroundColor: "transparent", 
             padding: "0px",
-            zIndex: 1 
+            zIndex: 1,
+            position: "relative"
           },
           items: [newItem]
         }
@@ -278,7 +286,7 @@ else if(type === "shape") {
       updatedSections.push(newBlankSection);
     } else {
       updatedSections = updatedSections.map(s => 
-        s.id === sectionId 
+        s.id === targetSectionId 
           ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } } 
           : s
       );
@@ -287,18 +295,31 @@ else if(type === "shape") {
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      selectedElementIds: [newId], 
-      activeElementId: newId      
+      selected: [newId],           // للوحة الخصائص
+      selectedElementIds: [newId],  // للتحريك (Moveable)
+      activeElementId: newId,
+      isDraggingNow: false,         // إيقاف وضع السحب
+      draggingType: null            // تنظيف نوع العنصر المسحوب
     };
   });
-}, [saveToHistory, setState]); 
+}, [saveToHistory, setState]);
+
+
 const selectItems = useCallback((ids) => {
   setState(prev => {
     const newSelected = Array.isArray(ids) ? ids : [ids];
-    if (JSON.stringify(prev.selected) === JSON.stringify(newSelected)) {
+    
+    // المقارنة لضمان عدم إعادة الرندرة بدون داعي (تحسين أداء)
+    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(newSelected)) {
       return prev;
     }
-    return { ...prev, selected: newSelected };
+
+    return { 
+      ...prev, 
+selected: newSelected, // للوحات القديمة (Properties)
+      selectedElementIds: newSelected ,
+    activeElementId: newSelected[0] || null };
+      
   });
 }, []);
 
@@ -392,7 +413,7 @@ const clearCanvas = useCallback(() => {
     return {
       ...prev,
       pages: updatedPages,
-      selected: [] 
+selectedElementIds: [],
     };
   });
 }, [saveToHistory]);
@@ -438,28 +459,31 @@ const undo = useCallback(() => {
   setHistory((prevHistory) => {
     if (prevHistory.length === 0) return prevHistory;
 
-    const previousState = prevHistory[prevHistory.length - 1];
+    const previousState = safeClone(prevHistory[prevHistory.length - 1]);
+    const newHistory = prevHistory.slice(0, -1);
 
     setState((currentState) => {
       setRedoStack((prevRedo) => [safeClone(currentState), ...prevRedo]);
       return previousState;
     });
 
-    return prevHistory.slice(0, -1);
+    return newHistory;
   });
-}, []); 
+}, []);
+
 const redo = useCallback(() => {
   setRedoStack((prevRedo) => {
     if (prevRedo.length === 0) return prevRedo;
 
-    const nextState = prevRedo[0];
+    const nextState = safeClone(prevRedo[0]);
+    const newRedo = prevRedo.slice(1);
 
     setState((currentState) => {
       setHistory((prevH) => [...prevH, safeClone(currentState)]);
       return nextState;
     });
 
-    return prevRedo.slice(1);
+    return newRedo;
   });
 }, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
@@ -545,8 +569,7 @@ const cutElements = useCallback((elementIds) => {
       ...prev,
       pages: updatedPages,
       clipboard: elementsToCopy,
-      selected: [] 
-    };
+selectedElementIds: [],    };
   });
 }, [saveToHistory]);
 

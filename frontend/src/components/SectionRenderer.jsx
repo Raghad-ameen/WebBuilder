@@ -56,14 +56,13 @@ const handleDoubleClick = (e) => {
       )}
 
 {section.data.items?.map((item) => {
-  const isSelected = selectedElementIds.includes(item.id);
-  
-  return (
+const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id);  return (
     <React.Fragment key={item.id}>
       <div
         ref={(el) => (itemRefs.current[item.id] = el)}
         onMouseDown={(e) => {
           e.stopPropagation();
+          onSelect(item.id); // استدعاء دالة التحديد
           if (!isSelected) onSelect(item.id);
         }}
         style={{
@@ -82,33 +81,53 @@ const handleDoubleClick = (e) => {
         {/* --- بداية الدمج: رندرة الأنواع المختلفة --- */}
 
         {/* 1. رندرة النصوص */}
-        {item.type === 'text' && (
-          <div
-            contentEditable={isSelected}
-            onDoubleClick={handleDoubleClick} // إضافة التحديد الأزرق
-            suppressContentEditableWarning
-            onBlur={(e) => updateItem(activePageId, section.id, item.id, { text: e.target.innerText })}
-            style={{
-              width: "100%",
-              height: "100%",
-              outline: "none",
-              cursor: isSelected ? "text" : "move", // يظهر حرف I عند الاختيار للتعديل
+       {item.type === 'text' && (
+  <div
+    // التعديل 1: لا يصبح Editable إلا إذا فعلنا ذلك برمجياً (Double Click)
+    contentEditable={item.isEditing} 
+    suppressContentEditableWarning
+    
+    // التعديل 2: عند فقدان التركيز نحدث النص ونغلق وضع التعديل
+    onBlur={(e) => {
+      const newText = e.target.innerText;
+      updateItem(activePageId, section.id, item.id, { 
+        text: newText,
+        isEditing: false // نغلق وضع التعديل في الـ Store
+      });
+    }}
+    
+    style={{
+      width: "100%",
+      height: "100%",
+      outline: "none",
+      
+      // التعديل 3: التحكم في المؤشر والتحديد
+      cursor: item.isEditing ? "text" : "move", 
+      userSelect: item.isEditing ? "text" : "none",
+      WebkitUserSelect: item.isEditing ? "text" : "none",
+      
       display: "grid",     
-      placeItems: "center",      // تمركز أفقي وعمودي بكلمة واحدة              // لضبط المحاذاة
-      alignItems: "center",              // محاذاة عمودية
+      placeItems: "center",
+      alignItems: "center",
       justifyContent: "center",  
-      textAlign: "center",        // محاذاة أفقية (اختياري حسب رغبتك)
-      lineHeight: "1.5 !important",                 // لضبط المسافات بين الأسطر
+      textAlign: "center",
       wordBreak: "break-word",
-      whiteSpace: "pre-wrap",    // للحفاظ على المسافات والأسطر
-              ...item.styles,
-              display: "grid !important" // التأكيد على النوع
-            }}
-          >
-            {item.text || "Type your text..."}
-          </div>
-        )}
-
+      whiteSpace: "pre-wrap",
+      
+      // التعديل 4: دمج الستايلات بدون !important (React سيعطيها الأولوية)
+      ...item.styles,
+      display: "grid", 
+    }}
+    // التعديل 5: منع أحداث الكيبورد من الوصول للمتصفح أثناء التعديل
+    onKeyDown={(e) => {
+      if (item.isEditing) {
+        e.stopPropagation(); // يمنع الـ Ctrl+C من نسخ العنصر أثناء كتابة نص
+      }
+    }}
+  >
+    {item.text || "Type your text..."}
+  </div>
+)}
         {/* 2. رندرة الصور */}
         {item.type === 'image' && (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", ...item.styles }}>

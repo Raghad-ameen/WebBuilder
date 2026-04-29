@@ -17,37 +17,41 @@ export default function TopBar({ store }) {
   
   const activePage = state.pages.find(p => p.id === state.activePageId);
 
+  const canUndo = history && history.length > 0;
+  const canRedo = redoStack && redoStack.length > 0;
+
   return (
     <div style={styles.container}>
       <div style={styles.section}>
-        <div style={styles.buttonGroup}>
-         <button 
-            onClick={undo} 
-            disabled={!history || history.length === 0} 
-            title="Undo"
-            style={{
-              ...styles.iconButton,
-              opacity: (history && history.length > 0) ? 1 : 0.3,
-              cursor: (history && history.length > 0) ? 'pointer' : 'not-allowed'
-            }}
-          >
-            <Undo2 size={18} />
-          </button>
+       <div style={styles.buttonGroup}>
+  {/* زر التراجع Undo */}
+  <button 
+    onClick={undo} 
+    disabled={!canUndo} 
+    title="Undo (Ctrl+Z)"
+    style={{
+      ...styles.iconButton,
+      opacity: canUndo ? 1 : 0.3,
+      cursor: canUndo ? 'pointer' : 'not-allowed'
+    }}
+  >
+    <Undo2 size={18} />
+  </button>
 
-          {/* زر الإعادة Redo */}
-          <button 
-            onClick={redo} 
-            disabled={!redoStack || redoStack.length === 0}
-            title="Redo"
-            style={{
-              ...styles.iconButton,
-              opacity: (redoStack && redoStack.length > 0) ? 1 : 0.3,
-              cursor: (redoStack && redoStack.length > 0) ? 'pointer' : 'not-allowed'
-            }}
-          >
-            <Redo2 size={18} />
-          </button>
-        </div>
+  {/* زر الإعادة Redo - تم إصلاح علامة التعجب هنا */}
+  <button 
+    onClick={redo} 
+    disabled={!canRedo} // تم التعديل من canRedo إلى !canRedo
+    title="Redo (Ctrl+Y)"
+    style={{
+      ...styles.iconButton,
+      opacity: canRedo ? 1 : 0.3,
+      cursor: canRedo ? 'pointer' : 'not-allowed'
+    }}
+  >
+    <Redo2 size={18} />
+  </button>
+</div>
         
         <div style={styles.divider} />
         

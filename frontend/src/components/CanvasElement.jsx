@@ -20,27 +20,36 @@ export default function CanvasElement({ store, children }) {
         position: 'relative',
     }}>
       {/* طبقة الحماية - تظهر وتختفي بذكاء */}
-      {state.isDraggingNow && (
-        <div 
-          onMouseUp={(e) => {
-            const canvasRect = document.getElementById('main-canvas').getBoundingClientRect();
-            const x = e.clientX - canvasRect.left;
-            const y = e.clientY - canvasRect.top;
-            
-            addItemAtPosition(state.draggingType, x, y, state.pages.find(p => p.id === state.activePageId)?.sections[0]?.id || null);
-            setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-          }}
-          style={{
-            position: 'fixed', // تغطي كل الشاشة أثناء السحب فقط
-            inset: 0,
-            zIndex: 99999,
-            cursor: 'copy',
-            backgroundColor: 'transparent' // شفافة تماماً
-          }}
-        />
-      )}
+{/* طبقة الحماية - تظهر فقط وقت السحب */}
+{state.isDraggingNow && (
+  <div 
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 99999, // أعلى من كل شيء
+      backgroundColor: 'rgba(0,0,0,0.05)', // لون خفيف جداً للتأكد أنها تعمل
+      cursor: 'copy'
+    }}
+    onMouseUp={(e) => {
+      const canvas = document.getElementById('main-canvas-area');
+      if (!canvas) return;
 
-      <div 
+      const rect = canvas.getBoundingClientRect();
+      // الحساب مع مراعاة الـ Scale
+const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);      
+      const x = (e.clientX - rect.left) / scale;
+      const y = (e.clientY - rect.top) / scale;
+      
+      const activePage = state.pages.find(p => p.id === state.activePageId);
+      const targetSectionId = activePage?.sections?.[0]?.id || null;
+
+      addItemAtPosition(state.draggingType, x, y, targetSectionId);
+      
+      // إنهاء الحالة فوراً
+      setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+    }}
+  />
+)}      <div 
         id="main-canvas"
         style={{ 
             width: getCanvasWidth(), 

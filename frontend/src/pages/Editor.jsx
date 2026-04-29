@@ -10,23 +10,20 @@ const initialData = useMemo(() => ({
   projectName: "dnd",
   canvasWidth: '100%',
   canvasHeight: '800px',
-  // أضيفي هذا السطر هنا
   canvasStyles: { backgroundColor: '#f3f4f6' }, 
   pages: [{ id: "p1", name: "Home", sections: [] }],
   activePageId: "p1",
-  selected: [],
+  selectedElementIds: [], // تغييره من selected إلى selectedElementIds
 }), []);
 
   const store = useEditorStore(initialData);
 
   // مراجع ثابتة للوصول لأحدث البيانات داخل الـ Listeners
   const storeRef = useRef(store);
-  const selectedRef = useRef(store.state.selected);
-
+const selectedRef = useRef(store.state.selectedElementIds); // تعديل هنا
   // تحديث المراجع في كل رندرة (مهم جداً لعمل الكيبورد)
   storeRef.current = store;
-  selectedRef.current = store.state.selected;
-
+selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
   // --- 1. التعامل مع النقر خارج العناصر ---
   useEffect(() => {
     const handleClickOutside = (e) => {
