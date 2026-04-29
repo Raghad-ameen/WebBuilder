@@ -182,103 +182,104 @@ const updateSection = useCallback((sectionId, data) => {
 
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
+  // توليد ID فريد لاستخدامه في كامل العملية
+  const finalNewId = `e-${Date.now()}`;
+
   setState(prev => {
-    saveToHistory(prev); 
+    saveToHistory(prev);
 
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    const newId = `e-${Date.now()}`; 
-    
     // الإحداثيات والستايل الأساسي
     const baseItem = {
-      id: newId,
+      id: finalNewId,
       type: type,
       x: x - 75,
       y: y - 25,
       width: 150,
       height: 50,
-      styles: { 
-        display: "flex", 
-        alignItems: "center", 
+      styles: {
+        display: "flex",
+        alignItems: "center",
         justifyContent: "center",
-        zIndex: 100 ,
-        userSelect: 'none', 
-  WebkitUserSelect: 'none',
-  cursor: 'move'
+        zIndex: 100,
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        cursor: 'move'
       }
     };
 
-    // --- بداية قسم البيانات الخاصة (بدون أي حذف) ---
+    // --- بداية قسم البيانات الخاصة (محمي بالكامل) ---
     let specificData = {};
-    if(type === "text") {
-        specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333333" } };
-    } else if(type === "button") {
-        specificData = { 
-            text: "New Button", 
-            action: { type: 'link', url: '' }, 
-            styles: { 
-                ...baseItem.styles, 
-                backgroundColor: "#4f46e5", 
-                color: "white", 
-                borderRadius: "6px",
-                fontSize: "14px", 
-                fontWeight: "bold",
-                textAlign: "center", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center",
-                lineHeight: "1", 
-                padding: "0 16px", 
-                cursor: "pointer",
-                border: "0px solid #000000",
-                transition: "all 0.2s" 
-            },
-            hoverStyles: {
-                backgroundColor: "#4338ca",
-                color: "white"
-            }
-        };
-    } else if(type === "image") {
-        specificData = { 
-            src: null, 
-            styles: { 
-                ...baseItem.styles, 
-                objectFit: "cover",
-                borderRadius: "8px", 
-                border: "0px solid #000000" 
-            } 
-        };
-    } else if(type === "shape") {
-        specificData = { 
-            shapeType: 'rect', 
-            styles: { 
-                ...baseItem.styles, 
-                backgroundColor: "#4f46e5", 
-                borderRadius: "0px",
-                clipPath: "none" 
-            } 
-        };
+    if (type === "text") {
+      specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333333" } };
+    } else if (type === "button") {
+      specificData = {
+        text: "New Button",
+        action: { type: 'link', url: '' },
+        styles: {
+          ...baseItem.styles,
+          backgroundColor: "#4f46e5",
+          color: "white",
+          borderRadius: "6px",
+          fontSize: "14px",
+          fontWeight: "bold",
+          textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          lineHeight: "1",
+          padding: "0 16px",
+          cursor: "pointer",
+          border: "0px solid #000000",
+          transition: "all 0.2s"
+        },
+        hoverStyles: {
+          backgroundColor: "#4338ca",
+          color: "white"
+        }
+      };
+    } else if (type === "image") {
+      specificData = {
+        src: null,
+        styles: {
+          ...baseItem.styles,
+          objectFit: "cover",
+          borderRadius: "8px",
+          border: "0px solid #000000"
+        }
+      };
+    } else if (type === "shape") {
+      specificData = {
+        shapeType: 'rect',
+        styles: {
+          ...baseItem.styles,
+          backgroundColor: "#4f46e5",
+          borderRadius: "0px",
+          clipPath: "none"
+        }
+      };
     }
     // --- نهاية قسم البيانات الخاصة ---
 
     const newItem = { ...baseItem, ...specificData };
     let updatedSections = [...activePage.sections];
-    
-    // منطق اختيار السيكشن المستهدف (ذكي)
+
+    // منطق اختيار السيكشن المستهدف
     let targetSectionId = sectionId;
     if (!targetSectionId && updatedSections.length > 0) {
-        targetSectionId = updatedSections[0].id; 
+      targetSectionId = updatedSections[0].id;
     }
 
     if (!targetSectionId || !activePage.sections.some(s => s.id === targetSectionId)) {
       const newBlankSection = {
         id: `s-${Date.now()}`,
-        type: "blank", 
+        type: "blank",
         data: {
-          styles: { 
-            minHeight: "500px", // زدنا الارتفاع ليظهر بوضوح عند السحب لأول مرة
-            backgroundColor: "transparent", 
+          styles: {
+            minHeight: "500px",
+            backgroundColor: "transparent",
             padding: "0px",
             zIndex: 1,
             position: "relative"
@@ -288,30 +289,35 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
       };
       updatedSections.push(newBlankSection);
     } else {
-      updatedSections = updatedSections.map(s => 
-        s.id === targetSectionId 
-          ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } } 
+      updatedSections = updatedSections.map(s =>
+        s.id === targetSectionId
+          ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } }
           : s
       );
     }
 
+    // إرجاع الحالة الجديدة مع ضمان إيقاف وضع السحب
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      selected: [],           // للوحة الخصائص
-      selectedElementIds: [],  // للتحريك (Moveable)
-      activeElementId: newId,
-      isDraggingNow: false,         // إيقاف وضع السحب
-      draggingType: null            // تنظيف نوع العنصر المسحوب
+      selected: [],
+      selectedElementIds: [],
+      activeElementId: finalNewId,
+      isDraggingNow: false,
+      draggingType: null
     };
-    setTimeout(() => {
-  setState(current => ({
-    ...current,
-    selected: [newId],
-    selectedElementIds: [newId]
-  }));
-}, 50);
   });
+
+  // التوقيت السحري لتحديد العنصر برمجياً بعد رندرة الـ DOM
+  setTimeout(() => {
+    setState(current => ({
+      ...current,
+      selected: [finalNewId],
+      selectedElementIds: [finalNewId]
+    }));
+    console.log("تم تحديث الحالة وتحديد العنصر الجديد:", finalNewId);
+  }, 100);
+
 }, [saveToHistory, setState]);
 
 

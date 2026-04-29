@@ -82,7 +82,14 @@ const handleElementClick = (type) => {
   addItemAtPosition(type, 150, 150, targetSectionId);
 };
 
-
+const handleStartDrag = (e, type) => {
+    e.preventDefault(); // منع سحب الصور الافتراضي للمتصفح
+    setState(prev => ({ 
+      ...prev, 
+      isDraggingNow: true, 
+      draggingType: type 
+    }));
+  };
 
   return (
     <div style={styles.sidebar}>
@@ -153,13 +160,14 @@ const handleElementClick = (type) => {
       <button 
         key={el.id} 
         style={styles.elementBtn}
-        onClick={() => {
-          const newId = `item_${Date.now()}`;
-          const activePage = state.pages.find(p => p.id === state.activePageId);
-          const targetId = activePage?.sections[0]?.id || null;
-          store.addItemAtPosition(el.id, 100, 100, targetId, newId);
-          setState(prev => ({ ...prev, selectedElementIds: [newId] }));
-        }}
+        // onClick={() => {
+        //   const newId = `item_${Date.now()}`;
+        //   const activePage = state.pages.find(p => p.id === state.activePageId);
+        //   const targetId = activePage?.sections[0]?.id || null;
+        //   store.addItemAtPosition(el.id, 100, 100, targetId, newId);
+        //   setState(prev => ({ ...prev, selectedElementIds: [newId] }));
+        // }}
+        onMouseDown={(e) => handleStartDrag(e, el.id)}
       >
         {el.icon}
         <span style={styles.label}>{el.label}</span>
@@ -179,7 +187,7 @@ const handleElementClick = (type) => {
       {isShapesOpen && (
         <div style={styles.shapesGridPopup}>
           {SHAPE_LIBRARY.map(s => (
-            <div key={s.id} style={styles.shapeIconItem} onClick={() => handleAddShape(s)}>
+            <div key={s.id} style={styles.shapeIconItem} onMouseDown={(e) => handleStartDrag(e, 'shape')}>
               {s.icon}
               <span style={{fontSize: '10px'}}>{s.label}</span>
             </div>

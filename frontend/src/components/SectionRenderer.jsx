@@ -29,6 +29,8 @@ const handleDoubleClick = (e) => {
   sel.addRange(range);
 };
   const isBlank = section.type === "blank";
+  // داخل مكون SectionRenderer
+const isSectionSelected = state.selectedElementIds.includes(section.id);
 
   return (
     <div
@@ -281,16 +283,21 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
   );
 })}
 
-      <Moveable
-        target={sectionRef.current}
-        resizable={true}
-        renderDirections={["s"]}
-        className="section-resizer-tool"
-        onResize={({ target, height }) => {
-          target.style.height = `${height}px`;
-          updateSection(section.id, { styles: { height } });
-        }}
-      />
+      {!state.isDraggingNow && isSectionSelected && (
+  <Moveable
+    target={`.section-${section.id}`}
+    resizable={true}
+    renderDirections={["s"]} // تغيير الحجم من الأسفل فقط
+    onResize={({ target, width, height, dist, delta }) => {
+      target.style.height = `${height}px`;
+      // تحديث الارتفاع في الـ Store
+      updateSection(activePageId, section.id, { height: `${height}px` });
+    }}
+    // تأكدي من إضافة هذه الخاصية لمنع تداخل الماوس مع العناصر الداخلية
+    snappable={true}
+    origin={false}
+  />
+)}
 
     <style>{`
         .element-moveable-tool .moveable-line {

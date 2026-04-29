@@ -8,6 +8,15 @@ export default function CanvasElement({ store, children }) {
     if (state.viewMode === 'tablet') return '768px';
     return '100%';
   };
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (state.isDraggingNow) {
+        setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [state.isDraggingNow, setState]);
 
   return (
     <div style={{
@@ -27,7 +36,7 @@ export default function CanvasElement({ store, children }) {
       position: 'fixed',
       inset: 0,
       zIndex: 99999, // أعلى من كل شيء
-      backgroundColor: 'rgba(0,0,0,0.05)', // لون خفيف جداً للتأكد أنها تعمل
+      backgroundColor: 'rgba(0,0,0,0.02)', // لون خفيف جداً للتأكد أنها تعمل
       cursor: 'copy'
     }}
     onMouseUp={(e) => {
@@ -37,9 +46,9 @@ export default function CanvasElement({ store, children }) {
       const rect = canvas.getBoundingClientRect();
       // الحساب مع مراعاة الـ Scale
 const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);      
-      const x = (e.clientX - rect.left) / scale;
-      const y = (e.clientY - rect.top) / scale;
-      
+            const x = (e.clientX - rect.left) / scale;
+            const y = (e.clientY - rect.top) / scale;
+                  
       const activePage = state.pages.find(p => p.id === state.activePageId);
       const targetSectionId = activePage?.sections?.[0]?.id || null;
 
