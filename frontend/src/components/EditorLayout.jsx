@@ -95,16 +95,16 @@ export default function EditorLayout({ store }) {
                   // الإعدادات الديناميكية للعرض والسكيل لضمان استجابة المحرر
                   width: width, 
                   minWidth: width === '100%' ? 'auto' : width,
-                  backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff",
+                  // backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff",
                   minHeight: state.canvasHeight || "100vh", 
                   
                   // السكيل يطبق هنا في الزاوية العلوية المركزية
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top center",
+                  // transform: `scale(${scale})`,
+                  // transformOrigin: "top center",
                   
                   transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
                   position: "relative", 
-                  boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.15)", 
+                  // boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.15)", 
                   margin: "0 auto",
                   
                   // overflow: visible ضروري جداً لكي لا تلتصق العناصر بالحواف عند السحب
