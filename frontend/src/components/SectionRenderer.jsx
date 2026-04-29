@@ -21,7 +21,6 @@ React.useEffect(() => {
 
 const handleDoubleClick = (e) => {
   e.stopPropagation();
-  // تحديد النص بالكامل
   const range = document.createRange();
   range.selectNodeContents(e.target);
   const sel = window.getSelection();
@@ -29,7 +28,6 @@ const handleDoubleClick = (e) => {
   sel.addRange(range);
 };
   const isBlank = section.type === "blank";
-  // داخل مكون SectionRenderer
 const isSectionSelected = state.selectedElementIds.includes(section.id);
 
   return (
@@ -64,31 +62,27 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         ref={(el) => (itemRefs.current[item.id] = el)}
         onMouseDown={(e) => {
           e.stopPropagation();
-          onSelect(item.id); // استدعاء دالة التحديد
+          onSelect(item.id);
           if (!isSelected) onSelect(item.id);
         }}
         style={{
           position: "absolute",
-          left: item.x,
-          top: item.y,  
-          width: item.width,
-          height: item.height,
+          left: `${item.x}px`,  
+  top: `${item.y}px`,  
+  width: `${item.width}px`,
+  height: `${item.height}px`,
           zIndex: isSelected ? 2000 : 150,
           cursor: "move",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
-          ...item.styles, // هنا يتم تطبيق الستايلات القادمة من المتجر (مثل clipPath للأشكال)
+          ...item.styles, 
         }}
       >
-        {/* --- بداية الدمج: رندرة الأنواع المختلفة --- */}
-
-        {/* 1. رندرة النصوص */}
 {item.type === 'text' && (
   <div 
     className="text-element-wrapper"
     style={{ position: 'relative', width: "100%", height: "100%", display: "grid", placeItems: "center" }}
   >
-    {/* 1. طبقة التحكم والتحريك (الدرع الشفاف) */}
     {!item.isEditing && (
       <div
         style={{
@@ -101,10 +95,8 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         onDoubleClick={(e) => {
           e.stopPropagation();
           
-          // تفعيل وضع التعديل
           updateItem(activePageId, section.id, item.id, { isEditing: true });
 
-          // الحل الذكي لضمان ظهور المؤشر
           setTimeout(() => {
             const input = document.getElementById(`text-input-${item.id}`);
             if (input) {
@@ -118,20 +110,18 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
               sel.removeAllRanges();
               sel.addRange(range);
               
-              input.click(); // نقرة وهمية لتثبيت المؤشر
+              input.click(); 
             }
-          }, 20); // زيادة بسيطة للتأكيد
+          }, 20); 
         }}
       />
     )}
 
-    {/* 2. النص الحقيقي بكل تنسيقاته */}
     <div
       id={`text-input-${item.id}`}
       contentEditable={item.isEditing}
       suppressContentEditableWarning
       onBlur={(e) => {
-        // حفظ النص + إغلاق التعديل (دمجناهم هنا)
         updateItem(activePageId, section.id, item.id, { 
           text: e.target.innerText, 
           isEditing: false 
@@ -150,7 +140,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         wordBreak: "break-word",
         whiteSpace: "pre-wrap",
         ...item.styles,
-        // تصحيح اللون للمتصفح
         color: item.styles?.color === "#333" ? "#333333" : item.styles?.color,
       }}
     >
@@ -158,7 +147,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     </div>
   </div>
 )}
-        {/* 2. رندرة الصور */}
         {item.type === 'image' && (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", ...item.styles }}>
             {item.src ? (
@@ -171,7 +159,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
           </div>
         )}
 
-        {/* 3. رندرة الأشكال (التي تستخدم clipPath) */}
         {item.type === 'shape' && (
           <div 
             style={{ 
@@ -183,13 +170,12 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
           />
         )}
 
-        {/* 4. رندرة الأزرار (كودك الأصلي كما هو) */}
         {item.type === 'button' && (
           <div
             className="button-container-wrapper"
             style={{
               width: "100%", height: "100%",
-      display: "flex",           // ضروري جداً للمحاذاة
+      display: "flex",          
       alignItems: "center",
       justifyContent: "center",
               backgroundColor: item.styles?.backgroundColor || "#4f46e5",
@@ -212,7 +198,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
           >
             <span
               contentEditable={isSelected}
-              onDoubleClick={handleDoubleClick} // إضافة التحديد الأزرق
+              onDoubleClick={handleDoubleClick} 
               suppressContentEditableWarning
               onBlur={(e) => updateItem(activePageId, section.id, item.id, { text: e.target.innerText })}
               style={{
@@ -228,10 +214,8 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
           </div>
         )}
         
-        {/* --- نهاية الدمج --- */}
       </div>
 
-      {/* منطق الـ Moveable وزر الحذف الخاص بك (بدون أي تغيير) */}
       {isSelected && itemRefs.current[item.id] && (
         <>
           <Moveable
@@ -287,13 +271,11 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
   <Moveable
     target={`.section-${section.id}`}
     resizable={true}
-    renderDirections={["s"]} // تغيير الحجم من الأسفل فقط
+    renderDirections={["s"]} 
     onResize={({ target, width, height, dist, delta }) => {
       target.style.height = `${height}px`;
-      // تحديث الارتفاع في الـ Store
       updateSection(activePageId, section.id, { height: `${height}px` });
     }}
-    // تأكدي من إضافة هذه الخاصية لمنع تداخل الماوس مع العناصر الداخلية
     snappable={true}
     origin={false}
   />
@@ -328,8 +310,13 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
           width: 40px !important; 
           border-radius: 2px !important;
         }
-        .is-blank-layer { pointer-events: none !important; }
-        .is-blank-layer > div { pointer-events: auto !important; }
+        .is-blank-layer { 
+    pointer-events: auto !important; 
+    background-color: transparent !important; 
+}
+    .section-container > div { 
+    pointer-events: auto !important; 
+}
 .button-container-wrapper {
     width: 100% !important;
     height: 100% !important;

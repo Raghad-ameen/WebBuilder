@@ -27,7 +27,6 @@ const SHAPE_LIBRARY = [
 
 
 export default function LeftSidebar({ store }) {
-// أضف setState بدلاً من updateState إذا لم تكن معرفة
 const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, setState } = store;
 const [isShapesOpen, setIsShapesOpen] = React.useState(false);
   const basicElements = [
@@ -39,7 +38,7 @@ const [isShapesOpen, setIsShapesOpen] = React.useState(false);
   ];
 
   const sections = [
-    { id: 'blank', label: 'Blank Canvas', icon: <Square size={18} /> }, // الخيار الجديد
+    { id: 'blank', label: 'Blank Canvas', icon: <Square size={18} /> },
     { id: 'navbar', label: 'Navbar', icon: <Layout size={18} /> },
     { id: 'hero', label: 'Hero', icon: <Columns size={18} /> },
     { id: 'features', label: 'Features', icon: <Plus size={18} /> },
@@ -52,7 +51,6 @@ const handleAddShape = (shape) => {
 
   store.addItemAtPosition("shape", 150, 150, targetId, newId);
   
-  // نحدث الستايل فوراً بناءً على الشكل المختار
   store.updateItem(state.activePageId, targetId, newId, {
     shapeType: shape.id,
     styles: { 
@@ -68,22 +66,18 @@ const handleAddShape = (shape) => {
 const handleElementClick = (type) => {
   const currentPage = state.pages.find(p => p.id === state.activePageId);
   
-  // إذا لم توجد صفحة، ننشئ واحدة أولاً
   if (!currentPage) {
     addPage("Main Page");
-    // هنا قد نحتاج لانتظار إنشاء الصفحة، لكن في الغالب المستخدم سيكون لديه صفحة مفتوحة
     return;
   }
 
-  // نأخذ الـ ID الخاص بأول سكشن لو وجد، وإذا لم يوجد سنرسله null
   const targetSectionId = currentPage.sections[0]?.id || null;
   
-  // سيقوم الـ Store بالباقي (إضافة سكشن لو لزم الأمر + إضافة العنصر) في ضغطة واحدة!
   addItemAtPosition(type, 150, 150, targetSectionId);
 };
 
 const handleStartDrag = (e, type) => {
-    e.preventDefault(); // منع سحب الصور الافتراضي للمتصفح
+    e.preventDefault();
     setState(prev => ({ 
       ...prev, 
       isDraggingNow: true, 
@@ -93,7 +87,6 @@ const handleStartDrag = (e, type) => {
 
   return (
     <div style={styles.sidebar}>
-      {/* قسم الصفحات - التحكم المركزي هنا فقط */}
       <section style={styles.section}>
         <div style={styles.headerRow}>
            <h3 style={styles.sectionTitle}>Pages</h3>
@@ -117,15 +110,12 @@ const handleStartDrag = (e, type) => {
   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
     <span style={{ fontSize: '10px', opacity: 0.5 }}>{index + 1}</span>
     
-    {/* اسم الصفحة */}
     <span style={{ flex: 1 }}>{page.name}</span>
 
-    {/* أيقونة التعديل الجديدة */}
     <button 
   className="action-icon"
   onClick={(e) => {
     e.stopPropagation();
-    // نفتح المودال ونمرر الـ id والاسم الحالي
     store.openModal("renamePage", { 
       pageId: page.id, 
       currentName: page.name 
@@ -137,7 +127,6 @@ const handleStartDrag = (e, type) => {
 </button>
   </div>
   
-  {/* أيقونة الحذف الموجودة مسبقاً */}
   <button 
     onClick={(e) => {
       e.stopPropagation(); 
@@ -151,22 +140,16 @@ const handleStartDrag = (e, type) => {
 </div>
       </section>
 
-      {/* قسم العناصر */}
 <section style={styles.section}>
   <h3 style={styles.sectionTitle}>Basic Elements</h3>
   <div style={styles.grid}>
-    {/* 1. العناصر العادية */}
     {basicElements.map((el) => (
       <button 
         key={el.id} 
         style={styles.elementBtn}
-        // onClick={() => {
-        //   const newId = `item_${Date.now()}`;
-        //   const activePage = state.pages.find(p => p.id === state.activePageId);
-        //   const targetId = activePage?.sections[0]?.id || null;
-        //   store.addItemAtPosition(el.id, 100, 100, targetId, newId);
-        //   setState(prev => ({ ...prev, selectedElementIds: [newId] }));
-        // }}
+        // 1. الكليك العادي (إضافة للمنتصف)
+        onClick={() => handleElementClick(el.id)}
+        // 2. السحب والإفلات
         onMouseDown={(e) => handleStartDrag(e, el.id)}
       >
         {el.icon}
@@ -174,7 +157,6 @@ const handleStartDrag = (e, type) => {
       </button>
     ))}
 
-    {/* 2. زر الأشكال المطور (هنا نضع الكود الذي سألتِ عنه) */}
     <div style={{ position: 'relative' }}>
       <button 
         style={{...styles.elementBtn, width: '100%'}} 
@@ -187,7 +169,13 @@ const handleStartDrag = (e, type) => {
       {isShapesOpen && (
         <div style={styles.shapesGridPopup}>
           {SHAPE_LIBRARY.map(s => (
-            <div key={s.id} style={styles.shapeIconItem} onMouseDown={(e) => handleStartDrag(e, 'shape')}>
+            <div 
+              key={s.id} 
+              style={styles.shapeIconItem} 
+              // تعديل هنا ليشمل الكليك والسحب للأشكال أيضاً
+              onClick={() => handleAddShape(s)}
+              onMouseDown={(e) => handleStartDrag(e, 'shape')}
+            >
               {s.icon}
               <span style={{fontSize: '10px'}}>{s.label}</span>
             </div>
@@ -198,7 +186,6 @@ const handleStartDrag = (e, type) => {
   </div>
 </section>
 
-      {/* قسم الـ Sections */}
       <section style={styles.section}>
         <h3 style={styles.sectionTitle}>Smart Sections</h3>
         <div style={styles.list}>
@@ -243,23 +230,23 @@ const styles = {
   padding: '4px',
   display: 'flex',
   alignItems: 'center',
-  opacity: 0.6, // ستظهر بشكل باهت قليلاً وتتضح عند التركيز
+  opacity: 0.6, 
   transition: '0.2s',
 },
 shapesGridPopup: {
     position: 'absolute',
-    top: '40px', // تظهر أسفل الزر مباشرة
-    right: '10px', // تظهر من جهة اليمين داخل حدود السايدبار
+    top: '40px', 
+    right: '10px',
     background: '#fff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', // زيادة الظل لتبرز
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)', 
     display: 'grid',
     gridTemplateColumns: '1fr 1fr 1fr',
     gap: '8px',
     padding: '12px',
-    width: '220px', // عرض القائمة
-    zIndex: 9999, // تأكدي أنها فوق كل شيء
+    width: '220px', 
+    zIndex: 9999, 
   },
   shapeIconItem: {
     display: 'flex',

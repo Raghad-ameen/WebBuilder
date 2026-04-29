@@ -16,10 +16,10 @@ export function useEditorStore(initialState) {
     canvasHeight: '800px', 
     pages: [],
     activePageId: null,
-    selected: [],           // المسمى القديم (للوحة الخصائص)
-    selectedElementIds: [], // المسمى الجديد (للتحريك والـ Moveable)
+    selected: [],          
+    selectedElementIds: [], 
     clipboard: [], 
-    isDraggingNow: false,   // ضروري لعمل الـ DnD
+    isDraggingNow: false,  
   draggingType: null,
     ...initialState
 });
@@ -64,7 +64,6 @@ const pasteElements = useCallback(() => {
 
     saveToHistory(prev);
 
-    // البحث عن السيكشن المختار أو آخر سيكشن مضاف
     const targetSection = activePage.sections.find(s => s.id === prev.activeSectionId) || activePage.sections[activePage.sections.length - 1];
     
     if (!targetSection) return prev;
@@ -182,157 +181,81 @@ const updateSection = useCallback((sectionId, data) => {
 
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
-  // توليد ID فريد لاستخدامه في كامل العملية
-  const finalNewId = `e-${Date.now()}`;
+  const isClick = typeof x !== 'number' || typeof y !== 'number';
+  let finalX = isClick ? 100 : x;
+  let finalY = isClick ? 100 : y;
+
+  const finalNewId = `e-${Date.now()}`; // معرف فريد ولحظي
 
   setState(prev => {
-    saveToHistory(prev);
+    // 1. حفظ التاريخ فوراً
+    if (typeof saveToHistory === 'function') saveToHistory(prev);
 
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    // الإحداثيات والستايل الأساسي
-    const baseItem = {
+    // 2. تجهيز العنصر
+    const newItem = {
       id: finalNewId,
       type: type,
-      x: x - 75,
-      y: y - 25,
+      x: finalX - 75,
+      y: finalY - 25,
       width: 150,
       height: 50,
+      text: type === 'text' ? "New Text" : (type === 'button' ? "New Button" : ""),
       styles: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100,
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
+        position: 'absolute',
+        zIndex: 1000,
+        backgroundColor: type === 'button' ? "#4f46e5" : "transparent",
+        color: type === 'button' ? "white" : "#333",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: "14px",
         cursor: 'move'
       }
     };
 
-    // --- بداية قسم البيانات الخاصة (محمي بالكامل) ---
-    let specificData = {};
-    if (type === "text") {
-      specificData = { text: "New Text", styles: { ...baseItem.styles, fontSize: "16px", color: "#333333" } };
-    } else if (type === "button") {
-      specificData = {
-        text: "New Button",
-        action: { type: 'link', url: '' },
-        styles: {
-          ...baseItem.styles,
-          backgroundColor: "#4f46e5",
-          color: "white",
-          borderRadius: "6px",
-          fontSize: "14px",
-          fontWeight: "bold",
-          textAlign: "center",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          lineHeight: "1",
-          padding: "0 16px",
-          cursor: "pointer",
-          border: "0px solid #000000",
-          transition: "all 0.2s"
-        },
-        hoverStyles: {
-          backgroundColor: "#4338ca",
-          color: "white"
-        }
-      };
-    } else if (type === "image") {
-      specificData = {
-        src: null,
-        styles: {
-          ...baseItem.styles,
-          objectFit: "cover",
-          borderRadius: "8px",
-          border: "0px solid #000000"
-        }
-      };
-    } else if (type === "shape") {
-      specificData = {
-        shapeType: 'rect',
-        styles: {
-          ...baseItem.styles,
-          backgroundColor: "#4f46e5",
-          borderRadius: "0px",
-          clipPath: "none"
-        }
-      };
-    }
-    // --- نهاية قسم البيانات الخاصة ---
-
-    const newItem = { ...baseItem, ...specificData };
-    let updatedSections = [...activePage.sections];
-
-    // منطق اختيار السيكشن المستهدف
-    let targetSectionId = sectionId;
-    if (!targetSectionId && updatedSections.length > 0) {
-      targetSectionId = updatedSections[0].id;
-    }
-
-    if (!targetSectionId || !activePage.sections.some(s => s.id === targetSectionId)) {
-      const newBlankSection = {
+    // 3. تحديث السيكشنز
+    let updatedSections = [...(activePage.sections || [])];
+    if (updatedSections.length === 0) {
+      updatedSections.push({
         id: `s-${Date.now()}`,
         type: "blank",
-        data: {
-          styles: {
-            minHeight: "500px",
-            backgroundColor: "transparent",
-            padding: "0px",
-            zIndex: 1,
-            position: "relative"
-          },
-          items: [newItem]
-        }
-      };
-      updatedSections.push(newBlankSection);
+        data: { styles: { minHeight: "100vh", position: "relative" }, items: [newItem] }
+      });
     } else {
-      updatedSections = updatedSections.map(s =>
-        s.id === targetSectionId
-          ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } }
-          : s
+      const targetId = sectionId || updatedSections[0].id;
+      updatedSections = updatedSections.map(s => 
+        s.id === targetId ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } } : s
       );
     }
 
-    // إرجاع الحالة الجديدة مع ضمان إيقاف وضع السحب
+    // 4. التحديث اللحظي (CRITICAL):
+    // نحدث المصفوفة والتحديد في كائن واحد ليقوم React بتنفيذهم في "نبضة" واحدة
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      selected: [],
-      selectedElementIds: [],
+      selectedElementIds: [finalNewId], // التحديد هنا يصبح فوري
       activeElementId: finalNewId,
       isDraggingNow: false,
       draggingType: null
     };
   });
 
-  // التوقيت السحري لتحديد العنصر برمجياً بعد رندرة الـ DOM
-  setTimeout(() => {
-    setState(current => ({
-      ...current,
-      selected: [finalNewId],
-      selectedElementIds: [finalNewId]
-    }));
-    console.log("تم تحديث الحالة وتحديد العنصر الجديد:", finalNewId);
-  }, 100);
-
-}, [saveToHistory, setState]);
-
-
+  // ملاحظة: لا تضعي أي setTimeout هنا، الكود أعلاه كافٍ جداً.
+}, [setState, saveToHistory]);
 const selectItems = useCallback((ids) => {
   setState(prev => {
     const newSelected = Array.isArray(ids) ? ids : [ids];
     
-    // المقارنة لضمان عدم إعادة الرندرة بدون داعي (تحسين أداء)
     if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(newSelected)) {
       return prev;
     }
 
     return { 
       ...prev, 
-selected: newSelected, // للوحات القديمة (Properties)
+selected: newSelected, 
       selectedElementIds: newSelected ,
     activeElementId: newSelected[0] || null };
       
@@ -521,7 +444,6 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
                     return {
                       ...it,
                       ...data,
-                      // هذا السطر هو الأهم لضمان وصول الـ clipPath من الـ data
                       styles: { ...it.styles, ...(data.styles || {}) }
                     };
                   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 export default function CanvasElement({ store, children }) {
   const { state, setState, addItemAtPosition } = store;
@@ -8,70 +8,82 @@ export default function CanvasElement({ store, children }) {
     if (state.viewMode === 'tablet') return '768px';
     return '100%';
   };
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (state.isDraggingNow) {
-        setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-      }
-    };
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [state.isDraggingNow, setState]);
+
+  // معالج الإفلات (Drop) والحساب الدقيق للإحداثيات
+  const handleMouseUp = (e) => {
+    // إذا لم نكن في حالة سحب، لا نفعل شيئاً
+    if (!state.isDraggingNow) return;
+
+    const canvas = document.getElementById('main-canvas');
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    
+    // مراعاة الـ Scale في الموبايل والتابلت
+    const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);
+    
+    // حساب الإحداثيات بالنسبة لزاوية الكانفاس (0,0)
+    const x = (e.clientX - rect.left) / scale;
+    const y = (e.clientY - rect.top) / scale;
+
+    addItemAtPosition(state.draggingType, x, y);
+    
+    // إنهاء حالة السحب
+    setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+  };
+
+  const handleCanvasClick = (e) => {
+    // إلغاء تحديد العناصر عند الضغط على المساحة الفارغة في الكانفاس
+    if (e.target.id === 'main-canvas' && (state.selectedElementIds?.length > 0)) {
+      store.selectItems([]); 
+    }
+  };
 
   return (
-    <div style={{
+    <div 
+      id="canvas-wrapper"
+      style={{
         flex: 1,
-        backgroundColor: 'transparent', // إلغاء الرمادي نهائياً
+        backgroundColor: '#f3f4f6', // خلفية المحرر الخارجية
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: "center", 
         alignItems: 'flex-start',
         minHeight: '100vh',
         position: 'relative',
+        overflowY: 'auto',
+        padding: '40px 0'
     }}>
-      {/* طبقة الحماية - تظهر وتختفي بذكاء */}
-{/* طبقة الحماية - تظهر فقط وقت السحب */}
-{state.isDraggingNow && (
-  <div 
-    style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 99999, // أعلى من كل شيء
-      backgroundColor: 'rgba(0,0,0,0.02)', // لون خفيف جداً للتأكد أنها تعمل
-      cursor: 'copy'
-    }}
-    onMouseUp={(e) => {
-      const canvas = document.getElementById('main-canvas-area');
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      // الحساب مع مراعاة الـ Scale
-const scale = state.viewMode === 'desktop' ? 1 : (state.viewMode === 'mobile' ? 0.8 : 0.7);      
-            const x = (e.clientX - rect.left) / scale;
-            const y = (e.clientY - rect.top) / scale;
-                  
-      const activePage = state.pages.find(p => p.id === state.activePageId);
-      const targetSectionId = activePage?.sections?.[0]?.id || null;
-
-      addItemAtPosition(state.draggingType, x, y, targetSectionId);
-      
-      // إنهاء الحالة فوراً
-      setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-    }}
-  />
-)}      <div 
-        id="main-canvas"
+      <div 
+        id="main-canvas" 
+        onMouseUp={handleMouseUp}
+        onClick={handleCanvasClick}
         style={{ 
             width: getCanvasWidth(), 
             minHeight: "100vh", 
             backgroundColor: "white", 
-            margin: "0 auto",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
             position: "relative", 
-            // boxShadow: "0 0 20px rgba(0,0,0,0.05)", // اختيارية، تعطي عمق بسيط للكانفاس
             zIndex: 1,
             overflow: "visible", 
+            transition: "width 0.3s ease, transform 0.3s ease",
+            // ضمان أن الـ Scale لا يحرك الكانفاس من مكانه
+            transformOrigin: 'top center',
+            transform: state.viewMode === 'desktop' ? 'none' : `scale(${state.viewMode === 'mobile' ? 0.8 : 0.7})`
         }}
       >
         {children}
+        
+        {/* دليل بصري عند السحب فوق الكانفاس */}
+        {state.isDraggingNow && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(79, 70, 229, 0.05)',
+            border: '2px dashed #4f46e5',
+            pointerEvents: 'none',
+            zIndex: 9999
+          }} />
+        )}
       </div>
     </div>
   );

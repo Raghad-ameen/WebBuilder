@@ -4,8 +4,6 @@ import { useEditorStore } from "../store/editorStore";
 import CustomModal from "../components/CustomModal";
 
 export default function Editor() {
-  // استخدام useMemo يمنع إعادة إنشاء الستور في كل حركة ماوس
-  // داخل Editor.jsx
 const initialData = useMemo(() => ({
   projectName: "dnd",
   canvasWidth: '100%',
@@ -13,22 +11,19 @@ const initialData = useMemo(() => ({
   canvasStyles: { backgroundColor: '#f3f4f6' }, 
   pages: [{ id: "p1", name: "Home", sections: [] }],
   activePageId: "p1",
-  selectedElementIds: [], // تغييره من selected إلى selectedElementIds
+  selectedElementIds: [],
 }), []);
 
   const store = useEditorStore(initialData);
 
-  // مراجع ثابتة للوصول لأحدث البيانات داخل الـ Listeners
   const storeRef = useRef(store);
-const selectedRef = useRef(store.state.selectedElementIds); // تعديل هنا
-  // تحديث المراجع في كل رندرة (مهم جداً لعمل الكيبورد)
+const selectedRef = useRef(store.state.selectedElementIds); 
   storeRef.current = store;
-selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
-  // --- 1. التعامل مع النقر خارج العناصر ---
+selectedRef.current = store.state.selectedElementIds; 
   useEffect(() => {
     const handleClickOutside = (e) => {
       const isSelectable = e.target.closest(".selectable-item");
-      const isMoveableControl = e.target.closest(".moveable-control-box"); // أضيفي هذا السطر
+      const isMoveableControl = e.target.closest(".moveable-control-box"); 
       const isPanel = e.target.closest(".editor-sidebar") || 
                       e.target.closest(".properties-panel") || 
                       e.target.closest(".editor-toolbar") ||
@@ -45,7 +40,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, []); 
 
-  // --- 2. استعادة البيانات من الـ LocalStorage ---
   useEffect(() => {
     const savedData = localStorage.getItem(`project_${store.state.projectName}`);
     if (savedData) {
@@ -58,7 +52,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     }
   }, []);
 
-  // --- 3. التعامل مع اختصارات الكيبورد (الإصلاح النهائي) ---
  useEffect(() => {
  const handleKeyDown = (e) => {
   const s = storeRef.current;
@@ -67,7 +60,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
   const isCtrl = e.ctrlKey || e.metaKey;
   const code = e.code;
 
-  // 1. فحص فوري وحاسم لوضع الكتابة
   const activeEl = document.activeElement;
   const isWriting = 
     activeEl.isContentEditable || 
@@ -75,7 +67,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     activeEl.tagName === 'TEXTAREA' ||
     e.target.closest('[contenteditable="true"]');
 
-  // 2. معالجة الـ Undo/Redo أولاً وقبل كل شيء (أولوية قصوى)
   if (isCtrl && code === 'KeyZ') {
     e.preventDefault();
     e.stopPropagation();
@@ -84,7 +75,7 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     } else {
       s.undo();
     }
-    return; // اخرج فوراً بعد التنفيذ
+    return; 
   }
 
   if (isCtrl && code === 'KeyY') {
@@ -94,12 +85,10 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     return;
   }
 
-  // 3. منع الحذف إذا كنا في وضع الكتابة
   if (code === 'Backspace' || code === 'Delete') {
     if (isWriting) {
-      return; // اترك المتصفح يمسح الحروف فقط
+      return; 
     } else {
-      // إذا لم نكن نكتب، احذف العنصر المختار
       const selectedIds = s.state.selectedElementIds || s.state.selected || [];
       if (selectedIds.length > 0) {
         e.preventDefault();
@@ -109,7 +98,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     }
   }
 
-  // 4. النسخ واللصق (فقط إذا لم نكن نكتب)
   if (isCtrl && !isWriting) {
     const selectedIds = s.state.selectedElementIds || s.state.selected || [];
     if (code === 'KeyC') { e.preventDefault(); s.copyElements(selectedIds); }
@@ -117,7 +105,6 @@ selectedRef.current = store.state.selectedElementIds; // وتعديل هنا
     if (code === 'KeyX') { e.preventDefault(); s.cutElements(selectedIds); }
   }
 };
-  // استخدام capture: true لضمان التقاط الحدث قبل أي معالجات أخرى
   window.addEventListener('keydown', handleKeyDown, { capture: true });
   return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
 }, []);

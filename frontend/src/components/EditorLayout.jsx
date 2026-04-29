@@ -27,40 +27,48 @@ export default function EditorLayout({ store }) {
 
 useEffect(() => {
   const handleKeyDown = (e) => {
-    // التراجع Ctrl + Z
+    // التحقق من أن المستخدم لا يكتب في input أو text editor
+    const isEditing = document.activeElement.tagName === 'INPUT' || 
+                      document.activeElement.tagName === 'TEXTAREA' || 
+                      document.activeElement.isContentEditable;
+
+    if (isEditing) return;
+
+    // التراجع
     if (e.ctrlKey && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       store.undo();
     }
 
-    // الحذف Delete
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (document.activeElement.tagName !== 'INPUT' && !document.activeElement.isContentEditable) {
-        state.selectedElementIds?.forEach(id => store.deleteElement(id));
-      }
-    }
-
-    // النسخ Ctrl + C (التعديل هنا)
+    // النسخ
     if (e.ctrlKey && e.key.toLowerCase() === 'c') {
-      // فقط إذا كان هناك عنصر محدد ولسنا داخل وضع تعديل نص
-      if (state.selectedElementIds?.length > 0 && !document.activeElement.isContentEditable) {
-        e.preventDefault(); // يمنع نسخ النص العادي
+      if (state.selectedElementIds?.length > 0) {
+        e.preventDefault();
         store.copyElements(state.selectedElementIds);
       }
     }
 
-    // اللصق Ctrl + V (التعديل هنا)
+    // اللصق (هنا الإصلاح)
     if (e.ctrlKey && e.key.toLowerCase() === 'v') {
-      if (state.clipboard?.length > 0 && !document.activeElement.isContentEditable) {
-        e.preventDefault(); // يمنع لصق نصوص الويندوز الخارجية
+      e.preventDefault();
+      e.stopImmediatePropagation(); // يمنع الانتشار فوراً
+      
+      // نتحقق من وجود بيانات في الكليب بورد الخاص بالتطبيق
+      if (state.clipboard && state.clipboard.length > 0) {
         store.pasteElements();
       }
     }
+
+    // الحذف
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      state.selectedElementIds?.forEach(id => store.deleteElement(id));
+    }
   };
 
-  window.addEventListener('keydown', handleKeyDown);
-  return () => window.removeEventListener('keydown', handleKeyDown);
-}, [state.selectedElementIds, state.clipboard, store]); // أضيفي clipboard للمراقبة
+  // استخدام capture: true يضمن الإمساك بالحدث قبل أي عنصر آخر
+  window.addEventListener('keydown', handleKeyDown, true);
+  return () => window.removeEventListener('keydown', handleKeyDown, true);
+}, [state.selectedElementIds, state.clipboard, store]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#f0f2f5", overflow: "hidden" }}>
@@ -84,6 +92,7 @@ useEffect(() => {
     /* طبقة واحدة فقط للتحكم في الحجم واللون والسكيل */
     <CanvasElement store={store}>
       <div
+      id="main-canvas"
         className="main-canvas-area"
         style={{
           width: width, 
