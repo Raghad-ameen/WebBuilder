@@ -130,3 +130,26 @@ div {
   user-select: none !important;/* يمنع ظهور مؤشر النص عند الضغط العادي */
   cursor: move;      /* يظهر المؤشر الرباعي فوراً */
 }
+
+/* فرض اللون الأبيض ومنع أي تداخلات */
+#canvas-wrapper, 
+#main-canvas, 
+.section-container, 
+[class*="section-"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+/* إخفاء الحدود المنقطة البشعة التي تظهر في الصور */
+.section-container {
+    border-bottom: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* تعديل خلفية الـ root لضمان عدم ظهور أي فجوات رمادية */
+#root {
+    background-color: #ffffff !important;
+}
