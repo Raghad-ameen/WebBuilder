@@ -181,86 +181,78 @@ const updateSection = useCallback((sectionId, data) => {
 
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null) => {
-  const isClick = typeof x !== 'number' || typeof y !== 'number';
-  let finalX = isClick ? 100 : x;
-  let finalY = isClick ? 100 : y;
+  const finalNewId = `e-${Date.now()}`;
+  const finalX = (typeof x === 'number' ? x : 100) - 75;
+  const finalY = (typeof y === 'number' ? y : 100) - 25;
 
-  const finalNewId = `e-${Date.now()}`; // معرف فريد ولحظي
-
+  // الخطوة 1: إضافة العنصر بدون تحديده فوراً
   setState(prev => {
-    // 1. حفظ التاريخ فوراً
-    if (typeof saveToHistory === 'function') saveToHistory(prev);
-
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    // 2. تجهيز العنصر
     const newItem = {
       id: finalNewId,
-      type: type,
-      x: finalX - 75,
-      y: finalY - 25,
+      type,
+      x: finalX,
+      y: finalY,
       width: 150,
       height: 50,
-      text: type === 'text' ? "New Text" : (type === 'button' ? "New Button" : ""),
-      styles: {
-        position: 'absolute',
-        zIndex: 1000,
-        backgroundColor: type === 'button' ? "#4f46e5" : "transparent",
-        color: type === 'button' ? "white" : "#333",
-        display: 'flex',
-        alignItems: 'center',
+      text: type === 'text' ? "New Text" : "New Button",
+      styles: { 
+        position: 'absolute', 
+        zIndex: 100, 
+        display: 'flex', 
+        alignItems: 'center', 
         justifyContent: 'center',
-        fontSize: "14px",
-        cursor: 'move'
+        pointerEvents: 'auto' // تأكدي أن العناصر تستقبل الأحداث
       }
     };
 
-    // 3. تحديث السيكشنز
-    let updatedSections = [...(activePage.sections || [])];
+    const updatedSections = [...activePage.sections];
     if (updatedSections.length === 0) {
-      updatedSections.push({
-        id: `s-${Date.now()}`,
-        type: "blank",
-        data: { styles: { minHeight: "100vh", position: "relative" }, items: [newItem] }
-      });
+      updatedSections.push({ id: `s-${Date.now()}`, type: "blank", data: { items: [newItem], styles: { minHeight: "100vh" } } });
     } else {
       const targetId = sectionId || updatedSections[0].id;
-      updatedSections = updatedSections.map(s => 
-        s.id === targetId ? { ...s, data: { ...s.data, items: [...(s.data.items || []), newItem] } } : s
-      );
+      const idx = updatedSections.findIndex(s => s.id === targetId);
+      const sIdx = idx === -1 ? 0 : idx;
+      updatedSections[sIdx] = {
+        ...updatedSections[sIdx],
+        data: { ...updatedSections[sIdx].data, items: [...(updatedSections[sIdx].data.items || []), newItem] }
+      };
     }
 
-    // 4. التحديث اللحظي (CRITICAL):
-    // نحدث المصفوفة والتحديد في كائن واحد ليقوم React بتنفيذهم في "نبضة" واحدة
     return {
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
-      selectedElementIds: [finalNewId], // التحديد هنا يصبح فوري
-      activeElementId: finalNewId,
       isDraggingNow: false,
       draggingType: null
     };
   });
 
-  // ملاحظة: لا تضعي أي setTimeout هنا، الكود أعلاه كافٍ جداً.
-}, [setState, saveToHistory]);
+  // الخطوة 2: التحديد بعد فجوة زمنية بسيطة جداً لكسر تعليق المتصفح
+  setTimeout(() => {
+    setState(current => ({
+      ...current,
+      selectedElementIds: [finalNewId],
+      activeElementId: finalNewId
+    }));
+  }, 50); // 50ms كافية جداً لفك أي "تعليق" في الأحداث
+  
+}, [setState]);
+
 const selectItems = useCallback((ids) => {
   setState(prev => {
-    const newSelected = Array.isArray(ids) ? ids : [ids];
-    
-    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(newSelected)) {
+    // إذا كان التحديد هو نفسه الموجود حالياً، لا تفعل شيئاً (يمنع الـ Lag)
+    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(ids)) {
       return prev;
     }
-
-    return { 
-      ...prev, 
-selected: newSelected, 
-      selectedElementIds: newSelected ,
-    activeElementId: newSelected[0] || null };
-      
+    return {
+      ...prev,
+      selectedElementIds: ids,
+      activeElementId: ids.length > 0 ? ids[0] : null
+    };
   });
-}, []);
+}, [setState]);
 
 const saveProject = useCallback(() => {
   try {

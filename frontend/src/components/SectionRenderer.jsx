@@ -295,12 +295,12 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
             margin-top: -3px !important; 
             margin-left: -3px !important;
         }
-        .moveable-control-box {
-            pointer-events: none !important;
-        }
-        .moveable-control, .moveable-line {
-            pointer-events: auto !important;
-        }
+       .moveable-control-box {
+      pointer-events: none !important;
+    }
+    .moveable-control, .moveable-line {
+      pointer-events: auto !important;
+    }
 
         .section-resizer-tool .moveable-line { display: none !important; }
         .section-resizer-tool .moveable-control { 
