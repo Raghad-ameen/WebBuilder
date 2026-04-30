@@ -120,54 +120,43 @@ const selectedSection = useMemo(() => {
           </div>
 
           {/* 3. Typography - (لم أحذفه!) */}
-          {selectedItem.type === "text" && (
-            <div style={styles.group}>
-              <label style={styles.label}>Typography</label>
-              <div style={styles.field}>
-                <span style={styles.subLabel}>Family</span>
-                <select
-                  value={selectedItem.styles?.fontFamily || "Inter"}
-                  onChange={(e) => handleStyleCommit("fontFamily", e.target.value)}
-                  style={styles.input}
-                >
-                  <option value="'Plus Jakarta Sans', sans-serif">Jakarta (Default)</option>
-                  <option value="'Righteous', cursive">Righteous (Retro)</option>
-                  <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                  <option value="'Inter', sans-serif">Inter (Clean)</option>
-                  <option value="'Cairo', sans-serif">Cairo (Arabic)</option>
-                </select>
-              </div>
-              <div style={styles.row}>
-                <div style={{ ...styles.field, flex: 2 }}>
-                  <span style={styles.subLabel}>Size</span>
-                  <input
-                    type="number"
-                    value={parseInt(selectedItem.styles?.fontSize) || 16}
-                    onChange={(e) => {
-                      const val = `${e.target.value}px`;
-                      handleStylePreview("fontSize", val);
-                      debouncedSave(state.activePageId, selectedItem.sectionId, selectedId, { styles: { ...selectedItem.styles, fontSize: val } });
-                    }}
-                    style={styles.input}
-                  />
-                </div>
-                <div style={styles.alignGroup}>
-                  {["left", "center", "right"].map((align) => (
-                    <button
-                      key={align}
-                      onClick={() => handleStyleCommit("textAlign", align)}
-                      style={{
-                        ...styles.alignButton,
-                        background: selectedItem.styles?.textAlign === align ? "#e2e8f0" : "transparent",
-                      }}
-                    >
-                      {align === "left" ? "⊢" : align === "center" ? "≡" : "⊣"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+         {/* 3. Typography - يظهر للنصوص وللأزرار */}
+{(selectedItem.type === "text" || selectedItem.type === "button") && (
+  <div style={styles.group}>
+    <label style={styles.label}>Typography</label>
+    <div style={styles.field}>
+      <span style={styles.subLabel}>Family</span>
+      <select
+        value={selectedItem.styles?.fontFamily || "Inter"}
+        onChange={(e) => handleStyleCommit("fontFamily", e.target.value)}
+        style={styles.input}
+      >
+        <option value="'Plus Jakarta Sans', sans-serif">Jakarta</option>
+        <option value="'Playfair Display', serif">Playfair Display</option>
+        <option value="'Cairo', sans-serif">Cairo (Arabic)</option>
+        <option value="'Inter', sans-serif">Inter</option>
+      </select>
+    </div>
+    
+    <div style={styles.row}>
+      <div style={{ ...styles.field, flex: 2 }}>
+        <span style={styles.subLabel}>Size</span>
+        <input
+          type="number"
+          value={parseInt(selectedItem.styles?.fontSize) || 16}
+          onChange={(e) => {
+            const val = `${e.target.value}px`;
+            handleStylePreview("fontSize", val);
+            debouncedSave(state.activePageId, selectedItem.sectionId, selectedId, { 
+              styles: { ...selectedItem.styles, fontSize: val } 
+            });
+          }}
+          style={styles.input}
+        />
+      </div>
+    </div>
+  </div>
+)}
 
           {/* 4. Image Style - (موجود!) */}
           {selectedItem.type === "image" && (

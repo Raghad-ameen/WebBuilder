@@ -7,9 +7,13 @@ import CanvasElement from "./CanvasElement";
 export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store, canvasScale = 1 }) {
   const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem,moveSectionUp, moveSectionDown } = store;
   const activePageId = state.activePageId; 
+  const allSections = state.pages.find(p => p.id === activePageId)?.sections || [];
   const itemRefs = useRef({});
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
+  const sectionIndex = state.pages
+  .find(p => p.id === activePageId)
+  .sections.findIndex(s => s.id === section.id);
 
 React.useEffect(() => {
   const lastItem = section.data.items?.[section.data.items.length - 1];
@@ -66,30 +70,26 @@ onMouseDown={(e) => {
   store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
 }}   
 style={{
-  position: "relative",
+ position: "relative",
   width: "100%",
-  // 1. نضع الـ styles الأساسية أولاً
   ...section.styles, 
 
-  // 2. ثم نضع القيم التي نريد إجبارها في النهاية لتلغي أي تعارض
-  height: section.height ? `${section.height}px` : "auto", 
-  minHeight: "100px", 
+  // --- التعديل الجذري هنا ---
+  // نعطي السكشن الأول z-index عالي، والذي يليه أقل، وهكذا
+  // هذا يضمن أن أي صورة تخرج من السكشن العلوي تظهر فوق السكشن السفلي دائماً
+  zIndex: isSectionSelected ? 1000 : (allSections.length - sectionIndex), 
+  
+  // تأكدي من هذه القيم
+  overflow: "visible", 
+  height: section.height ? `${section.height}px` : "auto",
   backgroundColor: section.styles?.backgroundColor || "transparent",
-  
-  // 3. خصائص الظهور (للتأكد أن السكشن ليس مخفياً)
   display: "block",
-  opacity: 1,
-  
-  // 4. بقية التنسيقات
+  // --------------------------
+
   backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
   backgroundSize: "cover",
   backgroundPosition: "center",
-  borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
-  overflow: "visible",
-  // رفعنا الـ zIndex قليلاً لضمان الظهور
-  zIndex: isSectionSelected ? 50 : 1, 
-  pointerEvents: 'auto',
-}}    >
+  borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",}}   >
      {isSectionSelected && (
   <div style={styles.sectionToolbar}>
     <button onClick={() => store.moveSectionUp(section.id)} style={styles.toolBtn}>🔼</button>
@@ -119,7 +119,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         width: `${item.width}px`,
         height: `${item.height}px`,
         transform: 'translate(0, 0)',
-          zIndex: isSelected ? 2000 : 150,
+          zIndex: isSelected ? 9999 : 150,
           cursor: item.isEditing ? "text" : "move",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
@@ -298,6 +298,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
               style={{
                 color: item.styles?.color || "white",
                 fontSize: item.styles?.fontSize || "16px",
+                fontFamily: item.styles?.fontFamily || "inherit", // 👈 تأكدي من إضافة هذا السطر
                 pointerEvents: "auto",
                 userSelect: isSelected ? "text" : "none", 
                 cursor: isSelected ? "text" : "move",
