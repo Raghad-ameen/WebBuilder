@@ -8,25 +8,23 @@ export default function RightPanel({ store }) {
   const activePage = state.pages.find((p) => p.id === state.activePageId);
   const selectedId = state.selectedElementIds?.[0] || state.activeElementId;
   
-  // الآن selectedId معرف، لذا سيعمل هذا السطر
-const selectedSection = useMemo(() => {
-  if (!selectedId || !activePage) return null;
-  // هل الـ ID المختار هو سكشن؟
-  const directSection = activePage.sections.find(s => s.id === selectedId);
-  if (directSection) return directSection;
-  
-  // إذا لم يكن سكشن، ابحث عن السكشن الذي يحتوي على هذا العنصر
-  return activePage.sections.find(s => 
-    s.data.items.some(item => item.id === selectedId)
-  );
-}, [selectedId, activePage]);
-  let selectedItem = null;
-  if (selectedId && activePage && !selectedSection) {
+let selectedItem = null;
+  if (selectedId && activePage) {
     activePage.sections.forEach((section) => {
-      const item = section.data.items.find((it) => it.id === selectedId);
-      if (item) selectedItem = { ...item, sectionId: section.id };
+      const item = section.data.items?.find((it) => it.id === selectedId);
+      if (item) {
+        selectedItem = { ...item, sectionId: section.id };
+      }
     });
   }
+
+  // الآن selectedId معرف، لذا سيعمل هذا السطر
+const selectedSection = useMemo(() => {
+    if (!selectedId || !activePage || selectedItem) return null; // إذا وجدنا عنصراً، لا داعي لاعتباره سكشن
+    return activePage.sections.find(s => s.id === selectedId);
+  }, [selectedId, activePage, selectedItem]);
+
+  
 
   const debouncedSave = useMemo(
     () =>
