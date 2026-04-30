@@ -36,21 +36,16 @@ const handleDoubleClick = (e) => {
 };
   const isBlank = section.type === "blank";
 const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
-
-
+const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 console.log(`🎨 RENDERING CHECK [${section.id}]:`, section.styles?.backgroundColor);
   return (
     <div
       ref={sectionRef}
       className={`section-container section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
-     // بدلاً من onClick
 onMouseDown={(e) => {
-  // هذا السطر هو السر: 
-  // إذا كان المستخدم يضغط على السكشن أو أي مساحة "فارغة" داخل السكشن
-  // (يعني لم يضغط مباشرة على مقبض تحريك أو نص مفعل)
   if (e.target === e.currentTarget || e.target.classList.contains('text-element-wrapper')) {
       e.stopPropagation();
-      onSelect(section.id); // يحدد الـ ID
+      onSelect(section.id);
       store.selectItems([section.id]);
   }
 }}onMouseUp={(e) => {
@@ -59,14 +54,11 @@ onMouseDown={(e) => {
 
   const rect = e.currentTarget.getBoundingClientRect();
   
-  // نستخدمcanvasScale لضبط الإحداثيات بدقة رغماً عن التصغير
   const x = (e.clientX - rect.left) / canvasScale;
   const y = (e.clientY - rect.top) / canvasScale;
 
-  // استدعاء الدالة من الستور
   store.addItemAtPosition(state.draggingType, x, y, section.id);
   
-  // إنهاء حالة السحب
   store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
 }}   
 style={{
@@ -74,22 +66,18 @@ style={{
   width: "100%",
   ...section.styles, 
 
-  // --- التعديل الجذري هنا ---
-  // نعطي السكشن الأول z-index عالي، والذي يليه أقل، وهكذا
-  // هذا يضمن أن أي صورة تخرج من السكشن العلوي تظهر فوق السكشن السفلي دائماً
-  zIndex: isSectionSelected ? 1000 : (allSections.length - sectionIndex), 
-  
-  // تأكدي من هذه القيم
+zIndex: allSections.length - sectionIndex,
   overflow: "visible", 
   height: section.height ? `${section.height}px` : "auto",
   backgroundColor: section.styles?.backgroundColor || "transparent",
   display: "block",
-  // --------------------------
 
   backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
   backgroundSize: "cover",
   backgroundPosition: "center",
-  borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",}}   >
+borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
+      }} 
+    > 
      {isSectionSelected && (
   <div style={styles.sectionToolbar}>
     <button onClick={() => store.moveSectionUp(section.id)} style={styles.toolBtn}>🔼</button>
@@ -107,9 +95,9 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         ref={(el) => (itemRefs.current[item.id] = el)}
         id={item.id}
        onMouseDown={(e) => {
-  if (item.isEditing) return; // إذا كان يعدل النص، اترك الحدث يمر للنص
+  if (item.isEditing) return;
   
-  e.stopPropagation(); // منع وصول الضغطة للسكشن فقط إذا كان الهدف هو تحريك العنصر
+  e.stopPropagation(); 
   onSelect(item.id);
 }}
         style={{
@@ -119,8 +107,9 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         width: `${item.width}px`,
         height: `${item.height}px`,
         transform: 'translate(0, 0)',
-          zIndex: isSelected ? 9999 : 150,
+zIndex: isSelected ? 9999 : 2000,
           cursor: item.isEditing ? "text" : "move",
+          overflow: "visible",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
           ...item.styles, 
@@ -188,10 +177,10 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      // تأكدي أن هذا السطر يقرأ من ستايل العنصر نفسه وليس السكشن
       backgroundColor: item.src ? "transparent" : (item.styles?.backgroundColor || "#f8fafc"),
       border: item.src ? "none" : "1px dashed #cbd5e1",
       borderRadius: item.styles?.borderRadius || "8px",
+      zIndex: isSelected ? 2000 : 100,
       ...item.styles 
     
     }}
@@ -298,7 +287,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
               style={{
                 color: item.styles?.color || "white",
                 fontSize: item.styles?.fontSize || "16px",
-                fontFamily: item.styles?.fontFamily || "inherit", // 👈 تأكدي من إضافة هذا السطر
+                fontFamily: item.styles?.fontFamily || "inherit", 
                 pointerEvents: "auto",
                 userSelect: isSelected ? "text" : "none", 
                 cursor: isSelected ? "text" : "move",
@@ -371,17 +360,16 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     target={sectionRef} 
     resizable={true}
     keepRatio={false}
-    renderDirections={["s"]} // يظهر المقبض في الأسفل فقط
+    renderDirections={["s"]} 
     origin={false}
     zoom={1 / canvasScale}
-    // هذا السطر يضمن أن المقبض قابل للسحب
     edge={true} 
     onResize={({ target, height }) => {
       target.style.height = `${height}px`;
     }}
     onResizeEnd={({ target }) => {
      updateSection(state.activePageId, section.id, { 
-        ...section, // الحفاظ على البيانات القديمة
+        ...section,
         height: parseInt(target.style.height) 
       });
     }}
@@ -445,7 +433,6 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     pointer-events: auto !important; 
 }
 
-/* فقط المحتوى الفعلي (النص، الزر، الصورة) هو من يستقبل الضغط */
 .text-element-wrapper > div, .button-container-wrapper > span, img {
     pointer-events: auto !important;
 }
@@ -464,7 +451,7 @@ const styles = {
   },
   sectionToolbar: {
     position: "absolute",
-    right: "-50px", // يظهر خارج الكانفاس بجهة اليمين
+    right: "-50px", 
     top: "0",
     display: "flex",
     flexDirection: "column",
