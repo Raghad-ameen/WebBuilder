@@ -162,25 +162,52 @@ const closeModal = useCallback(() => {
   }));
 }, []);
 
-const updateSection = useCallback((sectionId, newData) => {
+const updateSection = useCallback((pageId, sectionId, newData) => {
+  // 1. تأكدي أن البيانات تصل أصلاً
+  console.log("🛠️ Store received update for:", sectionId, newData);
+
   setState(prev => {
-    // لا نحفظ في الهيستوري إلا إذا كان التغيير نهائياً (عند انتهاء الـ Resize مثلاً)
-    // لذا يفضل استدعاء saveToHistory يدوياً عند الحاجة
+    // 2. تعريف activePage داخل الـ setState لضمان وصولها
+    const activePage = prev.pages.find(p => p.id === pageId);
+    
+    // إذا لم يجد الصفحة، لا يعطل البرنامج بل يعيد الحالة كما هي
+    if (!activePage) {
+      console.warn("⚠️ Page not found in store:", pageId);
+      return prev; 
+    }
+
     return {
       ...prev,
-      pages: prev.pages.map(p => p.id === prev.activePageId ? {
-        ...p,
-        sections: p.sections.map(s => s.id === sectionId ? {
-          ...s,
-          // دمج البيانات الجديدة: الارتفاع والتنسيقات
-          height: newData.height !== undefined ? newData.height : s.height,
-          styles: { ...(s.styles || {}), ...(newData.styles || {}) },
-          data: { ...s.data, ...(newData.data || {}) }
-        } : s)
-      } : p)
+      pages: prev.pages.map(p => {
+        if (p.id !== pageId) return p;
+
+        return {
+          ...p,
+          sections: p.sections.map(s => {
+            if (s.id !== sectionId) return s;
+
+            // 3. الدمج العميق للبيانات
+            const updatedSection = {
+              ...s,
+              height: newData.height !== undefined ? newData.height : s.height,
+              styles: { 
+                ...(s.styles || {}), 
+                ...(newData.styles || {}) 
+              },
+              data: { 
+                ...(s.data || {}), 
+                ...(newData.data || {}) 
+              }
+            };
+            
+            console.log("✅ Section updated successfully:", updatedSection);
+            return updatedSection;
+          })
+        };
+      })
     };
   });
-}, []);
+}, [setState]); // تأكدي من وجود setState هنا
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;

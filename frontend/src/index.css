@@ -48,8 +48,6 @@ html, body, #root {
 .section-container, 
 [class*="section-"] {
     /* جعل كل شيء داخل الكانفاس شفافاً تماماً */
-    background-color: transparent !important;
-    background: transparent !important;
     box-shadow: none !important;
     border: none !important;
     outline: none !important;

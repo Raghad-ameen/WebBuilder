@@ -33,16 +33,23 @@ const handleDoubleClick = (e) => {
   const isBlank = section.type === "blank";
 const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 
+
+console.log(`🎨 RENDERING CHECK [${section.id}]:`, section.styles?.backgroundColor);
   return (
     <div
       ref={sectionRef}
       className={`section-container section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
-      onClick={(e) => {
-    if (e.target === e.currentTarget) {
-      store.selectItems([section.id]); 
-    }
-  }}
-onMouseUp={(e) => {
+     // بدلاً من onClick
+onMouseDown={(e) => {
+  // هذا السطر هو السر: 
+  // إذا كان المستخدم يضغط على السكشن أو أي مساحة "فارغة" داخل السكشن
+  // (يعني لم يضغط مباشرة على مقبض تحريك أو نص مفعل)
+  if (e.target === e.currentTarget || e.target.classList.contains('text-element-wrapper')) {
+      e.stopPropagation();
+      onSelect(section.id); // يحدد الـ ID
+      store.selectItems([section.id]);
+  }
+}}onMouseUp={(e) => {
   if (!state.isDraggingNow) return;
   e.stopPropagation();
 
@@ -57,22 +64,32 @@ onMouseUp={(e) => {
   
   // إنهاء حالة السحب
   store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-}}     style={{
+}}   
+style={{
   position: "relative",
   width: "100%",
-  // --- استبدلي القيم القديمة بهذه ---
+  // 1. نضع الـ styles الأساسية أولاً
+  ...section.styles, 
+
+  // 2. ثم نضع القيم التي نريد إجبارها في النهاية لتلغي أي تعارض
   height: section.height ? `${section.height}px` : "auto", 
   minHeight: "100px", 
   backgroundColor: section.styles?.backgroundColor || "transparent",
+  
+  // 3. خصائص الظهور (للتأكد أن السكشن ليس مخفياً)
+  display: "block",
+  opacity: 1,
+  
+  // 4. بقية التنسيقات
   backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
   backgroundSize: "cover",
   backgroundPosition: "center",
-borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
+  borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
   overflow: "visible",
-  zIndex: isSectionSelected ? 100 : (isBlank ? 10 : 1),
+  // رفعنا الـ zIndex قليلاً لضمان الظهور
+  zIndex: isSectionSelected ? 50 : 1, 
   pointerEvents: 'auto',
-}}
-    >
+}}    >
      {isSectionSelected && (
   <div style={styles.sectionToolbar}>
     <button onClick={() => store.moveSectionUp(section.id)} style={styles.toolBtn}>🔼</button>
@@ -89,10 +106,12 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       <div
         ref={(el) => (itemRefs.current[item.id] = el)}
         id={item.id}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          if (!item.isEditing) onSelect(item.id);
-        }}
+       onMouseDown={(e) => {
+  if (item.isEditing) return; // إذا كان يعدل النص، اترك الحدث يمر للنص
+  
+  e.stopPropagation(); // منع وصول الضغطة للسكشن فقط إذا كان الهدف هو تحريك العنصر
+  onSelect(item.id);
+}}
         style={{
           position: "absolute",
          left: `${item.x}px`,   
@@ -169,10 +188,12 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: item.src ? "transparent" : "#f8fafc",
+      // تأكدي أن هذا السطر يقرأ من ستايل العنصر نفسه وليس السكشن
+      backgroundColor: item.src ? "transparent" : (item.styles?.backgroundColor || "#f8fafc"),
       border: item.src ? "none" : "1px dashed #cbd5e1",
       borderRadius: item.styles?.borderRadius || "8px",
       ...item.styles 
+    
     }}
   >
     {item.src ? (
@@ -288,6 +309,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
             </span>
           </div>
         )}
+
         
       </div>
 
@@ -357,7 +379,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
       target.style.height = `${height}px`;
     }}
     onResizeEnd={({ target }) => {
-      updateSection(section.id, { 
+     updateSection(state.activePageId, section.id, { 
         ...section, // الحفاظ على البيانات القديمة
         height: parseInt(target.style.height) 
       });
@@ -379,8 +401,12 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
             margin-left: -3px !important;
         }
        .moveable-control-box {
-      pointer-events: none !important;
-    }
+    z-index: 9999 !important;
+    background-color: transparent !important;
+}
+    .section-container.is-selected {
+    background-color: inherit !important;
+}
     .moveable-control, .moveable-line {
       pointer-events: auto !important;
     }
@@ -395,10 +421,9 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
         }
         .is-blank-layer { 
     pointer-events: auto !important; 
-    background-color: transparent !important; 
 }
-    .section-container > div { 
-    pointer-events: auto !important; 
+   .section-container {
+    pointer-events: auto !important;
 }
 .button-container-wrapper {
     width: 100% !important;
@@ -414,6 +439,14 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
     .button-container-wrapper {
     box-sizing: border-box !important;
     overflow: hidden;
+}
+ .text-element-wrapper, .button-container-wrapper {
+    pointer-events: auto !important; 
+}
+
+/* فقط المحتوى الفعلي (النص، الزر، الصورة) هو من يستقبل الضغط */
+.text-element-wrapper > div, .button-container-wrapper > span, img {
+    pointer-events: auto !important;
 }
       `}</style>
     </div>
