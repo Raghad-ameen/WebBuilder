@@ -129,6 +129,34 @@ zIndex: isSelected ? 9999 : (2000 + index),
           ...item.styles, 
         }}
       >
+
+{isSelected && !item.isEditing && (
+          <div
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              deleteElement(item.id);
+            }}
+            style={{
+              position: "absolute",
+              top: "-35px", // يظهر فوق العنصر مباشرة
+              right: "0px", // يلتصق بالزاوية اليمنى للعنصر
+              background: "#ef4444",
+              borderRadius: "50%",
+              width: "26px",
+              height: "26px",
+              zIndex: 10001,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              pointerEvents: "auto",
+            }}
+          >
+            <Trash2 size={14} color="white" />
+          </div>
+        )}
+
 {item.type === 'text' && (
   <div 
     className="text-element-wrapper"
@@ -313,50 +341,51 @@ zIndex: isSelected ? 9999 : (2000 + index),
 
       {isSelected && itemRefs.current[item.id] && !item.isEditing && (
         <>
-          <Moveable
-            target={itemRefs.current[item.id]}
-            draggable={true}
-            resizable={true}
-            origin={false}
-            throttleDrag={0} 
-            throttleResize={0} 
-            zoom={1 / canvasScale}
-            className="element-moveable-tool"
-            onDrag={({ target, left, top }) => {
-              target.style.left = `${left}px`;
-              target.style.top = `${top}px`;
-            }}
-            onDragEnd={({ target }) => {
-              updateItem(activePageId, section.id, item.id, {
-                x: parseInt(target.style.left),
-                y: parseInt(target.style.top)
-              });
-            }}
-            onResize={({ target, width, height, drag }) => {
-              target.style.width = `${width}px`;
-              target.style.height = `${height}px`;
-              target.style.left = `${drag.left}px`;
-              target.style.top = `${drag.top}px`;
-            }}
-            onResizeEnd={({ target }) => {
-              updateItem(activePageId, section.id, item.id, {
+         <Moveable
+    target={itemRefs.current[item.id]}
+    draggable={true}
+    resizable={true}
+    origin={false}
+    throttleDrag={1} // تغيير بسيط لتقليل عدد العمليات
+    throttleResize={1} 
+    zoom={1 / canvasScale}
+    className="element-moveable-tool"
+    /* إضافة اتجاهات التحجيم لضمان الدقة */
+    renderDirections={["nw","n","ne","w","e","sw","s","se"]} 
+    
+    onDrag={({ target, transform }) => {
+        // التحريك باستخدام transform أسرع بمراحل من left/top في الأداء
+        target.style.transform = transform;
+    }}
+    
+    onDragEnd={({ target, lastEvent }) => {
+        if (lastEvent) {
+            updateItem(activePageId, section.id, item.id, {
+                // استخراج القيم النهائية فقط عند الإفلات
+                x: lastEvent.beforeDelta[0], 
+                y: lastEvent.beforeDelta[1],
+                transform: target.style.transform
+            });
+        }
+    }}
+
+    onResize={({ target, width, height, drag }) => {
+        target.style.width = `${width}px`;
+        target.style.height = `${height}px`;
+        target.style.transform = drag.transform;
+    }}
+    
+    onResizeEnd={({ target, lastEvent }) => {
+        if (lastEvent) {
+            updateItem(activePageId, section.id, item.id, {
                 width: parseInt(target.style.width),
                 height: parseInt(target.style.height),
-                x: parseInt(target.style.left),
-                y: parseInt(target.style.top)
-              });
-            }}
-          />
-          <div
-            onMouseDown={(e) => { e.stopPropagation(); deleteElement(item.id); }}
-            style={{
-              ...styles.deleteElementBtn,
-              left: item.x + item.width - 10,
-              top: item.y - 15,
-            }}
-          >
-            <Trash2 size={12} color="white" />
-          </div>
+                transform: target.style.transform
+            });
+        }
+    }}
+/>
+         
         </>
       )}
     </React.Fragment>
@@ -462,6 +491,20 @@ zIndex: isSelected ? 9999 : (2000 + index),
         .moveable-control-box.dragging {
             pointer-events: none !important;
         }
+
+        /* تحسين أداء السحب */
+.moveable-target {
+    will-change: transform, width, height;
+    transition: none !important; /* مهم جداً: الانتقالات تبطئ السحب الفوري */
+}
+
+/* لضمان عدم تداخل الماوس مع أي شيء خلف العنصر أثناء السحب */
+.moveable-control-box {
+    pointer-events: none;
+}
+.moveable-control, .moveable-line {
+    pointer-events: auto;
+}
     `}</style>    </div>
   );
 }
