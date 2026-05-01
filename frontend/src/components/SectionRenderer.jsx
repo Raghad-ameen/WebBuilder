@@ -341,28 +341,27 @@ zIndex: isSelected ? 9999 : (2000 + index),
 
       {isSelected && itemRefs.current[item.id] && !item.isEditing && (
         <>
-         <Moveable
+<Moveable
     target={itemRefs.current[item.id]}
     draggable={true}
     resizable={true}
     origin={false}
-    throttleDrag={1} // تغيير بسيط لتقليل عدد العمليات
-    throttleResize={1} 
+    throttleDrag={0} // إزالة القيود تماماً للسلاسة
+    throttleResize={0}
     zoom={1 / canvasScale}
     className="element-moveable-tool"
-    /* إضافة اتجاهات التحجيم لضمان الدقة */
-    renderDirections={["nw","n","ne","w","e","sw","s","se"]} 
+    renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
     
     onDrag={({ target, transform }) => {
-        // التحريك باستخدام transform أسرع بمراحل من left/top في الأداء
+        // تحديث مباشر في المتصفح (GPU Accelerated)
         target.style.transform = transform;
     }}
     
     onDragEnd={({ target, lastEvent }) => {
         if (lastEvent) {
+            // نحدث الـ Store مرة واحدة فقط هنا عند الإفلات
             updateItem(activePageId, section.id, item.id, {
-                // استخراج القيم النهائية فقط عند الإفلات
-                x: lastEvent.beforeDelta[0], 
+                x: lastEvent.beforeDelta[0],
                 y: lastEvent.beforeDelta[1],
                 transform: target.style.transform
             });
@@ -370,6 +369,7 @@ zIndex: isSelected ? 9999 : (2000 + index),
     }}
 
     onResize={({ target, width, height, drag }) => {
+        // تحديث الحجم والموقع معاً بسلاسة
         target.style.width = `${width}px`;
         target.style.height = `${height}px`;
         target.style.transform = drag.transform;
@@ -384,8 +384,7 @@ zIndex: isSelected ? 9999 : (2000 + index),
             });
         }
     }}
-/>
-         
+/>         
         </>
       )}
     </React.Fragment>
@@ -504,6 +503,28 @@ zIndex: isSelected ? 9999 : (2000 + index),
 }
 .moveable-control, .moveable-line {
     pointer-events: auto;
+}
+    /* أضيفي هذا داخل الـ style tag */
+
+.section-container * {
+    /* تفعيل التسريع العتادي لجميع العناصر الداخلية */
+    backface-visibility: hidden;
+    perspective: 1000;
+}
+
+.element-moveable-tool {
+    /* منع أي عمليات حسابية إضافية أثناء السحب */
+    pointer-events: none !important;
+}
+
+.element-moveable-tool .moveable-control, 
+.element-moveable-tool .moveable-line {
+    pointer-events: auto !important;
+}
+
+/* العنصر الذي يتم تحريكه الآن */
+[ref] {
+    will-change: transform, width, height;
 }
     `}</style>    </div>
   );
