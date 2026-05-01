@@ -39,6 +39,32 @@ const handleDoubleClick = (e) => {
 const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+
+const formatAllStyles = (item) => {
+  const s = item.styles || {};
+  
+  // 1. تجميع الفلاتر
+  const filters = [];
+  if (s.filterBlur) filters.push(`blur(${s.filterBlur}px)`);
+  if (s.filterBrightness !== undefined) filters.push(`brightness(${s.filterBrightness}%)`);
+  if (s.filterContrast !== undefined) filters.push(`contrast(${s.filterContrast}%)`);
+  if (s.filterGrayscale !== undefined) filters.push(`grayscale(${s.filterGrayscale}%)`);
+
+  // 2. تجميع الظلال
+  const boxShadow = s.shadowColor 
+    ? `${s.shadowX || 0}px ${s.shadowY || 0}px ${s.shadowBlur || 0}px ${s.shadowColor}` 
+    : s.boxShadow;
+
+  return {
+    ...s,
+    filter: filters.length > 0 ? filters.join(" ") : s.filter,
+    boxShadow: boxShadow,
+    // التأكد من تطبيق الوحدات للخصائص التي قد تنساها الرايت بانل
+    fontSize: typeof s.fontSize === 'number' ? `${s.fontSize}px` : s.fontSize,
+    letterSpacing: typeof s.letterSpacing === 'number' ? `${s.letterSpacing}px` : s.letterSpacing,
+  };
+};
+
   return (
     <div
       ref={sectionRef}
@@ -70,7 +96,6 @@ style={{
   height: isMobile ? "auto" : (section.height ? `${section.height}px` : "auto"),
   minHeight: section.height ? `${section.height}px` : "50px",  
   
-  // تعديل: إذا كان السكشن "blank" نجعله شفافاً تماماً
   backgroundColor: section.type === "blank" ? "transparent" : (section.styles?.backgroundColor || "#ffffff"),
   
   zIndex: allSections.length - sectionIndex,
@@ -82,20 +107,11 @@ style={{
   backgroundSize: "cover",
   backgroundPosition: "center",
   
-  // تحسين: جعل الحدود أقل إزعاجاً بصرياً
   borderBottom: isSectionSelected ? "2px solid #4f46e5" : "1px solid rgba(204, 204, 204, 0.3)",
 }}
     > 
-     {isSectionSelected && (
-  <div style={styles.sectionToolbar}>
-    <button onClick={() => store.moveSectionUp(section.id)} style={styles.toolBtn}>🔼</button>
-    <button onClick={() => store.moveSectionDown(section.id)} style={styles.toolBtn}>🔽</button>
-    <button onClick={() => deleteSection(section.id)} style={{...styles.toolBtn, color: 'red'}}>
-       <Trash2 size={14} />
-    </button>
-  </div>
-)}
-
+    
+    
 {section.data.items?.map((item,index) => {
 const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id); 
 const leftPercent = (item.x / BASE_WIDTH) * 100;
@@ -119,7 +135,7 @@ position: isMobileOrTablet ? "relative" : "absolute",
           top: isMobileOrTablet ? "auto" : `${item.y}px`,
           height: isMobileOrTablet ? "auto" : `${item.height}px`,  marginBottom: isMobile ? "20px" : "0", 
   transform: 'translate(0, 0)',
-zIndex: isSelected ? 9999 : (2000 + index), 
+zIndex: isSelected ? 100000 : (2000 + index),
  margin: isMobileOrTablet ? "15px auto" : "0", 
           display: isMobileOrTablet ? "block" : "initial",
             cursor: item.isEditing ? "text" : "move",
@@ -130,32 +146,6 @@ zIndex: isSelected ? 9999 : (2000 + index),
         }}
       >
 
-{isSelected && !item.isEditing && (
-          <div
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              deleteElement(item.id);
-            }}
-            style={{
-              position: "absolute",
-              top: "-35px", // يظهر فوق العنصر مباشرة
-              right: "0px", // يلتصق بالزاوية اليمنى للعنصر
-              background: "#ef4444",
-              borderRadius: "50%",
-              width: "26px",
-              height: "26px",
-              zIndex: 10001,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              pointerEvents: "auto",
-            }}
-          >
-            <Trash2 size={14} color="white" />
-          </div>
-        )}
 
 {item.type === 'text' && (
   <div 
@@ -285,7 +275,7 @@ zIndex: isSelected ? 9999 : (2000 + index),
       backgroundColor: item.styles?.backgroundColor || "#4f46e5",
       clipPath: item.styles?.clipPath || "none",
       borderRadius: item.styles?.borderRadius || "0px",
-      ...item.styles 
+      // ...item.styles 
     }} 
   />
 )}
@@ -335,7 +325,33 @@ zIndex: isSelected ? 9999 : (2000 + index),
             </span>
           </div>
         )}
-
+{isSelected && !item.isEditing && (
+          <div
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              deleteElement(item.id);
+            }}
+            style={{
+              position: "absolute",
+              top: "-50px", // ارفعيه أكثر ليتجاوز أي حواف
+              right: "0px",
+              width: "35px",
+              height: "35px",
+              backgroundColor: "#ef4444",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              zIndex: 9999999, // قيمة جنونية لضمان الظهور
+              pointerEvents: "auto", // ضروري جداً
+              boxShadow: "0 4px 15px rgba(0,0,0,0.4)",
+            }}
+          >
+            <Trash2 size={18} color="white" strokeWidth={2.5} />
+          </div>
+        )}
         
       </div>
 
@@ -346,20 +362,18 @@ zIndex: isSelected ? 9999 : (2000 + index),
     draggable={true}
     resizable={true}
     origin={false}
-    throttleDrag={0} // إزالة القيود تماماً للسلاسة
+    throttleDrag={0} 
     throttleResize={0}
     zoom={1 / canvasScale}
     className="element-moveable-tool"
     renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
     
     onDrag={({ target, transform }) => {
-        // تحديث مباشر في المتصفح (GPU Accelerated)
         target.style.transform = transform;
     }}
     
     onDragEnd={({ target, lastEvent }) => {
         if (lastEvent) {
-            // نحدث الـ Store مرة واحدة فقط هنا عند الإفلات
             updateItem(activePageId, section.id, item.id, {
                 x: lastEvent.beforeDelta[0],
                 y: lastEvent.beforeDelta[1],
@@ -369,7 +383,6 @@ zIndex: isSelected ? 9999 : (2000 + index),
     }}
 
     onResize={({ target, width, height, drag }) => {
-        // تحديث الحجم والموقع معاً بسلاسة
         target.style.width = `${width}px`;
         target.style.height = `${height}px`;
         target.style.transform = drag.transform;
@@ -413,9 +426,8 @@ zIndex: isSelected ? 9999 : (2000 + index),
   />
 )}
 <style>{`
-        /* --- 1. مقابض التحكم في العناصر (نص، صورة، زر) --- */
         .element-moveable-tool .moveable-line {
-            border-top: 1px solid #4f46e5 !important; /* خط متصل أنيق */
+            border-top: 1px solid #4f46e5 !important; 
             background: transparent !important;
         }
         
@@ -423,14 +435,13 @@ zIndex: isSelected ? 9999 : (2000 + index),
             width: 10px !important; 
             height: 10px !important;
             background: white !important;
-            border: 2px solid #4f46e5 !important; /* حدود زرقاء عريضة قليلاً */
-            border-radius: 50% !important; /* شكل دائري مثل تطبيقات التصميم العالمية */
+            border: 2px solid #4f46e5 !important; 
+            border-radius: 50% !important; 
             margin-top: -5px !important; 
             margin-left: -5px !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* --- 2. صندوق التحكم العام --- */
         .moveable-control-box {
             z-index: 9999 !important;
             background-color: transparent !important;
@@ -440,7 +451,6 @@ zIndex: isSelected ? 9999 : (2000 + index),
             pointer-events: auto !important;
         }
 
-        /* --- 3. أداة التحكم في ارتفاع السكشن (Section Resizer) --- */
         .section-resizer-tool .moveable-line { 
             display: none !important; 
         }
@@ -454,13 +464,10 @@ zIndex: isSelected ? 9999 : (2000 + index),
             border: none !important;
         }
 
-        /* --- 4. إدارة التفاعل مع الطبقات الشفافة --- */
-        /* السكاشن الشفافة لا يجب أن تحجب ما خلفها إلا إذا كانت مختارة */
         .is-blank-layer { 
             pointer-events: none !important; 
         }
         
-        /* السماح بالتفاعل مع العناصر داخل السكشن المختار فقط */
         .section-container.selected, 
         .section-container > *, 
         .text-element-wrapper, 
@@ -469,7 +476,6 @@ zIndex: isSelected ? 9999 : (2000 + index),
             pointer-events: auto !important;
         }
 
-        /* --- 5. تنسيقات المحتوى الداخلي --- */
         .button-container-wrapper {
             width: 100% !important;
             height: 100% !important;
@@ -486,34 +492,28 @@ zIndex: isSelected ? 9999 : (2000 + index),
             pointer-events: auto !important;
         }
 
-        /* منع التداخل أثناء السحب */
         .moveable-control-box.dragging {
             pointer-events: none !important;
         }
 
-        /* تحسين أداء السحب */
 .moveable-target {
     will-change: transform, width, height;
-    transition: none !important; /* مهم جداً: الانتقالات تبطئ السحب الفوري */
+    transition: none !important; 
 }
 
-/* لضمان عدم تداخل الماوس مع أي شيء خلف العنصر أثناء السحب */
 .moveable-control-box {
     pointer-events: none;
 }
 .moveable-control, .moveable-line {
     pointer-events: auto;
 }
-    /* أضيفي هذا داخل الـ style tag */
 
 .section-container * {
-    /* تفعيل التسريع العتادي لجميع العناصر الداخلية */
     backface-visibility: hidden;
     perspective: 1000;
 }
 
 .element-moveable-tool {
-    /* منع أي عمليات حسابية إضافية أثناء السحب */
     pointer-events: none !important;
 }
 
@@ -522,7 +522,6 @@ zIndex: isSelected ? 9999 : (2000 + index),
     pointer-events: auto !important;
 }
 
-/* العنصر الذي يتم تحريكه الآن */
 [ref] {
     will-change: transform, width, height;
 }
@@ -540,12 +539,12 @@ const styles = {
   },
  sectionToolbar: {
   position: "absolute",
-  right: "-45px", // تقريب المسافة قليلاً
+  right: "-45px", 
   top: "10px",
   display: "flex",
   flexDirection: "column",
   gap: "8px",
-  zIndex: 10000, // التأكد من أنه فوق كل شيء
+  zIndex: 10000,
   background: "white",
   padding: "5px",
   borderRadius: "8px",
