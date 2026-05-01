@@ -45,42 +45,28 @@ const [isShapesOpen, setIsShapesOpen] = React.useState(false);
     { id: 'footer', label: 'Footer', icon: <Smartphone size={18} /> },
   ];
 const handleAddShape = (shape) => {
-  const newId = `shape_${Date.now()}`;
   const activePage = state.pages.find(p => p.id === state.activePageId);
   const targetSectionId = activePage?.sections[0]?.id || null;
 
   if (!targetSectionId) return;
 
-  // 1. إضافة العنصر مع البيانات الأساسية في خطوة واحدة إذا كان الـ Store يدعم ذلك
-  // أو القيام بها بالتتابع مع ضمان الـ ID
-addItemAtPosition("shape", 150, 150, targetSectionId, {
+  // إرسال كل الخصائص في كائن واحد لضمان عدم ضياعها
+  addItemAtPosition("shape", 150, 150, targetSectionId, {
     shapeType: shape.id,
+    width: 100,
+    height: 100,
     styles: { 
-      clipPath: shape.path, 
-      borderRadius: shape.radius,
-      backgroundColor: "#4f46e5"
+      width: "100px",
+      height: "100px",
+      backgroundColor: "#4f46e5",
+      clipPath: shape.path,      // أهم خاصية للمثلث والنجمة
+      borderRadius: shape.radius, // أهم خاصية للدائرة
+      position: "absolute",
+      display: "block"
     }
   });
+
   setIsShapesOpen(false);
-  // 2. تحديث الخصائص فوراً
-  setTimeout(() => {
-    store.updateItem(state.activePageId, targetSectionId, newId, {
-      shapeType: shape.id,
-      text: "", // لضمان عدم ظهور نصوص افتراضية
-      styles: { 
-        width: 100,
-        height: 100,
-        backgroundColor: "#4f46e5",
-        clipPath: shape.path, 
-        borderRadius: shape.radius,
-        position: "absolute"
-      }
-    });
-    
-    // إغلاق القائمة واختيار العنصر الجديد
-    setIsShapesOpen(false);
-    setState(prev => ({ ...prev, selectedElementIds: [newId] }));
-  }, 10); 
 };
 
 const handleElementClick = (type) => {
@@ -266,20 +252,21 @@ const styles = {
   transition: '0.2s',
 },
 shapesGridPopup: {
-    position: 'absolute',
-    top: '40px', 
-    right: '10px',
+    position: 'fixed', // تغيير من absolute إلى fixed لضمان ظهورها فوق كل شيء
+    top: '83%', 
+    left: '5%', // تظهر بجانب السايد بار تماماً
+    transform: 'translateY(-50%)',
     background: '#fff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
     boxShadow: '0 10px 25px rgba(0,0,0,0.2)', 
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
-    gap: '8px',
-    padding: '12px',
-    width: '220px', 
-    zIndex: 9999, 
-  },
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '12px',
+    padding: '15px',
+    width: '240px', 
+    zIndex: 100000, 
+},
   shapeIconItem: {
     display: 'flex',
     flexDirection: 'column',

@@ -9,6 +9,7 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const activePageId = state.activePageId; 
   const allSections = state.pages.find(p => p.id === activePageId)?.sections || [];
   const itemRefs = useRef({});
+  const BASE_WIDTH = 1200;
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const sectionIndex = state.pages
@@ -37,7 +38,7 @@ const handleDoubleClick = (e) => {
   const isBlank = section.type === "blank";
 const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
-console.log(`🎨 RENDERING CHECK [${section.id}]:`, section.styles?.backgroundColor);
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
   return (
     <div
       ref={sectionRef}
@@ -48,11 +49,12 @@ onMouseDown={(e) => {
       onSelect(section.id);
       store.selectItems([section.id]);
   }
-}}onMouseUp={(e) => {
+}}
+onMouseUp={(e) => {
   if (!state.isDraggingNow) return;
   e.stopPropagation();
 
-  const rect = e.currentTarget.getBoundingClientRect();
+  const rect = sectionRef.current.getBoundingClientRect(); 
   
   const x = (e.clientX - rect.left) / canvasScale;
   const y = (e.clientY - rect.top) / canvasScale;
@@ -62,21 +64,27 @@ onMouseDown={(e) => {
   store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
 }}   
 style={{
- position: "relative",
+  position: "relative",
   width: "100%",
-  ...section.styles, 
-
-zIndex: allSections.length - sectionIndex,
+  ...section.styles,
+  height: isMobile ? "auto" : (section.height ? `${section.height}px` : "auto"),
+  minHeight: section.height ? `${section.height}px` : "50px",  
+  
+  // تعديل: إذا كان السكشن "blank" نجعله شفافاً تماماً
+  backgroundColor: section.type === "blank" ? "transparent" : (section.styles?.backgroundColor || "#ffffff"),
+  
+  zIndex: allSections.length - sectionIndex,
   overflow: "visible", 
-  height: section.height ? `${section.height}px` : "auto",
-  backgroundColor: section.styles?.backgroundColor || "transparent",
-  display: "block",
-
+  display: isMobile ? "flex" : "block",
+  flexDirection: "column",
+  paddingBottom: isMobile ? "50px" : "0px",
   backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
   backgroundSize: "cover",
   backgroundPosition: "center",
-borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
-      }} 
+  
+  // تحسين: جعل الحدود أقل إزعاجاً بصرياً
+  borderBottom: isSectionSelected ? "2px solid #4f46e5" : "1px solid rgba(204, 204, 204, 0.3)",
+}}
     > 
      {isSectionSelected && (
   <div style={styles.sectionToolbar}>
@@ -88,8 +96,12 @@ borderBottom: isSectionSelected ? "3px dashed #4f46e5" : "1px dashed #cccccc",
   </div>
 )}
 
-{section.data.items?.map((item) => {
-const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id);  return (
+{section.data.items?.map((item,index) => {
+const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id); 
+const leftPercent = (item.x / BASE_WIDTH) * 100;
+  const widthPercent = (item.width / BASE_WIDTH) * 100;
+const isMobileOrTablet = window.innerWidth < 1024;  
+ return (
     <React.Fragment key={item.id}>
       <div
         ref={(el) => (itemRefs.current[item.id] = el)}
@@ -101,14 +113,16 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
   onSelect(item.id);
 }}
         style={{
-          position: "absolute",
-         left: `${item.x}px`,   
-        top: `${item.y}px`,   
-        width: `${item.width}px`,
-        height: `${item.height}px`,
-        transform: 'translate(0, 0)',
-zIndex: isSelected ? 9999 : 2000,
-          cursor: item.isEditing ? "text" : "move",
+position: isMobileOrTablet ? "relative" : "absolute",
+          left: isMobileOrTablet ? "0" : `${(item.x / BASE_WIDTH) * 100}%`,
+          width: isMobileOrTablet ? "90%" : `${(item.width / BASE_WIDTH) * 100}%`,
+          top: isMobileOrTablet ? "auto" : `${item.y}px`,
+          height: isMobileOrTablet ? "auto" : `${item.height}px`,  marginBottom: isMobile ? "20px" : "0", 
+  transform: 'translate(0, 0)',
+zIndex: isSelected ? 9999 : (2000 + index), 
+ margin: isMobileOrTablet ? "15px auto" : "0", 
+          display: isMobileOrTablet ? "block" : "initial",
+            cursor: item.isEditing ? "text" : "move",
           overflow: "visible",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
@@ -122,11 +136,11 @@ zIndex: isSelected ? 9999 : 2000,
       position: 'relative', 
       width: "100%", 
       height: "100%", 
+      top: isMobile ? `${index * 40}px` : `0px`, 
       display: "flex",
-      alignItems: item.styles?.alignItems || "center",
-      justifyContent: 
-        item.styles?.textAlign === 'right' ? 'flex-end' : 
-        item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
+      alignItems: "center",
+      justifyContent: item.styles?.textAlign === 'right' ? 'flex-end' : 
+                     item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
     }}
   >
     {!item.isEditing && (
@@ -150,17 +164,16 @@ zIndex: isSelected ? 9999 : 2000,
         });
       }}
       style={{
-        width: "100%", 
+       width: "100%", 
         outline: "none",
         zIndex: 5,
-        pointerEvents: "auto", 
-        userSelect: "text", 
-        WebkitUserSelect: "text",
+        fontSize: isMobile ? `clamp(12px, 4vw, 18px)` : (item.styles?.fontSize || "16px"),
         textAlign: item.styles?.textAlign || "left",
-        lineHeight: item.styles?.lineHeight || "1.5", 
-        wordBreak: "break-word",
-        whiteSpace: "pre-wrap",
-        ...item.styles, 
+        lineHeight: "1.2", 
+        wordBreak: "break-word", 
+        overflowWrap: "anywhere",
+        whiteSpace: "normal", 
+        ...item.styles,
       }}
     >
       {item.text || "Type your text..."}
@@ -188,7 +201,7 @@ zIndex: isSelected ? 9999 : 2000,
     {item.src ? (
       <img 
         src={item.src} 
-        style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+        style={{ width: "100%", height: "100%", objectFit: "cover",maxWidth: "100%" }} 
         alt="Uploaded content"
       />
     ) : (
@@ -236,19 +249,14 @@ zIndex: isSelected ? 9999 : 2000,
   </div>
 )}
 
- {item.type === 'shape' && (
+{item.type === 'shape' && (
   <div 
     style={{ 
       width: "100%", 
       height: "100%", 
       backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-            clipPath: item.styles?.clipPath || (
-         item.shapeType === 'triangle' ? "polygon(50% 0%, 0% 100%, 100% 100%)" :
-         item.shapeType === 'star' ? "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" :
-         "none"
-      ),
-      
-      borderRadius: item.shapeType === 'circle' ? "50%" : (item.styles?.borderRadius || "0px"),
+      clipPath: item.styles?.clipPath || "none",
+      borderRadius: item.styles?.borderRadius || "0px",
       ...item.styles 
     }} 
   />
@@ -310,8 +318,8 @@ zIndex: isSelected ? 9999 : 2000,
             draggable={true}
             resizable={true}
             origin={false}
-            throttleDrag={1} 
-            throttleResize={1} 
+            throttleDrag={0} 
+            throttleResize={0} 
             zoom={1 / canvasScale}
             className="element-moveable-tool"
             onDrag={({ target, left, top }) => {
@@ -368,76 +376,93 @@ zIndex: isSelected ? 9999 : 2000,
       target.style.height = `${height}px`;
     }}
     onResizeEnd={({ target }) => {
-     updateSection(state.activePageId, section.id, { 
+      const newHeight = parseInt(target.style.height);
+      updateSection(state.activePageId, section.id, { 
         ...section,
-        height: parseInt(target.style.height) 
+        height: newHeight 
       });
     }}
   />
 )}
-    <style>{`
+<style>{`
+        /* --- 1. مقابض التحكم في العناصر (نص، صورة، زر) --- */
         .element-moveable-tool .moveable-line {
-            border-top: 1px dashed #4f46e5 !important;
+            border-top: 1px solid #4f46e5 !important; /* خط متصل أنيق */
             background: transparent !important;
         }
+        
         .element-moveable-tool .moveable-control {
-            width: 6px !important; 
-            height: 6px !important;
+            width: 10px !important; 
+            height: 10px !important;
             background: white !important;
-            border: 1px solid #4f46e5 !important;
-            border-radius: 0% !important; 
-            margin-top: -3px !important; 
-            margin-left: -3px !important;
+            border: 2px solid #4f46e5 !important; /* حدود زرقاء عريضة قليلاً */
+            border-radius: 50% !important; /* شكل دائري مثل تطبيقات التصميم العالمية */
+            margin-top: -5px !important; 
+            margin-left: -5px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-       .moveable-control-box {
-    z-index: 9999 !important;
-    background-color: transparent !important;
-}
-    .section-container.is-selected {
-    background-color: inherit !important;
-}
-    .moveable-control, .moveable-line {
-      pointer-events: auto !important;
-    }
 
-        .section-resizer-tool .moveable-line { display: none !important; }
+        /* --- 2. صندوق التحكم العام --- */
+        .moveable-control-box {
+            z-index: 9999 !important;
+            background-color: transparent !important;
+        }
+        
+        .moveable-control, .moveable-line {
+            pointer-events: auto !important;
+        }
+
+        /* --- 3. أداة التحكم في ارتفاع السكشن (Section Resizer) --- */
+        .section-resizer-tool .moveable-line { 
+            display: none !important; 
+        }
+        
         .section-resizer-tool .moveable-control { 
-          background: #4f46e5 !important; 
-          opacity: 0.5; 
-          height: 4px !important; 
-          width: 40px !important; 
-          border-radius: 2px !important;
+            background: #4f46e5 !important; 
+            opacity: 0.8; 
+            height: 6px !important; 
+            width: 50px !important; 
+            border-radius: 10px !important;
+            border: none !important;
         }
-        .is-blank-layer { 
-    pointer-events: auto !important; 
-}
-   .section-container {
-    pointer-events: auto !important;
-}
-.button-container-wrapper {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-}
-.moveable-control-box.dragging {
-    pointer-events: none !important;
-}
-    .button-container-wrapper {
-    box-sizing: border-box !important;
-    overflow: hidden;
-}
- .text-element-wrapper, .button-container-wrapper {
-    pointer-events: auto !important; 
-}
 
-.text-element-wrapper > div, .button-container-wrapper > span, img {
-    pointer-events: auto !important;
-}
-      `}</style>
-    </div>
+        /* --- 4. إدارة التفاعل مع الطبقات الشفافة --- */
+        /* السكاشن الشفافة لا يجب أن تحجب ما خلفها إلا إذا كانت مختارة */
+        .is-blank-layer { 
+            pointer-events: none !important; 
+        }
+        
+        /* السماح بالتفاعل مع العناصر داخل السكشن المختار فقط */
+        .section-container.selected, 
+        .section-container > *, 
+        .text-element-wrapper, 
+        .button-container-wrapper,
+        .moveable-control-box {
+            pointer-events: auto !important;
+        }
+
+        /* --- 5. تنسيقات المحتوى الداخلي --- */
+        .button-container-wrapper {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+            overflow: hidden;
+        }
+
+        .text-element-wrapper > div, 
+        .button-container-wrapper > span, 
+        img {
+            pointer-events: auto !important;
+        }
+
+        /* منع التداخل أثناء السحب */
+        .moveable-control-box.dragging {
+            pointer-events: none !important;
+        }
+    `}</style>    </div>
   );
 }
 
@@ -449,15 +474,20 @@ const styles = {
     display: "flex", alignItems: "center", justifyContent: "center",
     boxShadow: "0 2px 8px rgba(0,0,0,0.3)", pointerEvents: "auto"
   },
-  sectionToolbar: {
-    position: "absolute",
-    right: "-50px", 
-    top: "0",
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-    zIndex: 3000,
-  },
+ sectionToolbar: {
+  position: "absolute",
+  right: "-45px", // تقريب المسافة قليلاً
+  top: "10px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  zIndex: 10000, // التأكد من أنه فوق كل شيء
+  background: "white",
+  padding: "5px",
+  borderRadius: "8px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  border: "1px solid #e2e8f0"
+},
   toolBtn: {
     background: "white",
     border: "1px solid #ddd",

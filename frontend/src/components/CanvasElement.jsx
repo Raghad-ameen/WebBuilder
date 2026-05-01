@@ -35,7 +35,6 @@ const handleMouseUp = (e) => {
   // بالنسبة للارتفاع (Y)، سنضعه في بداية السكرول أو على بعد 100 بكسل من الأعلى
   const centerY = 100; 
 
-  console.log("CENTERING SUCCESS! X:", centerX, "Y:", centerY);
 
   // إرسال الإحداثيات المركزية للـ Store
   addItemAtPosition(state.draggingType, centerX, centerY);
@@ -53,7 +52,7 @@ return (
       key={state.viewMode}
       style={{
         flex: 1,
-        backgroundColor: state.viewMode === 'desktop' ? '#ffffff' : '#f1f5f9', 
+        backgroundColor: 'transparent' ,
         display: 'flex',
         justifyContent: 'center', 
         alignItems: 'flex-start',

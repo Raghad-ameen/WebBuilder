@@ -63,8 +63,6 @@ export default function EditorLayout({ store }) {
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [state.selectedElementIds, state.clipboard, store]);
 
-  // لمراقبة العرض في الـ Console أثناء التطوير
-  console.log("Current Mode:", state.viewMode, "Width:", width, "Scale:", scale);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#f0f2f5", overflow: "hidden" }}>
@@ -91,27 +89,23 @@ export default function EditorLayout({ store }) {
               <div
                 id="main-canvas"
                 className="main-canvas-area"
-                style={{
-                  // الإعدادات الديناميكية للعرض والسكيل لضمان استجابة المحرر
-                  width: width, 
-                  minWidth: width === '100%' ? 'auto' : width,
-                  // backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff",
-                  minHeight: state.canvasHeight || "100vh", 
-                  
-                  // السكيل يطبق هنا في الزاوية العلوية المركزية
-                  // transform: `scale(${scale})`,
-                  // transformOrigin: "top center",
-                  
-                  transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
-                  position: "relative", 
-                  // boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.15)", 
-                  margin: "0 auto",
-                  
-                  // overflow: visible ضروري جداً لكي لا تلتصق العناصر بالحواف عند السحب
-                  overflow: "visible", 
-                  display: "flex",
-                  flexDirection: "column"
-                }}
+              style={{
+  width: width, 
+  minWidth: width === '100%' ? 'auto' : width,
+  // 1. تفعيل لون الخلفية الأساسي للكانفاس ليكون هو الأرضية البيضاء
+  backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff", 
+  minHeight: state.canvasHeight || "100vh", 
+  transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
+  position: "relative", 
+  margin: "0 auto",
+  overflow: "visible", 
+  display: "flex",
+  flexDirection: "column",
+  // 2. ضمان عدم وجود أي فجوات هوائية بين السكاشن
+  gap: "0px",
+  // 3. إضافة ظل خفيف لتمييز حدود الصفحة عن خلفية البرنامج الرمادية
+  boxShadow: "0 4px 20px rgba(0,0,0,0.08)" 
+}}
               >
                 {activePage?.sections?.length > 0 ? (
                   activePage.sections.map((section) => (

@@ -9,7 +9,7 @@ import {
   ChevronRight 
 } from "lucide-react";
 
-export default function TopBar({ store }) {
+export default function TopBar({ store,exportToHTML }) {
   if (!store) return null;
 
   // استخراج history و redoStack من الـ store لإصلاح الـ ReferenceError
@@ -109,6 +109,28 @@ export default function TopBar({ store }) {
   <i className="fa-solid fa-trash-can"></i>
   Clear Page
 </button>
+
+<button 
+          onClick={() => exportToHTML && exportToHTML()}
+          style={{
+            padding: "0 16px",
+            height: "36px",
+            backgroundColor: "#4f46e5",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            whiteSpace: "nowrap"
+          }}
+        >
+          Export Code (HTML)
+        </button>
+
     <button 
       onClick={() => store.saveProject()}
       style={styles.saveButton}

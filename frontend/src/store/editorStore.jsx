@@ -44,11 +44,8 @@ const copyElements = useCallback((elementIds) => {
         activePage.sections.forEach(section => {
             section.data.items.forEach(item => {
                 if (elementIds.includes(item.id)) {
-                    // نقوم بعمل نسخة عميقة للعنصر
                     const clonedItem = safeClone(item);
                     
-                    // توليد معرف جديد كلياً عند النسخ لتجنب التكرار لاحقاً
-                    // أضفنا Math.random لضمان التفرد حتى لو تمت العملية في نفس الجزء من الثانية
                     clonedItem.id = `e-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
                     
                     elementsToCopy.push(clonedItem);
@@ -163,14 +160,10 @@ const closeModal = useCallback(() => {
 }, []);
 
 const updateSection = useCallback((pageId, sectionId, newData) => {
-  // 1. تأكدي أن البيانات تصل أصلاً
-  console.log("🛠️ Store received update for:", sectionId, newData);
 
   setState(prev => {
-    // 2. تعريف activePage داخل الـ setState لضمان وصولها
     const activePage = prev.pages.find(p => p.id === pageId);
     
-    // إذا لم يجد الصفحة، لا يعطل البرنامج بل يعيد الحالة كما هي
     if (!activePage) {
       console.warn("⚠️ Page not found in store:", pageId);
       return prev; 
@@ -186,7 +179,6 @@ const updateSection = useCallback((pageId, sectionId, newData) => {
           sections: p.sections.map(s => {
             if (s.id !== sectionId) return s;
 
-            // 3. الدمج العميق للبيانات
             const updatedSection = {
               ...s,
               height: newData.height !== undefined ? newData.height : s.height,
@@ -200,44 +192,54 @@ const updateSection = useCallback((pageId, sectionId, newData) => {
               }
             };
             
-            console.log("✅ Section updated successfully:", updatedSection);
             return updatedSection;
           })
         };
       })
     };
   });
-}, [setState]); // تأكدي من وجود setState هنا
+}, [setState]);
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
-  // الخطوة 1: تحديد الأبعاد الافتراضية قبل الحساب لضمان دقة الموقع
-  let defaultWidth = 150;
-  let defaultHeight = 50;
-  let defaultStyles = { backgroundColor: "transparent", color: "#000000" };
-  let defaultText = "";
 
-  if (type === 'button') {
-    defaultStyles = { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px" };
-    defaultText = "Click Me";
-    defaultHeight = 45;
-  } else if (type === 'text') {
-    defaultText = "New Text";
-  } else if (type === 'shape') {
-    defaultStyles = { backgroundColor: "#4f46e5", borderRadius: "0px" };
-    defaultWidth = 100;
-    defaultHeight = 100;
-  } else if (type === 'image') {
-    defaultStyles = { backgroundColor: "#f1f5f9" };
-    defaultWidth = 200;
-    defaultHeight = 150;
-  }
+  const elementDefaults = {
+    button: {
+      width: 150,
+      height: 45,
+      text: "Click Me",
+      styles: { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px" }
+    },
+    text: {
+      width: 200,
+      height: 50,
+      text: "New Text",
+      styles: { backgroundColor: "transparent", color: "#000000" }
+    },
+    shape: {
+      width: 100,
+      height: 100,
+      text: "",
+      styles: { backgroundColor: "#4f46e5", borderRadius: "0px" }
+    },
+    image: {
+      width: 250,
+      height: 180,
+      text: "",
+      styles: { backgroundColor: "transparent", border: "1px dashed #ccc" }
+    },
+    default: {
+      width: 150,
+      height: 50,
+      text: "",
+      styles: { backgroundColor: "transparent", color: "#000000" }
+    }
+  };
 
-  const finalWidth = extraData.width || defaultWidth;
-  const finalHeight = extraData.height || defaultHeight;
+  const config = elementDefaults[type] || elementDefaults.default;
 
-  // الخطوة 2: الحساب الذكي للموقع (الماوس في منتصف العنصر تماماً)
-  // تم إلغاء الـ -75 و -25 الثابتة واستبدالها بنصف الحجم الفعلي
+  const finalWidth = extraData.width || config.width;
+  const finalHeight = extraData.height || config.height;
   const finalX = (typeof x === 'number' ? x : 100) - (finalWidth / 2);
   const finalY = (typeof y === 'number' ? y : 100) - (finalHeight / 2);
 
@@ -245,72 +247,85 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    const safeExtraData = extraData || {};
-
     const newItem = {
       id: finalNewId,
-      type: type,
+      type,
       x: finalX,
       y: finalY,
       width: finalWidth,
       height: finalHeight,
-      text: safeExtraData.text !== undefined ? safeExtraData.text : defaultText, 
-      ...safeExtraData, 
-      styles: { 
-        position: 'absolute', 
-        zIndex: 100, 
-        display: 'flex', 
-        alignItems: 'center', 
+      text: extraData.text !== undefined ? extraData.text : config.text,
+      ...extraData,
+      styles: {
+        position: 'absolute',
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        ...defaultStyles,
-        ...(safeExtraData?.styles || {})
+        ...config.styles,
+        ...(extraData.styles || {})
       }
     };
 
-    const updatedSections = [...activePage.sections];
-    if (updatedSections.length === 0) {
-      updatedSections.push({ 
-        id: `s-${Date.now()}`, 
-        type: "blank", 
-        data: { items: [newItem], styles: { minHeight: "100vh" } } 
-      });
-    } else {
+    let updatedSections = [...activePage.sections];
+
+if (updatedSections.length === 0) {
+    // التحقق هل العنصر المضاف هو أصلاً سكشن (مثل هيرو) أم عنصر بسيط (مثل نص)
+    const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
+
+    updatedSections = [{
+        id: `s-${Date.now()}`,
+        type: isLargeSection ? type : "blank",
+        // إذا كان سكشن كبير نعطيه 600، إذا كان نص نعطيه 100 فقط
+        height: isLargeSection ? 600 : 100, 
+        styles: { 
+            // السكاشن البسيطة دائماً شفافة لتظهر خلفية الكانفاس
+            backgroundColor: isLargeSection ? "#ffffff" : "transparent", 
+            padding: "0px",
+            // منع الارتفاع الإجباري الكبير للعناصر البسيطة
+            minHeight: isLargeSection ? "400px" : "50px" 
+        },
+        data: { items: [newItem] }
+    }];
+}    else {
       const targetId = sectionId || updatedSections[0].id;
-      const idx = updatedSections.findIndex(s => s.id === targetId);
-      const sIdx = idx === -1 ? 0 : idx;
-      updatedSections[sIdx] = {
-        ...updatedSections[sIdx],
-        data: { 
-          ...updatedSections[sIdx].data, 
-          items: [...(updatedSections[sIdx].data.items || []), newItem] 
+      updatedSections = updatedSections.map(s => {
+        if (s.id === targetId) {
+          return {
+            ...s,
+            data: {
+              ...s.data,
+              items: [...(s.data.items || []), newItem]
+            }
+          };
         }
-      };
+        return s;
+      });
     }
 
     return {
       ...prev,
-      pages: prev.pages.map(p => p.id === prev.activePageId ? { ...p, sections: updatedSections } : p),
+      pages: prev.pages.map(p => 
+        p.id === prev.activePageId ? { ...p, sections: updatedSections } : p
+      ),
       isDraggingNow: false,
       draggingType: null
     };
   });
-  console.log("X:", x, "Y:", y, "Scale:", state.viewMode);
 
-  // الخطوة 3: التحديد التلقائي للعنصر الجديد
   setTimeout(() => {
     setState(current => ({
       ...current,
       selectedElementIds: [finalNewId],
       activeElementId: finalNewId
     }));
-  }, 50); 
-  
+  }, 50);
+
 }, [setState]);
 
 const selectItems = useCallback((ids) => {
   setState(prev => {
-    // إذا كان التحديد هو نفسه الموجود حالياً، لا تفعل شيئاً (يمنع الـ Lag)
     if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(ids)) {
       return prev;
     }
@@ -347,20 +362,21 @@ const loadProject = useCallback(() => {
     saveToHistory(state); 
     
 const templates = {
-    blank: {
-      id: `s-${Date.now()}`,
-      type: "blank",
-      height: 400, // الارتفاع الافتراضي للسكشن الفارغ
-      styles: { 
-        backgroundColor: "#ffffff", 
-        padding: "0px" 
-      },
-      data: { items: [] }
+  blank: {
+    id: `s-${Date.now()}`,
+    type: "blank",
+    height: 150, // تقليل الارتفاع الافتراضي للسكشن الفارغ
+    styles: { 
+        backgroundColor: "transparent", // جعله شفافاً ليعكس لون الكانفاس
+        padding: "0px",
+        minHeight: "50px"
     },
+    data: { items: [] }
+},
     hero: {
       id: `s-${Date.now()}`,
       type: "section",
-      height: 600, // السكشن الـ Hero يحتاج مساحة أكبر
+      height: 600, 
       styles: { 
         backgroundColor: "#f8fafc", 
         padding: "80px 40px" 
@@ -383,7 +399,7 @@ const templates = {
     navbar: {
       id: `s-${Date.now()}`,
       type: "section",
-      height: 80, // النواف بار يكون نحيف دائماً
+      height: 80, 
       styles: { 
         backgroundColor: "#ffffff", 
         borderBottom: "1px solid #eee" 
@@ -604,7 +620,6 @@ const moveSection = useCallback((sectionId, direction) => {
     const sections = [...activePage.sections];
     const index = sections.findIndex(s => s.id === sectionId);
     
-    // منع التحريك إذا كان السكشن في الأطراف
     if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections.length - 1)) {
       return prev;
     }
@@ -612,7 +627,6 @@ const moveSection = useCallback((sectionId, direction) => {
     saveToHistory(prev);
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     
-    // عملية التبديل (Swap)
     [sections[index], sections[newIndex]] = [sections[newIndex], sections[index]];
 
     return {

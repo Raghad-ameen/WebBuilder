@@ -4,7 +4,6 @@ import { debounce } from "lodash";
 export default function RightPanel({ store }) {
   const { state, updateItem, previewUpdateItem, updateSection } = store;
 
-  // --- التعديلات الجوهرية هنا (تصحيح الترتيب) ---
   const activePage = state.pages.find((p) => p.id === state.activePageId);
   const selectedId = state.selectedElementIds?.[0] || state.activeElementId;
   
@@ -18,9 +17,8 @@ let selectedItem = null;
     });
   }
 
-  // الآن selectedId معرف، لذا سيعمل هذا السطر
 const selectedSection = useMemo(() => {
-    if (!selectedId || !activePage || selectedItem) return null; // إذا وجدنا عنصراً، لا داعي لاعتباره سكشن
+    if (!selectedId || !activePage || selectedItem) return null;
     return activePage.sections.find(s => s.id === selectedId);
   }, [selectedId, activePage, selectedItem]);
 
@@ -63,7 +61,7 @@ const selectedSection = useMemo(() => {
     });
   };
 
-  return (
+return (
     <div className="properties-panel" style={styles.panel}>
       <h3 style={styles.title}>Properties</h3>
 
@@ -119,46 +117,45 @@ const selectedSection = useMemo(() => {
             </div>
           </div>
 
-          {/* 3. Typography - (لم أحذفه!) */}
-         {/* 3. Typography - يظهر للنصوص وللأزرار */}
-{(selectedItem.type === "text" || selectedItem.type === "button") && (
-  <div style={styles.group}>
-    <label style={styles.label}>Typography</label>
-    <div style={styles.field}>
-      <span style={styles.subLabel}>Family</span>
-      <select
-        value={selectedItem.styles?.fontFamily || "Inter"}
-        onChange={(e) => handleStyleCommit("fontFamily", e.target.value)}
-        style={styles.input}
-      >
-        <option value="'Plus Jakarta Sans', sans-serif">Jakarta</option>
-        <option value="'Playfair Display', serif">Playfair Display</option>
-        <option value="'Cairo', sans-serif">Cairo (Arabic)</option>
-        <option value="'Inter', sans-serif">Inter</option>
-      </select>
-    </div>
-    
-    <div style={styles.row}>
-      <div style={{ ...styles.field, flex: 2 }}>
-        <span style={styles.subLabel}>Size</span>
-        <input
-          type="number"
-          value={parseInt(selectedItem.styles?.fontSize) || 16}
-          onChange={(e) => {
-            const val = `${e.target.value}px`;
-            handleStylePreview("fontSize", val);
-            debouncedSave(state.activePageId, selectedItem.sectionId, selectedId, { 
-              styles: { ...selectedItem.styles, fontSize: val } 
-            });
-          }}
-          style={styles.input}
-        />
-      </div>
-    </div>
-  </div>
-)}
+          {/* 3. Typography */}
+          {(selectedItem.type === "text" || selectedItem.type === "button") && (
+            <div style={styles.group}>
+              <label style={styles.label}>Typography</label>
+              <div style={styles.field}>
+                <span style={styles.subLabel}>Family</span>
+                <select
+                  value={selectedItem.styles?.fontFamily || "Inter"}
+                  onChange={(e) => handleStyleCommit("fontFamily", e.target.value)}
+                  style={styles.input}
+                >
+                  <option value="'Plus Jakarta Sans', sans-serif">Jakarta</option>
+                  <option value="'Playfair Display', serif">Playfair Display</option>
+                  <option value="'Cairo', sans-serif">Cairo (Arabic)</option>
+                  <option value="'Inter', sans-serif">Inter</option>
+                </select>
+              </div>
+              
+              <div style={styles.row}>
+                <div style={{ ...styles.field, flex: 2 }}>
+                  <span style={styles.subLabel}>Size</span>
+                  <input
+                    type="number"
+                    value={parseInt(selectedItem.styles?.fontSize) || 16}
+                    onChange={(e) => {
+                      const val = `${e.target.value}px`;
+                      handleStylePreview("fontSize", val);
+                      debouncedSave(state.activePageId, selectedItem.sectionId, selectedId, { 
+                        styles: { ...selectedItem.styles, fontSize: val } 
+                      });
+                    }}
+                    style={styles.input}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* 4. Image Style - (موجود!) */}
+          {/* 4. Image/Button/Shape Specific Styles */}
           {selectedItem.type === "image" && (
             <div style={styles.group}>
               <label style={styles.label}>Image Style</label>
@@ -177,10 +174,9 @@ const selectedSection = useMemo(() => {
             </div>
           )}
 
-          {/* 5. Button Style - (موجود!) */}
-          {selectedItem.type === "button" && (
+          {(selectedItem.type === "button" || selectedItem.type === "shape") && (
             <div style={styles.group}>
-              <label style={styles.label}>Button Style</label>
+              <label style={styles.label}>{selectedItem.type === "button" ? "Button Color" : "Shape Color"}</label>
               <input
                 type="color"
                 value={selectedItem.styles?.backgroundColor || "#4f46e5"}
@@ -191,21 +187,7 @@ const selectedSection = useMemo(() => {
             </div>
           )}
 
-          {/* 6. Shape Properties - (موجود!) */}
-          {selectedItem.type === "shape" && (
-            <div style={styles.group}>
-              <label style={styles.label}>Shape Properties</label>
-              <input
-                type="color"
-                value={selectedItem.styles?.backgroundColor || "#4f46e5"}
-                onChange={(e) => handleStylePreview("backgroundColor", e.target.value)}
-                onBlur={(e) => handleStyleCommit("backgroundColor", e.target.value)}
-                style={styles.fullColorPicker}
-              />
-            </div>
-          )}
-
-          {/* 7. Decoration - (موجود!) */}
+          {/* 5. Decoration & Appearance */}
           <div style={styles.group}>
             <label style={styles.label}>Decoration</label>
             <div style={styles.row}>
@@ -242,82 +224,87 @@ const selectedSection = useMemo(() => {
                 />
               </div>
             </div>
+
+            {/* تم نقل Opacity هنا ليكون جزءاً من مظهر العنصر */}
+            <hr style={styles.divider} />
+            <label style={styles.subLabel}>Opacity ({Math.round((selectedItem.styles?.opacity || 1) * 100)}%)</label>
+            <input
+              type="range" min="0" max="1" step="0.01"
+              style={{ width: "100%" }}
+              value={selectedItem.styles?.opacity || 1}
+              onChange={(e) => handleStylePreview("opacity", parseFloat(e.target.value))}
+              onBlur={(e) => handleStyleCommit("opacity", parseFloat(e.target.value))}
+            />
           </div>
         </div>
       ) : selectedSection ? (
-  <div style={styles.controls}>
-    <div style={styles.group}>
-      <label style={styles.label}>Section Layout</label>
+        <div style={styles.controls}>
+          <div style={styles.group}>
+            <label style={styles.label}>Section Layout</label>
 
-      {/* 1. لون الخلفية - تصحيح مسار التحديث */}
-      <div style={styles.field}>
-        <span style={styles.subLabel}>Background Color</span>
-        <input
-          type="color"
-          // نستخدم الـ Default في حال لم يوجد لون
-          value={selectedSection.styles?.backgroundColor || "#ffffff"}
-         onChange={(e) => {
-  const newColor = e.target.value;
-  console.log("🖱️ UI INTERACTION: Changing color to", newColor);
- // ✅ الطريقة الأفضل والأضمن
-updateSection(state.activePageId, selectedSection.id, {
-  styles: { 
-    backgroundColor: newColor 
-  }
-});
-}}
-          style={styles.fullColorPicker}
-        />
-      </div>
+            <div style={styles.field}>
+              <span style={styles.subLabel}>Background Color</span>
+              <input
+                type="color"
+                value={selectedSection.styles?.backgroundColor || "#ffffff"}
+                onChange={(e) => {
+                  updateSection(state.activePageId, selectedSection.id, {
+                    styles: { ...selectedSection.styles, backgroundColor: e.target.value }
+                  });
+                }}
+                style={styles.fullColorPicker}
+              />
+            </div>
 
-      {/* 2. الارتفاع - تأكدي أنه يتوافق مع renderer */}
-<div style={styles.field}>
-  <span style={styles.subLabel}>Section Height (px)</span>
-  <input
-    type="number"
-    value={selectedSection.height || 400} 
-    onChange={(e) => {
-      const newHeight = parseInt(e.target.value) || 0;
-      // التحديث يجب أن يكون للسكشن مباشرة وليس داخل styles
-      updateSection(state.activePageId, selectedSection.id, {
-        height: newHeight 
-      });
-    }}
-    style={styles.input}
-  />
-</div>
+            <div style={styles.field}>
+              <span style={styles.subLabel}>Section Height (px)</span>
+              <input
+                type="number"
+                value={selectedSection.height || 400} 
+                onChange={(e) => {
+                  updateSection(state.activePageId, selectedSection.id, {
+                    height: parseInt(e.target.value) || 0 
+                  });
+                }}
+                style={styles.input}
+              />
+            </div>
 
-      {/* 3. صورة الخلفية */}
-      <div style={styles.field}>
-        <span style={styles.subLabel}>Background Image</span>
-        <button 
-          onClick={() => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = (e) => {
-              const file = e.target.files[0];
-              const reader = new FileReader();
-              reader.onload = (event) => {
-               // ✅ الطريقة الأنظف
-updateSection(state.activePageId, selectedSection.id, {
-  styles: { 
-    backgroundImage: event.target.result 
-  }
-});
-              };
-              reader.readAsDataURL(file);
-            };
-            input.click();
-          }}
-          style={styles.uploadBtn}
-        >
-          Upload Image
-        </button>
-      </div>
-    </div>
-  </div>
-) : (
+            <div style={styles.field}>
+              <span style={styles.subLabel}>Background Image</span>
+              <button 
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      updateSection(state.activePageId, selectedSection.id, {
+                        styles: { ...selectedSection.styles, backgroundImage: `url(${event.target.result})` }
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  };
+                  input.click();
+                }}
+                style={{
+                  padding: "8px",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                  width: "100%"
+                }}
+              >
+                Upload Image
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
         <div style={styles.emptyState}>Select a section or element to edit</div>
       )}
     </div>

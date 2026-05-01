@@ -2,6 +2,7 @@ import React, { useEffect, useRef,useMemo } from "react";
 import EditorLayout from "../components/EditorLayout";
 import { useEditorStore } from "../store/editorStore";
 import CustomModal from "../components/CustomModal";
+import TopBar from "../components/TopBar"; // تأكدي أن المسار يؤدي لملف التوب بار فعلاً
 
 export default function Editor() {
 const initialData = useMemo(() => ({
@@ -110,8 +111,77 @@ selectedRef.current = store.state.selectedElementIds;
   return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
 }, []);
 
+// دالة تحويل الستايلات من كائن إلى نص CSS
+  const formatStyle = (styles) => {
+    if (!styles) return "";
+    return Object.entries(styles)
+      .map(([key, value]) => {
+        const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+        return `${cssKey}:${value}`;
+      })
+      .join(";");
+  };
+
+  // دالة التصدير الأساسية
+  const exportToHTML = () => {
+    const BASE_WIDTH = 1200;
+    const currentState = store.state;
+    const activePage = currentState.pages.find(p => p.id === currentState.activePageId);
+
+    if (!activePage) return;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Project</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; overflow-x: hidden; }
+        .section { position: relative; width: 100%; overflow: hidden; background-size: cover; background-position: center; }
+        .element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+        @media (max-width: 1024px) {
+            .section { height: auto !important; display: flex; flex-direction: column; padding: 40px 20px; }
+            .element { position: relative !important; left: 0 !important; width: 100% !important; top: auto !important; margin-bottom: 20px; transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+    ${activePage.sections.map(sec => `
+        <div class="section" style="height: ${sec.height}px; ${formatStyle(sec.styles)}">
+            ${(sec.data?.items || []).map(item => `
+                <div class="element" style="
+                    left: ${(item.x / BASE_WIDTH) * 100}%; 
+                    top: ${item.y}px; 
+                    width: ${(item.width / BASE_WIDTH) * 100}%; 
+                    height: ${item.height}px;
+                    ${formatStyle(item.styles)}
+                ">
+                    ${item.type === 'text' ? item.text : ''}
+                    ${item.type === 'image' ? `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover;">` : ''}
+                    ${item.type === 'button' ? `<button style="width:100%; height:100%; cursor:pointer;">${item.text}</button>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    `).join('')}
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${currentState.projectName || 'my-site'}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
+   
       <EditorLayout store={store} />
 
       <CustomModal
