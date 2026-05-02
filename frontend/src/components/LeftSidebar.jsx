@@ -79,11 +79,34 @@ const handleElementClick = (type) => {
 
   const targetSectionId = currentPage.sections[0]?.id || null;
   
-  addItemAtPosition(type, 150, 150, targetSectionId);
+ if (type === 'link') {
+    addItemAtPosition(type, 150, 150, targetSectionId, {
+      text: "Click here to visit",
+      action: { url: 'https://www.google.com' },
+      styles: {
+        color: '#2563eb',
+        textDecoration: 'underline',
+        fontSize: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    });
+  } else {
+    addItemAtPosition(type, 150, 150, targetSectionId);
+  }
 };
 
 const handleStartDrag = (e, type) => {
     e.preventDefault();
+    let draggingData = {};
+  if (type === 'link') {
+    draggingData = {
+      text: "New Link",
+      action: { url: 'https://www.google.com' },
+      styles: { color: '#2563eb', textDecoration: 'underline' }
+    };
+  }
     setState(prev => ({ 
       ...prev, 
       isDraggingNow: true, 

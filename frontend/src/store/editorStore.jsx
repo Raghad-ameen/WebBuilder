@@ -21,8 +21,16 @@ export function useEditorStore(initialState) {
     clipboard: [], 
     isDraggingNow: false,  
   draggingType: null,
+  isPreviewMode: false,
     ...initialState
 });
+// أضيفي هذه الدالة مع باقي الدوال مثل addPage و deletePage
+const togglePreview = useCallback(() => {
+  setState(prev => ({
+    ...prev,
+    isPreviewMode: !prev.isPreviewMode
+  }));
+}, []);
 const [history, setHistory] = useState([]);
 const [redoStack, setRedoStack] = useState([]);
 const saveToHistory = useCallback((stateToSave) => {
@@ -247,27 +255,35 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
     const activePage = prev.pages.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-    const newItem = {
-      id: finalNewId,
-      type,
-      x: finalX,
-      y: finalY,
-      width: finalWidth,
-      height: finalHeight,
-      text: extraData.text !== undefined ? extraData.text : config.text,
-      ...extraData,
-      styles: {
-        position: 'absolute',
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        pointerEvents: 'auto',
-        ...config.styles,
-        ...(extraData.styles || {})
-      }
-    };
-
+const newItem = {
+  id: finalNewId,
+  type,
+  x: finalX,
+  y: finalY,
+  width: finalWidth,
+  height: finalHeight,
+  text: extraData.text !== undefined ? extraData.text : config.text,
+  action: type === 'link' ? { url: 'https://www.google.com' } : {},
+  
+  styles: {
+    position: 'absolute',
+    zIndex: 100,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'auto',
+    // 1. نضع ستايلات الكوفيج أولاً
+    ...config.styles,
+    // 2. ثم نضع ستايلات الـ extraData
+    ...(extraData.styles || {}),
+    // 3. أخيراً، نفرض لون الرابط والخط السفلي لضمان عدم مسحهما من أي ملف آخر
+    ...(type === 'link' && {
+      color: '#2563eb',
+      textDecoration: 'underline',
+      cursor: 'pointer'
+    })
+  }
+};
     let updatedSections = [...activePage.sections];
 
 if (updatedSections.length === 0) {
@@ -678,6 +694,8 @@ setViewMode: (mode) => {
     loadProject,
     updateSection,
     updateCanvasStyles,
+    togglePreview,
+    isPreviewMode: state.isPreviewMode,
     moveSection,
     moveSectionUp: (id) => moveSection(id, 'up'),
   moveSectionDown: (id) => moveSection(id, 'down'),

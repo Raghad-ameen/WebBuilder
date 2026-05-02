@@ -117,6 +117,7 @@ const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.
 const leftPercent = (item.x / BASE_WIDTH) * 100;
   const widthPercent = (item.width / BASE_WIDTH) * 100;
 const isMobileOrTablet = window.innerWidth < 1024;  
+const { clipPath, ...otherStyles } = item.styles || {};
  return (
     <React.Fragment key={item.id}>
       <div
@@ -134,7 +135,7 @@ position: isMobileOrTablet ? "relative" : "absolute",
           width: isMobileOrTablet ? "90%" : `${(item.width / BASE_WIDTH) * 100}%`,
           top: isMobileOrTablet ? "auto" : `${item.y}px`,
           height: isMobileOrTablet ? "auto" : `${item.height}px`,  marginBottom: isMobile ? "20px" : "0", 
-  transform: 'translate(0, 0)',
+  // transform: 'translate(0, 0)',
 zIndex: isSelected ? 100000 : (2000 + index),
  margin: isMobileOrTablet ? "15px auto" : "0", 
           display: isMobileOrTablet ? "block" : "initial",
@@ -142,10 +143,43 @@ zIndex: isSelected ? 100000 : (2000 + index),
           overflow: "visible",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
-          ...item.styles, 
+          transform: 'translate3d(0, 0, 0)', // يجبر المتصفح على استخدام الـ GPU
+  backfaceVisibility: 'hidden',
+  perspective: 1000,
+  WebkitFontSmoothing: 'antialiased',
+        //  ...item.styles,
+
         }}
       >
 
+{isSelected && !item.isEditing && !state.isPreviewMode && (
+      <div
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        deleteElement(item.id);
+      }}
+      style={{
+        position: "absolute",
+        top: "-35px",
+        right: "-10px",
+        width: "28px",
+        height: "28px",
+        backgroundColor: "#ef4444",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        zIndex: 9999999,
+        pointerEvents: "auto",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+        border: "2px solid white",
+      }}
+    >
+      <Trash2 size={14} color="white" strokeWidth={3} />
+    </div>
+  )}
 
 {item.type === 'text' && (
   <div 
@@ -216,6 +250,7 @@ zIndex: isSelected ? 100000 : (2000 + index),
     
     }}
   >
+
     {item.src ? (
       <img 
         src={item.src} 
@@ -268,19 +303,21 @@ zIndex: isSelected ? 100000 : (2000 + index),
 )}
 
 {item.type === 'shape' && (
-  <div 
-    style={{ 
-      width: "100%", 
-      height: "100%", 
+  <div style={{ 
+    width: "100%", 
+    height: "100%", 
+    position: "relative",
+    /* انقلي الـ clipPath من هنا إلى الداخل */
+  }}>
+    <div style={{
+      width: "100%",
+      height: "100%",
       backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-      clipPath: item.styles?.clipPath || "none",
-      borderRadius: item.styles?.borderRadius || "0px",
-      // ...item.styles 
-    }} 
-  />
-)}
-
-        {item.type === 'button' && (
+      /* نطبق القص هنا فقط على الخلفية الملونة */
+      clipPath: item.styles?.clipPath || "none", 
+    }} />
+  </div>
+)}        {item.type === 'button' && (
           <div
             className="button-container-wrapper"
             style={{
@@ -325,40 +362,64 @@ zIndex: isSelected ? 100000 : (2000 + index),
             </span>
           </div>
         )}
-{isSelected && !item.isEditing && (
-          <div
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              deleteElement(item.id);
-            }}
-            style={{
-              position: "absolute",
-              top: "-50px", // ارفعيه أكثر ليتجاوز أي حواف
-              right: "0px",
-              width: "35px",
-              height: "35px",
-              backgroundColor: "#ef4444",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              zIndex: 9999999, // قيمة جنونية لضمان الظهور
-              pointerEvents: "auto", // ضروري جداً
-              boxShadow: "0 4px 15px rgba(0,0,0,0.4)",
-            }}
-          >
-            <Trash2 size={18} color="white" strokeWidth={2.5} />
-          </div>
-        )}
+
+{item.type === 'link' && (
+  <a
+    href={item.action?.url || "#"}
+    target="_blank"
+    rel="noopener noreferrer"
+    contentEditable={isSelected && !state.isPreviewMode}
+    suppressContentEditableWarning
+    onDoubleClick={handleDoubleClick}
+    onBlur={(e) => {
+      updateItem(activePageId, section.id, item.id, { text: e.target.innerText });
+    }}
+    // ميزة تعديل الرابط عند الضغط بيمين الماوس
+    onContextMenu={(e) => {
+      if (state.isPreviewMode) return;
+      e.preventDefault(); 
+      const newUrl = prompt("أدخل الرابط الجديد:", item.action?.url || "https://");
+      if (newUrl !== null) {
+        updateItem(activePageId, section.id, item.id, {
+          action: { ...item.action, url: newUrl }
+        });
+      }
+    }}
+    onClick={(e) => {
+      if (!state.isPreviewMode) {
+        e.preventDefault();
         
+        // Ctrl + Click للفتح مع التركيز الفوري على النافذة الجديدة
+        if (e.ctrlKey && item.action?.url) {
+          const newWindow = window.open(item.action.url, '_blank', 'noopener,noreferrer');
+          if (newWindow) newWindow.focus(); 
+        }
+      }
+    }}
+    style={{
+      ...item.styles,
+      width: "100%",
+      height: "100%",
+      cursor: state.isPreviewMode ? "pointer" : "text",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      textDecoration: "underline",
+      color: item.styles?.color || "inherit",
+      outline: "none",
+      userSelect: state.isPreviewMode ? "none" : "text",
+    }}
+  >
+    {item.text || "Link Text"}
+  </a>
+)}
+            
       </div>
 
-      {isSelected && itemRefs.current[item.id] && !item.isEditing && (
-        <>
+{isSelected && itemRefs.current[item.id] && !item.isEditing && !state.isPreviewMode && (
+           <>
 <Moveable
-    target={itemRefs.current[item.id]}
+   target={itemRefs.current[item.id]}
     draggable={true}
     resizable={true}
     origin={false}
@@ -367,16 +428,22 @@ zIndex: isSelected ? 100000 : (2000 + index),
     zoom={1 / canvasScale}
     className="element-moveable-tool"
     renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
-    
+    keepRatio={false}
+    edgeDraggable={false}
+    checkInput={true}
+    useResizeCard={true}
+    useAccuratePosition={true}
     onDrag={({ target, transform }) => {
         target.style.transform = transform;
     }}
     
     onDragEnd={({ target, lastEvent }) => {
         if (lastEvent) {
+            // نحدث x و y بإضافة الإزاحة الجديدة للقيمة القديمة (التراكمية)
             updateItem(activePageId, section.id, item.id, {
-                x: lastEvent.beforeDelta[0],
-                y: lastEvent.beforeDelta[1],
+                x: item.x + lastEvent.beforeDelta[0],
+                y: item.y + lastEvent.beforeDelta[1],
+                // نحتفظ بالترانسفورم كما هو من الـ target لضمان الاستقرار
                 transform: target.style.transform
             });
         }
@@ -390,15 +457,17 @@ zIndex: isSelected ? 100000 : (2000 + index),
     
     onResizeEnd={({ target, lastEvent }) => {
         if (lastEvent) {
+            // حل مشكلة الصغر: نحدث الحجم والموقع معاً لأن التحجيم يغير الإحداثيات أيضاً
             updateItem(activePageId, section.id, item.id, {
                 width: parseInt(target.style.width),
                 height: parseInt(target.style.height),
+                x: item.x + lastEvent.drag.beforeDelta[0],
+                y: item.y + lastEvent.drag.beforeDelta[1],
                 transform: target.style.transform
             });
         }
     }}
-/>         
-        </>
+/>        </>
       )}
     </React.Fragment>
   );
@@ -524,6 +593,15 @@ zIndex: isSelected ? 100000 : (2000 + index),
 
 [ref] {
     will-change: transform, width, height;
+}
+    .moveable-control-box {
+    pointer-events: none !important;
+    will-change: transform;
+}
+
+.moveable-control {
+    pointer-events: auto !important;
+    touch-action: none; /* يحسن الأداء في المتصفحات الحديثة */
 }
     `}</style>    </div>
   );

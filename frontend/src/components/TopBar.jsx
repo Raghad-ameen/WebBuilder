@@ -109,6 +109,19 @@ export default function TopBar({ store,exportToHTML }) {
   <i className="fa-solid fa-trash-can"></i>
   Clear Page
 </button>
+<button 
+  onClick={store.togglePreview}
+  style={{
+    padding: "6px 12px",
+    background: state.isPreviewMode ? "#10b981" : "#4f46e5",
+    color: "#fff",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer"
+  }}
+>
+  {state.isPreviewMode ? "Exit Preview" : "Live Preview"}
+</button>
 
 <button 
           onClick={() => exportToHTML && exportToHTML()}
