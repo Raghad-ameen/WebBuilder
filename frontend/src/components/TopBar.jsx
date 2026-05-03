@@ -9,7 +9,7 @@ import {
   ChevronRight 
 } from "lucide-react";
 
-export default function TopBar({ store,exportToHTML }) {
+export default function TopBar({ store,exportToHTML,onSave }) {
   if (!store) return null;
 
   const { state, setViewMode, undo, redo, history, redoStack } = store;
@@ -142,13 +142,23 @@ export default function TopBar({ store,exportToHTML }) {
           Export Code (HTML)
         </button>
 
-    <button 
-      onClick={() => store.saveProject()}
-      style={styles.saveButton}
-    >
-      <Save size={16} style={{ marginRight: "6px" }} />
-      Save
-    </button>
+   <button 
+  onClick={() => {
+    console.log("Saving..."); 
+    // تنفيذ الحفظ المحلي أولاً
+    if (store.saveProject) store.saveProject(); 
+    
+    // تنفيذ الحفظ في السيرفر (الدالة التي مررناها من Editor.jsx)
+    if (typeof onSave === 'function') {
+      onSave();
+    } else {
+      console.error("onSave is not a function or not passed!");
+    }
+  }}
+  style={styles.saveButton}
+>
+  Save
+</button>
   </div>
 
     

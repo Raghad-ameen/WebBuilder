@@ -7,7 +7,7 @@ import CustomModal from "./CustomModal";
 import { Plus } from "lucide-react";
 import CanvasElement from "./CanvasElement";
 
-export default function EditorLayout({ store }) {
+export default function EditorLayout({ store,onSave }) {
   const { state, closeModal, deletePage, renamePage } = store;
   const activePage = state.pages.find((p) => p.id === state.activePageId);
 
@@ -66,8 +66,7 @@ export default function EditorLayout({ store }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#f0f2f5", overflow: "hidden" }}>
-      <TopBar store={store} />
-
+      <TopBar store={store} onSave={onSave} />
       <div style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%" }}>
         
         <LeftSidebar store={store} />

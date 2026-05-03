@@ -43,7 +43,7 @@ class WebsiteViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(owner=user)
+            serializer.save(owner=self.request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         print("Serializer Errors:", serializer.errors) # سيظهر لك هنا لو الـ slug مكرر

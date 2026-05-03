@@ -128,10 +128,10 @@ const { clipPath, ...otherStyles } = item.styles || {};
 }}
         style={{
 position: isMobileOrTablet ? "relative" : "absolute",
-          left: isMobileOrTablet ? "0" : `${(item.x / BASE_WIDTH) * 100}%`,
-          width: isMobileOrTablet ? "90%" : `${(item.width / BASE_WIDTH) * 100}%`,
-          top: isMobileOrTablet ? "auto" : `${item.y}px`,
-          height: isMobileOrTablet ? "auto" : `${item.height}px`,  marginBottom: isMobile ? "20px" : "0", 
+         left: isMobileOrTablet ? "0" : `${item.x}px`, 
+  width: isMobileOrTablet ? "90%" : `${item.width}px`,
+  top: isMobileOrTablet ? "auto" : `${item.y}px`,
+  height: isMobileOrTablet ? "auto" : `${item.height}px`,
 zIndex: isSelected ? 100000 : (2000 + index),
  margin: isMobileOrTablet ? "15px auto" : "0", 
           display: isMobileOrTablet ? "block" : "initial",
@@ -302,15 +302,18 @@ zIndex: isSelected ? 100000 : (2000 + index),
   <div style={{ 
     width: "100%", 
     height: "100%", 
-    position: "relative",
-    /* انقلي الـ clipPath من هنا إلى الداخل */
+    position: "absolute",
+    top: 0,
+    left: 0,
+    overflow: "visible"
   }}>
     <div style={{
       width: "100%",
       height: "100%",
       backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-      /* نطبق القص هنا فقط على الخلفية الملونة */
       clipPath: item.styles?.clipPath || "none", 
+      WebkitClipPath: item.styles?.clipPath || "none",
+      ...item.styles, // سحب أي فلاتر أو ألوان شفافة
     }} />
   </div>
 )} 
@@ -406,12 +409,12 @@ zIndex: isSelected ? 100000 : (2000 + index),
 {isSelected && itemRefs.current[item.id] && !item.isEditing && !state.isPreviewMode && (
            <>
 <Moveable
-   target={itemRefs.current[item.id]}
+    target={itemRefs.current[item.id]}
     draggable={true}
     resizable={true}
     origin={false}
-    throttleDrag={0} 
-    throttleResize={0}
+    throttleDrag={1} 
+    throttleResize={1}
     zoom={1 / canvasScale}
     className="element-moveable-tool"
     renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
@@ -420,21 +423,33 @@ zIndex: isSelected ? 100000 : (2000 + index),
     checkInput={true}
     useResizeCard={true}
     useAccuratePosition={true}
-    onDrag={({ target, transform }) => {
+
+    /* 1. السحب (Dragging) */
+    onDrag={({ target, transform, left, top }) => {
+        // تحديث الـ DOM مباشرة وبسرعة فائقة دون لمس الـ State
         target.style.transform = transform;
     }}
     
-    onDragEnd={({ target, lastEvent }) => {
-        if (lastEvent) {
-            updateItem(activePageId, section.id, item.id, {
-                x: item.x + lastEvent.beforeDelta[0],
-                y: item.y + lastEvent.beforeDelta[1],
-                transform: target.style.transform
-            });
-        }
-    }}
+onDragEnd={({ target, lastEvent }) => {
+    if (lastEvent) {
+        // 1. حساب الموقع النهائي الحقيقي (الموقع الأصلي + الإزاحة الكلية)
+        const finalX = item.x + lastEvent.beforeTranslate[0];
+        const finalY = item.y + lastEvent.beforeTranslate[1];
 
+        // 2. تحديث المتجر بالقيم النهائية وتصفير الـ transform تماماً
+        updateItem(activePageId, section.id, item.id, {
+            x: finalX,
+            y: finalY,
+            // ضروري جداً: تصفير الـ transform لكي لا يتم تطبيقه مرتين
+            transform: "translate(0px, 0px)" 
+        });
+
+        // 3. تصفير الـ transform في العنصر المرئي (DOM) لمنع القفزة البصرية
+        target.style.transform = "translate(0px, 0px)";
+    }
+}}
     onResize={({ target, width, height, drag }) => {
+        // تحديث بصري فوري
         target.style.width = `${width}px`;
         target.style.height = `${height}px`;
         target.style.transform = drag.transform;
@@ -450,8 +465,10 @@ zIndex: isSelected ? 100000 : (2000 + index),
                 transform: target.style.transform
             });
         }
+    
     }}
-/>        </>
+/>
+</>
       )}
     </React.Fragment>
   );
@@ -567,7 +584,7 @@ zIndex: isSelected ? 100000 : (2000 + index),
 }
 
 .element-moveable-tool {
-    pointer-events: none !important;
+   z-index: 1000000 !important;
 }
 
 .element-moveable-tool .moveable-control, 
@@ -587,7 +604,8 @@ zIndex: isSelected ? 100000 : (2000 + index),
     pointer-events: auto !important;
     touch-action: none; /* يحسن الأداء في المتصفحات الحديثة */
 }
-    `}</style>    </div>
+    `}</style>    
+    </div>
   );
 }
 

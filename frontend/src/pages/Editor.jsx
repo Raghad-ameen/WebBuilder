@@ -2,13 +2,14 @@ import React, { useEffect, useRef,useMemo } from "react";
 import EditorLayout from "../components/EditorLayout";
 import { useEditorStore } from "../store/editorStore";
 import CustomModal from "../components/CustomModal";
-import TopBar from "../components/TopBar"; // تأكدي أن المسار يؤدي لملف التوب بار فعلاً
+import TopBar from "../components/TopBar"; 
+import { useParams } from "react-router-dom"; // تأكد من الاستيراد
+import axios from "axios";
 
 export default function Editor() {
+  const { siteId } = useParams();
 const initialData = useMemo(() => ({
   projectName: "dnd",
-  // canvasWidth: '100%',
-  // canvasHeight: '800px',
   viewMode: 'desktop',
 canvasStyles: { backgroundColor: '#ffffff' }, 
  pages: [{ id: "p1", name: "Home", sections: [] }],
@@ -22,6 +23,28 @@ canvasStyles: { backgroundColor: '#ffffff' },
 const selectedRef = useRef(store.state.selectedElementIds); 
   storeRef.current = store;
 selectedRef.current = store.state.selectedElementIds; 
+
+useEffect(() => {
+    const fetchSiteData = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await axios.get(`http://127.0.0.1:8000/api/websites/${siteId}/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // استخدام حقل content المخزن في قاعدة البيانات
+        if (res.data.content && Object.keys(res.data.content).length > 0) {
+          store.setState(res.data.content);
+        } else {
+          store.clearCanvas();
+        }
+      } catch (err) {
+        console.error("Load Error:", err);
+      }
+    };
+
+    if (siteId) fetchSiteData();
+  }, [siteId]); // سيعمل الكود فور فتح الصفحة بناءً على الـ ID في الرابط
   useEffect(() => {
     const handleClickOutside = (e) => {
       const isSelectable = e.target.closest(".selectable-item");
@@ -43,7 +66,7 @@ selectedRef.current = store.state.selectedElementIds;
   }, []); 
 
   useEffect(() => {
-    const savedData = localStorage.getItem(`project_${store.state.projectName}`);
+    const savedData = localStorage.getItem(`project_id_${siteId}`);
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
@@ -52,9 +75,41 @@ selectedRef.current = store.state.selectedElementIds;
         console.error("Error loading saved project", e);
       }
     }
-  }, []);
+    else {
+      // إذا لم توجد بيانات، نُصفر المحرر تماماً للموقع الجديد
+      store.clearCanvas(); 
+    }
+  }, [siteId]);
 
- useEffect(() => {
+  useEffect(() => {
+    if (store.state && siteId) {
+      localStorage.setItem(`project_id_${siteId}`, JSON.stringify(store.state));
+      console.log(`Saved changes for site ${siteId}`);
+    }
+  }, [store.state, siteId]); // يحفظ في كل مرة تتغير فيها حالة الـ store
+
+  // أضف هذه الدالة داخل مكون Editor
+// داخل مكون Editor
+const handleSave = async () => {
+  try {
+    const token = localStorage.getItem('access_token');
+    
+    // الحل الأضمن: جلب الحالة مباشرة من الـ Store لضمان شمول آخر تحريك للعناصر
+    const latestState = store.getState ? store.getState() : store.state;
+
+    await axios.patch(`http://127.0.0.1:8000/api/websites/${siteId}/`, {
+      content: latestState 
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    alert("تم الحفظ بنجاح مع المواقع الجديدة! ✅");
+  } catch (err) {
+    console.error("Save Error:", err.response?.data);
+    alert("فشل الحفظ");
+  }
+};
+
+useEffect(() => {
  const handleKeyDown = (e) => {
   const s = storeRef.current;
   if (!s) return;
@@ -111,7 +166,6 @@ selectedRef.current = store.state.selectedElementIds;
   return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
 }, []);
 
-// دالة تحويل الستايلات من كائن إلى نص CSS
   const formatStyle = (styles) => {
     if (!styles) return "";
     return Object.entries(styles)
@@ -122,7 +176,6 @@ selectedRef.current = store.state.selectedElementIds;
       .join(";");
   };
 
-  // دالة التصدير الأساسية
   const exportToHTML = () => {
     const BASE_WIDTH = 1200;
     const currentState = store.state;
@@ -182,7 +235,7 @@ selectedRef.current = store.state.selectedElementIds;
   return (
     <>
    
-      <EditorLayout store={store} />
+      <EditorLayout store={store} onSave={handleSave} />
 
       <CustomModal
         isOpen={store.state.modal.isOpen && store.state.modal.type === "confirmClear"}
