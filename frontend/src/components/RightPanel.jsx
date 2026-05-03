@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from "react";
 import { debounce } from "lodash";
-import { PROPERTY_CONTROLS } from "./PropertyConfigs"; // تأكدي من المسار الصحيح
+import { PROPERTY_CONTROLS } from "./PropertyConfigs"; 
 
 const styles = {
   panel: { padding: "15px", backgroundColor: "#fff", height: "100%", overflowY: "auto", display: "flex", flexDirection: "column" },
@@ -22,7 +22,6 @@ export default function RightPanel({ store }) {
   const activePage = state.pages.find((p) => p.id === state.activePageId);
   const selectedId = state.selectedElementIds?.[0] || state.activeElementId;
   
-  // 1. العثور على العنصر المختار
   let selectedItem = null;
   if (selectedId && activePage) {
     activePage.sections.forEach((section) => {
@@ -33,7 +32,6 @@ export default function RightPanel({ store }) {
     });
   }
 
-  // 2. معالجة التحديثات (Debounced)
   const debouncedUpdate = useMemo(
     () => debounce((data) => {
       updateItem(state.activePageId, selectedItem.sectionId, selectedId, data);
@@ -41,38 +39,61 @@ export default function RightPanel({ store }) {
     [state.activePageId, selectedItem?.sectionId, selectedId]
   );
 
-  // 3. دالة ذكية لتحديث الخصائص (Style أو Attributes)
-  const handlePropertyChange = (config, value) => {
+ const handlePropertyChange = (config, value) => {
     if (!selectedItem) return;
 
-    // هل التعديل في الـ styles أم في أصل العنصر (مثل text أو src)؟
-    const isStyle = !['text', 'src', 'url'].includes(config.field);
+    // 1. تحديد نوع الحقل: هل هو ستايل (CSS) أم بيانات نصية؟
+    const isStyle = !['text', 'src', 'linkUrl'].includes(config.field);
     
     let updatePayload = {};
-    if (isStyle) {
+
+    if (config.field === 'linkUrl') {
+      // 2. إذا كان الحقل هو رابط اللينك، نقوم بتحديثه داخل كائن action
+      updatePayload = { 
+        action: { 
+          ...selectedItem.action, 
+          url: value 
+        } 
+      };
+    } else if (isStyle) {
+      // 3. إذا كان ستايل (لون، حجم خط.. إلخ)
       const formattedValue = config.unit ? `${value}${config.unit}` : value;
-      updatePayload = { styles: { ...selectedItem.styles, [config.field]: formattedValue } };
+      updatePayload = { 
+        styles: { 
+          ...selectedItem.styles, 
+          [config.field]: formattedValue 
+        } 
+      };
     } else {
+      // 4. إذا كان نصاً عادياً أو مصدر صورة
       updatePayload = { [config.field]: value };
     }
 
-    // معاينة فورية (لحظية)
+    // إرسال التحديثات للمتجر (Store)
     previewUpdateItem(state.activePageId, selectedItem.sectionId, selectedId, updatePayload);
-    // حفظ نهائي (مؤجل)
     debouncedUpdate(updatePayload);
   };
 
-  // 4. دالة لرسم الـ Input المناسب بناءً على النوع
-  const renderControl = (config) => {
-    const rawValue = !['text', 'src', 'url'].includes(config.field) 
-      ? selectedItem.styles?.[config.field] 
-      : selectedItem[config.field];
+const renderControl = (config) => {
+    // تحديد القيمة التي ستظهر داخل الـ Input
+    let rawValue;
     
-    // تنظيف القيمة من الوحدات (مثل px) لإظهارها في الـ input كرقـم
+    if (config.field === 'linkUrl') {
+      // إذا كان الحقل للرابط، نسحب القيمة من المسار الصحيح
+      rawValue = selectedItem.action?.url;
+    } else {
+      // للمجالات الأخرى (نصوص أو ستايلات)
+      rawValue = !['text', 'src'].includes(config.field) 
+        ? selectedItem.styles?.[config.field] 
+        : selectedItem[config.field];
+    }
+    
+    // معالجة القيمة لتناسب نوع الحقل (رقم أو نص)
     const value = config.type === 'number' && typeof rawValue === 'string' 
       ? parseInt(rawValue) 
       : rawValue || (config.type === 'number' ? 0 : "");
 
+    // جزء الـ switch يبقى كما هو دون تغيير
     switch (config.type) {
       case "number":
       case "text":
@@ -82,7 +103,7 @@ export default function RightPanel({ store }) {
             value={value}
             onChange={(e) => handlePropertyChange(config, config.type === 'number' ? Number(e.target.value) : e.target.value)}
             style={styles.input}
-            placeholder={config.placeholder}
+            placeholder={config.field === 'linkUrl' ? "https://example.com" : config.placeholder}
           />
         );
       case "color":
@@ -117,7 +138,6 @@ export default function RightPanel({ store }) {
     }
   };
 
-  // 5. تجميع الخصائص حسب الـ Section لترتيبها في الواجهة
   const groupedControls = useMemo(() => {
     if (!selectedItem) return {};
     const controls = [...(PROPERTY_CONTROLS[selectedItem.type] || []), ...PROPERTY_CONTROLS.common];
@@ -155,9 +175,8 @@ export default function RightPanel({ store }) {
   );
 }
 
-// أضيفي هذه التعديلات البسيطة لـ styles الموجودة عندك:
 const extendedStyles = {
-  ...styles, // نحتفظ بـ styles الأصلية
+  ...styles, 
   itemBadge: {
     background: "#4f46e5",
     color: "white",

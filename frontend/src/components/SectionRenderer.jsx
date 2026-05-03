@@ -43,14 +43,12 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 const formatAllStyles = (item) => {
   const s = item.styles || {};
   
-  // 1. تجميع الفلاتر
   const filters = [];
   if (s.filterBlur) filters.push(`blur(${s.filterBlur}px)`);
   if (s.filterBrightness !== undefined) filters.push(`brightness(${s.filterBrightness}%)`);
   if (s.filterContrast !== undefined) filters.push(`contrast(${s.filterContrast}%)`);
   if (s.filterGrayscale !== undefined) filters.push(`grayscale(${s.filterGrayscale}%)`);
 
-  // 2. تجميع الظلال
   const boxShadow = s.shadowColor 
     ? `${s.shadowX || 0}px ${s.shadowY || 0}px ${s.shadowBlur || 0}px ${s.shadowColor}` 
     : s.boxShadow;
@@ -59,7 +57,6 @@ const formatAllStyles = (item) => {
     ...s,
     filter: filters.length > 0 ? filters.join(" ") : s.filter,
     boxShadow: boxShadow,
-    // التأكد من تطبيق الوحدات للخصائص التي قد تنساها الرايت بانل
     fontSize: typeof s.fontSize === 'number' ? `${s.fontSize}px` : s.fontSize,
     letterSpacing: typeof s.letterSpacing === 'number' ? `${s.letterSpacing}px` : s.letterSpacing,
   };
@@ -135,7 +132,6 @@ position: isMobileOrTablet ? "relative" : "absolute",
           width: isMobileOrTablet ? "90%" : `${(item.width / BASE_WIDTH) * 100}%`,
           top: isMobileOrTablet ? "auto" : `${item.y}px`,
           height: isMobileOrTablet ? "auto" : `${item.height}px`,  marginBottom: isMobile ? "20px" : "0", 
-  // transform: 'translate(0, 0)',
 zIndex: isSelected ? 100000 : (2000 + index),
  margin: isMobileOrTablet ? "15px auto" : "0", 
           display: isMobileOrTablet ? "block" : "initial",
@@ -143,7 +139,7 @@ zIndex: isSelected ? 100000 : (2000 + index),
           overflow: "visible",
           pointerEvents: "auto",
           willChange: "left, top, width, height",
-          transform: 'translate3d(0, 0, 0)', // يجبر المتصفح على استخدام الـ GPU
+          transform: 'translate3d(0, 0, 0)',
   backfaceVisibility: 'hidden',
   perspective: 1000,
   WebkitFontSmoothing: 'antialiased',
@@ -317,7 +313,9 @@ zIndex: isSelected ? 100000 : (2000 + index),
       clipPath: item.styles?.clipPath || "none", 
     }} />
   </div>
-)}        {item.type === 'button' && (
+)} 
+
+ {item.type === 'button' && (
           <div
             className="button-container-wrapper"
             style={{
@@ -365,7 +363,8 @@ zIndex: isSelected ? 100000 : (2000 + index),
 
 {item.type === 'link' && (
   <a
-    href={item.action?.url || "#"}
+    // جعل الـ href حقيقياً هو السر في توجيه المتصفح فوراً عند Ctrl + Click
+    href={item.action?.url || "#"} 
     target="_blank"
     rel="noopener noreferrer"
     contentEditable={isSelected && !state.isPreviewMode}
@@ -374,25 +373,12 @@ zIndex: isSelected ? 100000 : (2000 + index),
     onBlur={(e) => {
       updateItem(activePageId, section.id, item.id, { text: e.target.innerText });
     }}
-    // ميزة تعديل الرابط عند الضغط بيمين الماوس
-    onContextMenu={(e) => {
-      if (state.isPreviewMode) return;
-      e.preventDefault(); 
-      const newUrl = prompt("أدخل الرابط الجديد:", item.action?.url || "https://");
-      if (newUrl !== null) {
-        updateItem(activePageId, section.id, item.id, {
-          action: { ...item.action, url: newUrl }
-        });
-      }
-    }}
     onClick={(e) => {
+      // في وضع التصميم: نمنع الانتقال العادي لكي نستطيع الضغط للتحديد أو التعديل
       if (!state.isPreviewMode) {
-        e.preventDefault();
-        
-        // Ctrl + Click للفتح مع التركيز الفوري على النافذة الجديدة
-        if (e.ctrlKey && item.action?.url) {
-          const newWindow = window.open(item.action.url, '_blank', 'noopener,noreferrer');
-          if (newWindow) newWindow.focus(); 
+        // إذا كان المستخدم ضاغطاً على Ctrl، نترك المتصفح يقوم بعمله الطبيعي (فتح الرابط)
+        if (!e.ctrlKey) {
+          e.preventDefault();
         }
       }
     }}
@@ -408,12 +394,13 @@ zIndex: isSelected ? 100000 : (2000 + index),
       color: item.styles?.color || "inherit",
       outline: "none",
       userSelect: state.isPreviewMode ? "none" : "text",
+      // نمنع أي تداخل للماوس في وضع التصميم إلا إذا كان العنصر محدداً
+      pointerEvents: "auto", 
     }}
   >
     {item.text || "Link Text"}
   </a>
-)}
-            
+)}            
       </div>
 
 {isSelected && itemRefs.current[item.id] && !item.isEditing && !state.isPreviewMode && (
@@ -439,11 +426,9 @@ zIndex: isSelected ? 100000 : (2000 + index),
     
     onDragEnd={({ target, lastEvent }) => {
         if (lastEvent) {
-            // نحدث x و y بإضافة الإزاحة الجديدة للقيمة القديمة (التراكمية)
             updateItem(activePageId, section.id, item.id, {
                 x: item.x + lastEvent.beforeDelta[0],
                 y: item.y + lastEvent.beforeDelta[1],
-                // نحتفظ بالترانسفورم كما هو من الـ target لضمان الاستقرار
                 transform: target.style.transform
             });
         }
@@ -457,7 +442,6 @@ zIndex: isSelected ? 100000 : (2000 + index),
     
     onResizeEnd={({ target, lastEvent }) => {
         if (lastEvent) {
-            // حل مشكلة الصغر: نحدث الحجم والموقع معاً لأن التحجيم يغير الإحداثيات أيضاً
             updateItem(activePageId, section.id, item.id, {
                 width: parseInt(target.style.width),
                 height: parseInt(target.style.height),

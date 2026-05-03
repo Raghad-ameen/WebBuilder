@@ -25,7 +25,6 @@ const SHAPE_LIBRARY = [
   { id: 'rhombus', label: 'Rhombus', icon: <Diamond />, path: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', radius: '0px' },
 ];
 
-//t
 export default function LeftSidebar({ store }) {
 const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, setState } = store;
 const [isShapesOpen, setIsShapesOpen] = React.useState(false);
@@ -33,12 +32,10 @@ const [isShapesOpen, setIsShapesOpen] = React.useState(false);
     { id: 'text', label: 'Text', icon: <Type size={18} /> },
     { id: 'image', label: 'Image', icon: <ImageIcon size={18} /> },
     { id: 'button', label: 'Button', icon: <CreditCard size={18} /> },
-    // { id: 'rect', label: 'Shape', icon: <Square size={18} /> },
     { id: 'link', label: 'Link', icon: <LinkIcon size={18} /> },
   ];
 
   const sections = [
-    // { id: 'blank', label: 'Blank Canvas', icon: <Square size={18} /> },
     { id: 'navbar', label: 'Navbar', icon: <Layout size={18} /> },
     { id: 'hero', label: 'Hero', icon: <Columns size={18} /> },
     { id: 'features', label: 'Features', icon: <Plus size={18} /> },
@@ -50,7 +47,6 @@ const handleAddShape = (shape) => {
 
   if (!targetSectionId) return;
 
-  // إرسال كل الخصائص في كائن واحد لضمان عدم ضياعها
   addItemAtPosition("shape", 150, 150, targetSectionId, {
     shapeType: shape.id,
     width: 100,
@@ -59,8 +55,8 @@ const handleAddShape = (shape) => {
       width: "100px",
       height: "100px",
       backgroundColor: "#4f46e5",
-      clipPath: shape.path,      // أهم خاصية للمثلث والنجمة
-      borderRadius: shape.radius, // أهم خاصية للدائرة
+      clipPath: shape.path,    
+      borderRadius: shape.radius, 
       position: "absolute",
       display: "block"
     }
@@ -176,9 +172,7 @@ const handleStartDrag = (e, type) => {
       <button 
         key={el.id} 
         style={styles.elementBtn}
-        // 1. الكليك العادي (إضافة للمنتصف)
         onClick={() => handleElementClick(el.id)}
-        // 2. السحب والإفلات
         onMouseDown={(e) => handleStartDrag(e, el.id)}
       >
         {el.icon}
@@ -201,19 +195,17 @@ const handleStartDrag = (e, type) => {
   <div 
     key={s.id} 
     style={styles.shapeIconItem} 
-    // عند الضغط العادي:
     onClick={(e) => {
       e.stopPropagation();
       handleAddShape(s);
     }}
-    // عند السحب: نمرر نوع الشكل للـ Drag State
     onMouseDown={(e) => {
       e.stopPropagation();
       setState(prev => ({ 
         ...prev, 
         isDraggingNow: true, 
         draggingType: 'shape',
-        draggingShapeData: s // تخزين بيانات الشكل المسحوب
+        draggingShapeData: s
       }));
     }}
   >
@@ -275,9 +267,9 @@ const styles = {
   transition: '0.2s',
 },
 shapesGridPopup: {
-    position: 'fixed', // تغيير من absolute إلى fixed لضمان ظهورها فوق كل شيء
+    position: 'fixed',
     top: '83%', 
-    left: '5%', // تظهر بجانب السايد بار تماماً
+    left: '5%', 
     transform: 'translateY(-50%)',
     background: '#fff',
     border: '1px solid #e2e8f0',

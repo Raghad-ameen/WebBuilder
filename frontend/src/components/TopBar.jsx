@@ -12,7 +12,6 @@ import {
 export default function TopBar({ store,exportToHTML }) {
   if (!store) return null;
 
-  // استخراج history و redoStack من الـ store لإصلاح الـ ReferenceError
   const { state, setViewMode, undo, redo, history, redoStack } = store;
   
   const activePage = state.pages.find(p => p.id === state.activePageId);
@@ -38,10 +37,9 @@ export default function TopBar({ store,exportToHTML }) {
     <Undo2 size={18} />
   </button>
 
-  {/* زر الإعادة Redo - تم إصلاح علامة التعجب هنا */}
   <button 
     onClick={redo} 
-    disabled={!canRedo} // تم التعديل من canRedo إلى !canRedo
+    disabled={!canRedo}
     title="Redo (Ctrl+Y)"
     style={{
       ...styles.iconButton,
@@ -95,7 +93,7 @@ export default function TopBar({ store,exportToHTML }) {
     gap: '8px',
     padding: '8px 12px',
     backgroundColor: 'transparent',
-    color: '#ef4444', // لون أحمر خفيف للزر
+    color: '#ef4444',
     border: '1px solid #fee2e2',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -163,7 +161,7 @@ const styles = {
    height: "56px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between", // يوزع المساحة بين الأقسام الثلاثة
+    justifyContent: "space-between",
     padding: "0 16px",
     backgroundColor: "#fff",
     borderBottom: "1px solid #e2e8f0",
@@ -180,7 +178,7 @@ const styles = {
     alignItems: "center",
     gap: "8px",
     flex: 1,
-    justifyContent: "flex-end", // يدفع زر Save لليمين تماماً
+    justifyContent: "flex-end", 
   },
   buttonGroup: {
     display: "flex",
@@ -224,10 +222,9 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     backgroundColor: '#f8fafc',
-    padding: '6px 16px', // زيادة الـ padding قليلاً ليناسب الصورة
+    padding: '6px 16px',
     borderRadius: '20px',
     border: '1px solid #f1f5f9',
-    // لضمان أنه لا يتقلص ويظل في المنتصف
     flexShrink: 0,
   },
   projectName: {

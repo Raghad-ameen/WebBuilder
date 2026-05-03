@@ -32,5 +32,12 @@ export const PROPERTY_CONTROLS = {
   ],
   shape: [
     { section: "Style", label: "Background Color", field: "backgroundColor", type: "color" },
+  ],
+  link: [
+    { section: "Action", label: "Link URL", field: "linkUrl", type: "text", placeholder: "https://google.com" },
+    { section: "Typography", label: "Link Text", field: "text", type: "text" },
+    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
+    { section: "Typography", label: "Color", field: "color", type: "color" },
+    { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none"] },
   ]
 };
