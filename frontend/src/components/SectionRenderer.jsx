@@ -12,6 +12,17 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const BASE_WIDTH = 1200;
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
+  const [canvasColor, setCanvasColor] = useState('#ffffff');
+const [targets, setTargets] = useState([]); // لإدارة العناصر المختارة والتجميع
+  const getShapePath = (shapeType) => {
+  const paths = {
+    'triangle': "M50 0 L100 100 L0 100 Z",
+    'circle': "M50,0 A50,50 0 1,1 50,100 A50,50 0 1,1 50,0",
+    'square': "M0 0 H100 V100 H0 Z",
+    'rhombus': "M50 0 L100 50 L50 100 L0 50 Z"
+  };
+  return paths[shapeType] || paths['square'];
+};
   const sectionIndex = state.pages
   .find(p => p.id === activePageId)
   .sections.findIndex(s => s.id === section.id);
@@ -74,22 +85,31 @@ onMouseDown={(e) => {
   }
 }}
 onMouseUp={(e) => {
-  if (!state.isDraggingNow) return;
-  e.stopPropagation();
+    if (!state.isDraggingNow) return;
+    e.stopPropagation();
 
-  const rect = sectionRef.current.getBoundingClientRect(); 
-  
-  const x = (e.clientX - rect.left) / canvasScale;
-  const y = (e.clientY - rect.top) / canvasScale;
+    const rect = sectionRef.current.getBoundingClientRect(); 
+    const x = (e.clientX - rect.left) / canvasScale;
+    const y = (e.clientY - rect.top) / canvasScale;
 
-  store.addItemAtPosition(state.draggingType, x, y, section.id);
-  
-  store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-}}   
+    const defaultWidth = 150;
+    const defaultHeight = 150;
+
+    store.addItemAtPosition(state.draggingType, x, y, section.id, {
+        width: defaultWidth,
+        height: defaultHeight,
+        styles: state.draggingType === 'shape' ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
+    });
+    
+    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+}}
+
 style={{
-  position: "relative",
-  width: "100%",
-  ...section.styles,
+  position: section.styles?.position || "relative", 
+  left: section.styles?.left || 0,
+  top: section.styles?.top || 0,
+  width: section.styles?.width || "100%",
+
   height: isMobile ? "auto" : (section.height ? `${section.height}px` : "auto"),
   minHeight: section.height ? `${section.height}px` : "50px",  
   
@@ -99,22 +119,37 @@ style={{
   overflow: "visible", 
   display: isMobile ? "flex" : "block",
   flexDirection: "column",
-  paddingBottom: isMobile ? "50px" : "0px",
+  
   backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
   backgroundSize: "cover",
   backgroundPosition: "center",
   
   borderBottom: isSectionSelected ? "2px solid #4f46e5" : "1px solid rgba(204, 204, 204, 0.3)",
+  ...section.styles,
 }}
     > 
     
-    
-{section.data.items?.map((item,index) => {
+    {/* Section Toolbar - يظهر فقط عند اختيار السكشن */}
+{isSectionSelected && !state.isPreviewMode && (
+  <div style={styles.sectionToolbar}>
+    <button 
+      onPointerDown={(e) => { 
+        e.stopPropagation(); 
+         deleteSection(section.id); 
+      }} 
+      style={{...styles.toolBtn, color: '#ef4444'}}
+    >
+      <Trash2 size={16} />
+    </button>
+  </div>
+)}{section.data.items?.map((item,index) => {
 const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id); 
 const leftPercent = (item.x / BASE_WIDTH) * 100;
   const widthPercent = (item.width / BASE_WIDTH) * 100;
 const isMobileOrTablet = window.innerWidth < 1024;  
 const { clipPath, ...otherStyles } = item.styles || {};
+
+
  return (
     <React.Fragment key={item.id}>
       <div
@@ -126,27 +161,28 @@ const { clipPath, ...otherStyles } = item.styles || {};
   e.stopPropagation(); 
   onSelect(item.id);
 }}
-        style={{
-position: isMobileOrTablet ? "relative" : "absolute",
-         left: isMobileOrTablet ? "0" : `${item.x}px`, 
-  width: isMobileOrTablet ? "90%" : `${item.width}px`,
-  top: isMobileOrTablet ? "auto" : `${item.y}px`,
-  height: isMobileOrTablet ? "auto" : `${item.height}px`,
-zIndex: isSelected ? 100000 : (2000 + index),
- margin: isMobileOrTablet ? "15px auto" : "0", 
-          display: isMobileOrTablet ? "block" : "initial",
-            cursor: item.isEditing ? "text" : "move",
-          overflow: "visible",
-          pointerEvents: "auto",
-          willChange: "left, top, width, height",
-          transform: 'translate3d(0, 0, 0)',
-  backfaceVisibility: 'hidden',
-  perspective: 1000,
-  WebkitFontSmoothing: 'antialiased',
-        //  ...item.styles,
-
-        }}
+       style={{
+position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolute",
+    left: (section.type === 'navbar' || isMobileOrTablet) ? "auto" : `${item.x}px`, 
+    top: (section.type === 'navbar' || isMobileOrTablet) ? "auto" : `${item.y}px`,
+    width: isMobileOrTablet ? "90%" : `${item.width}px`,
+    height: isMobileOrTablet ? "auto" : `${item.height}px`,
+    zIndex: isSelected ? 100000 : (2000 + index),
+    margin: isMobileOrTablet ? "15px auto" : "0", 
+    display: isMobileOrTablet ? "block" : "initial",
+    cursor: item.isEditing ? "text" : "move",
+    overflow: "visible",
+    pointerEvents: "auto",
+    willChange: "left, top, width, height",
+    transform: 'translate(0, 0)', 
+    backfaceVisibility: 'hidden',
+    perspective: 1000,
+    WebkitFontSmoothing: 'antialiased',
+}}
       >
+
+
+
 
 {isSelected && !item.isEditing && !state.isPreviewMode && (
       <div
@@ -299,26 +335,38 @@ zIndex: isSelected ? 100000 : (2000 + index),
 )}
 
 {item.type === 'shape' && (
-  <div style={{ 
-    width: "100%", 
-    height: "100%", 
-    position: "absolute",
-    top: 0,
-    left: 0,
-    overflow: "visible"
-  }}>
-    <div style={{
-      width: "100%",
-      height: "100%",
-      backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-      clipPath: item.styles?.clipPath || "none", 
-      WebkitClipPath: item.styles?.clipPath || "none",
-      ...item.styles, // سحب أي فلاتر أو ألوان شفافة
-    }} />
+  <div 
+    key={item.id}
+    ref={(el) => (itemRefs.current[item.id] = el)} 
+    style={{ 
+      width: `${item.width}px`, 
+      height: `${item.height}px`, 
+      position: "absolute",
+      top: `${item.y}px`, 
+      left: `${item.x}px`,
+      overflow: "visible",
+      zIndex: item.styles?.zIndex || 100,
+    }}
+  >
+    <svg 
+      width="100%" 
+      height="100%" 
+      viewBox="0 0 100 100" 
+      preserveAspectRatio="none"
+      style={{ display: 'block' }}
+    >
+      <path 
+        d={getShapePath(item.shapeType)}
+        fill={item.styles?.backgroundColor || "#4f46e5"}
+        stroke={item.styles?.borderColor || "transparent"}
+        strokeWidth={item.styles?.borderWidth || 0}
+      />
+    </svg>
   </div>
-)} 
+)}
 
- {item.type === 'button' && (
+
+{item.type === 'button' && (
           <div
             className="button-container-wrapper"
             style={{
@@ -366,7 +414,6 @@ zIndex: isSelected ? 100000 : (2000 + index),
 
 {item.type === 'link' && (
   <a
-    // جعل الـ href حقيقياً هو السر في توجيه المتصفح فوراً عند Ctrl + Click
     href={item.action?.url || "#"} 
     target="_blank"
     rel="noopener noreferrer"
@@ -377,9 +424,7 @@ zIndex: isSelected ? 100000 : (2000 + index),
       updateItem(activePageId, section.id, item.id, { text: e.target.innerText });
     }}
     onClick={(e) => {
-      // في وضع التصميم: نمنع الانتقال العادي لكي نستطيع الضغط للتحديد أو التعديل
       if (!state.isPreviewMode) {
-        // إذا كان المستخدم ضاغطاً على Ctrl، نترك المتصفح يقوم بعمله الطبيعي (فتح الرابط)
         if (!e.ctrlKey) {
           e.preventDefault();
         }
@@ -397,7 +442,6 @@ zIndex: isSelected ? 100000 : (2000 + index),
       color: item.styles?.color || "inherit",
       outline: "none",
       userSelect: state.isPreviewMode ? "none" : "text",
-      // نمنع أي تداخل للماوس في وضع التصميم إلا إذا كان العنصر محدداً
       pointerEvents: "auto", 
     }}
   >
@@ -413,61 +457,65 @@ zIndex: isSelected ? 100000 : (2000 + index),
     draggable={true}
     resizable={true}
     origin={false}
-    throttleDrag={1} 
-    throttleResize={1}
     zoom={1 / canvasScale}
-    className="element-moveable-tool"
+    throttleDrag={0}
+    throttleResize={0}
     renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
-    keepRatio={false}
-    edgeDraggable={false}
-    checkInput={true}
-    useResizeCard={true}
-    useAccuratePosition={true}
-
-    /* 1. السحب (Dragging) */
-    onDrag={({ target, transform, left, top }) => {
-        // تحديث الـ DOM مباشرة وبسرعة فائقة دون لمس الـ State
-        target.style.transform = transform;
-    }}
     
-onDragEnd={({ target, lastEvent }) => {
-    if (lastEvent) {
-        // 1. حساب الموقع النهائي الحقيقي (الموقع الأصلي + الإزاحة الكلية)
-        const finalX = item.x + lastEvent.beforeTranslate[0];
-        const finalY = item.y + lastEvent.beforeTranslate[1];
+    snappable={true}
+    snapThreshold={5}
+    snapGap={true}
+    snapElement={true}
+    snapVertical={true}
+    snapHorizontal={true}
+    snapCenter={true}
 
-        // 2. تحديث المتجر بالقيم النهائية وتصفير الـ transform تماماً
-        updateItem(activePageId, section.id, item.id, {
-            x: finalX,
-            y: finalY,
-            // ضروري جداً: تصفير الـ transform لكي لا يتم تطبيقه مرتين
-            transform: "translate(0px, 0px)" 
+    /* 🔥 الحل الديناميكي: حساب السنتر بناءً على حجم الكانفاس الحالي */
+   verticalGuidelines={[
+       (document.querySelector(".section-container")?.offsetWidth || 0) / 2
+    ]}
+    horizontalGuidelines={[
+       (document.querySelector(".section-container")?.offsetHeight || 0) / 2
+    ]}
+    snapContainer={document.querySelector("#main-canvas")}
+    elementGuidelines={[
+        document.querySelector("#main-canvas"),
+        ...Array.from(document.querySelectorAll(".section-container, .text-element-wrapper, .button-container-wrapper"))
+    ]}    
+    portalContainer={document.body}
+    isDisplaySnapDigit={false} 
+    isDisplayInnerSnapDigit={false}
+
+    onDrag={({ target, left, top }) => {
+        target.style.left = `${left}px`;
+        target.style.top = `${top}px`;
+    }}
+
+    onDragEnd={({ target }) => {
+        updateItem(activePageId, section.id, item.id, { 
+            x: parseFloat(target.style.left), 
+            y: parseFloat(target.style.top) 
         });
+    }}
 
-        // 3. تصفير الـ transform في العنصر المرئي (DOM) لمنع القفزة البصرية
-        target.style.transform = "translate(0px, 0px)";
-    }
-}}
     onResize={({ target, width, height, drag }) => {
-        // تحديث بصري فوري
         target.style.width = `${width}px`;
         target.style.height = `${height}px`;
-        target.style.transform = drag.transform;
+        target.style.left = `${drag.left}px`;
+        target.style.top = `${drag.top}px`;
     }}
-    
-    onResizeEnd={({ target, lastEvent }) => {
-        if (lastEvent) {
-            updateItem(activePageId, section.id, item.id, {
-                width: parseInt(target.style.width),
-                height: parseInt(target.style.height),
-                x: item.x + lastEvent.drag.beforeDelta[0],
-                y: item.y + lastEvent.drag.beforeDelta[1],
-                transform: target.style.transform
-            });
-        }
-    
+
+    onResizeEnd={({ target }) => {
+        updateItem(activePageId, section.id, item.id, {
+            width: parseFloat(target.style.width),
+            height: parseFloat(target.style.height),
+            x: parseFloat(target.style.left),
+            y: parseFloat(target.style.top)
+        });
     }}
 />
+
+
 </>
       )}
     </React.Fragment>
@@ -475,137 +523,220 @@ onDragEnd={({ target, lastEvent }) => {
 })}
 
       {!state.isDraggingNow && isSectionSelected && (
-  <Moveable
+<Moveable
     target={sectionRef} 
     resizable={true}
+    draggable={true} 
+    // التعديل: منع السحب من الحواف لترك المساحة للريسايز
+    edgeDraggable={false} 
+    // تأكدي من وجود واحدة فقط من هذه
+    edge={false} 
+    stopPropagation={true}
     keepRatio={false}
-    renderDirections={["s"]} 
+    throttleResize={1}
+    renderDirections={["n", "nw", "ne", "s", "sw", "se", "w", "e"]}
     origin={false}
     zoom={1 / canvasScale}
-    edge={true} 
-    onResize={({ target, height }) => {
-      target.style.height = `${height}px`;
+
+    // السحب (Drag)
+    onDrag={({ target, left, top }) => {
+        target.style.left = `${left}px`;
+        target.style.top = `${top}px`;
     }}
-    onResizeEnd={({ target }) => {
-      const newHeight = parseInt(target.style.height);
-      updateSection(state.activePageId, section.id, { 
-        ...section,
-        height: newHeight 
-      });
+    onDragEnd={({ target }) => {
+        updateSection(state.activePageId, section.id, { 
+            styles: { 
+                ...section.styles, 
+                left: parseFloat(target.style.left), 
+                top: parseFloat(target.style.top), 
+                position: 'absolute' 
+            } 
+        });
     }}
-  />
+
+    // التحجيم (Resize) - الإصلاح هنا
+    onResizeStart={({ setOrigin, dragStart }) => {
+        setOrigin(["%", "%"]);
+        // تثبيت نقطة البداية لمنع القفز المفاجئ
+        dragStart && dragStart.set(
+            parseFloat(sectionRef.current.style.left || 0), 
+            parseFloat(sectionRef.current.style.top || 0)
+        );
+    }}
+    onResize={({ target, width, height, drag }) => {
+        target.style.width = `${width}px`;
+        target.style.height = `${height}px`;
+        // استخدام translate بدلاً من الماتريكس أثناء الحركة لضمان الاستجابة
+        target.style.transform = `translate(${drag.beforeTranslate[0]}px, ${drag.beforeTranslate[1]}px)`;
+    }}
+    onResizeEnd={({ target, lastEvent }) => {
+        // تحديث نهائي لبيانات السكشن
+        updateSection(state.activePageId, section.id, {
+            styles: { 
+                ...section.styles, 
+                width: parseFloat(target.style.width),
+                height: parseFloat(target.style.height),
+                // نأخذ الإحداثيات الجديدة بناءً على ما توقفت عنده عملية التحجيم
+                left: (section.styles.left || 0) + (lastEvent?.drag.beforeTranslate[0] || 0),
+                top: (section.styles.top || 0) + (lastEvent?.drag.beforeTranslate[1] || 0),
+            }
+        });
+        target.style.transform = "none"; 
+    }}
+/>
+
 )}
 <style>{`
-        .element-moveable-tool .moveable-line {
-            border-top: 1px solid #4f46e5 !important; 
-            background: transparent !important;
-        }
-        
-        .element-moveable-tool .moveable-control {
-            width: 10px !important; 
-            height: 10px !important;
-            background: white !important;
-            border: 2px solid #4f46e5 !important; 
-            border-radius: 50% !important; 
-            margin-top: -5px !important; 
-            margin-left: -5px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    /* 1. إعدادات الكانفاس ومساحة العمل */
+    #main-canvas {
+        position: relative;
+        overflow: hidden;
+        transition: background-color 0.3s ease, transform 0.3s ease !important;
+    }
 
-        .moveable-control-box {
-            z-index: 9999 !important;
-            background-color: transparent !important;
-        }
-        
-        .moveable-control, .moveable-line {
-            pointer-events: auto !important;
-        }
+    .main-canvas-area.snapping {
+        cursor: crosshair;
+    }
 
-        .section-resizer-tool .moveable-line { 
-            display: none !important; 
-        }
-        
-        .section-resizer-tool .moveable-control { 
-            background: #4f46e5 !important; 
-            opacity: 0.8; 
-            height: 6px !important; 
-            width: 50px !important; 
-            border-radius: 10px !important;
-            border: none !important;
-        }
+    /* 2. التحكم في التفاعل والطبقات */
+    .section-container.selected, 
+    .section-container > *, 
+    .text-element-wrapper, 
+    .button-container-wrapper {
+        pointer-events: auto !important;
+    }
 
-        .is-blank-layer { 
-            pointer-events: none !important; 
-        }
-        
-        .section-container.selected, 
-        .section-container > *, 
-        .text-element-wrapper, 
-        .button-container-wrapper,
-        .moveable-control-box {
-            pointer-events: auto !important;
-        }
+    .section-container[style*="position: absolute"] {
+        cursor: move !important;
+    }
 
-        .button-container-wrapper {
-            width: 100% !important;
-            height: 100% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-sizing: border-box !important;
-            overflow: hidden;
-        }
+    .is-blank-layer { 
+        pointer-events: none !important; 
+    }
 
-        .text-element-wrapper > div, 
-        .button-container-wrapper > span, 
-        img {
-            pointer-events: auto !important;
-        }
+    .moveable-target {
+        will-change: transform, width, height;
+        transition: none !important; 
+    }
 
-        .moveable-control-box.dragging {
-            pointer-events: none !important;
-        }
+    .section-container * {
+        backface-visibility: hidden;
+        perspective: 1000;
+    }
 
-.moveable-target {
-    will-change: transform, width, height;
-    transition: none !important; 
-}
+    /* 3. أدوات التحكم والمقابض والـ Toolbar */
+    [style*="sectionToolbar"] {
+        pointer-events: auto !important;
+        z-index: 1000001 !important;
+    }
 
-.moveable-control-box {
-    pointer-events: none;
-}
-.moveable-control, .moveable-line {
-    pointer-events: auto;
-}
+    [style*="toolBtn"] {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
 
-.section-container * {
-    backface-visibility: hidden;
-    perspective: 1000;
-}
+    .element-moveable-tool {
+        z-index: 1000000 !important;
+    }
 
-.element-moveable-tool {
-   z-index: 1000000 !important;
-}
+    .section-resizer-tool .moveable-control { 
+        background: #4f46e5 !important; 
+        opacity: 0.8; 
+        height: 6px !important; 
+        width: 50px !important; 
+        border-radius: 10px !important;
+        border: none !important;
+    }
 
-.element-moveable-tool .moveable-control, 
-.element-moveable-tool .moveable-line {
-    pointer-events: auto !important;
-}
+    /* 4. تنسيق العناصر الداخلية */
+    .button-container-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        overflow: hidden;
+    }
 
-[ref] {
-    will-change: transform, width, height;
-}
+    .text-element-wrapper > div, 
+    .button-container-wrapper > span, 
+    img {
+        pointer-events: auto !important;
+    }
+
+    .moveable-control {
+        background: #ffffff !important;
+        border: 2px solid #4f46e5 !important;
+        width: 12px !important;
+        height: 12px !important;
+        border-radius: 50% !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    }
+
     .moveable-control-box {
-    pointer-events: none !important;
-    will-change: transform;
-}
+        z-index: 2147483647 !important;
+    }
 
-.moveable-control {
-    pointer-events: auto !important;
-    touch-action: none; /* يحسن الأداء في المتصفحات الحديثة */
-}
-    `}</style>    
-    </div>
+    /* 5. نظام خطوط السناب والإرشاد (المعدل والمحسن) */
+
+    /* إخفاء الأرقام والأبعاد */
+    .moveable-snap-digit, 
+    .moveable-snappable-dimension {
+        display: none !important;
+        opacity: 0 !important;
+    }
+
+    /* أ- خطوط المحاذاة العامة: أزرق منقط (Blue & Dashed) */
+    .moveable-control-box .moveable-line.moveable-guideline {
+        background: transparent !important;
+        display: block !important;
+        opacity: 1 !important;
+    }
+
+    .moveable-control-box .moveable-line.moveable-guideline.moveable-vertical {
+        border-left: 1px dashed #4f46e5 !important;
+        width: 1px !important;
+    }
+
+    .moveable-control-box .moveable-line.moveable-guideline.moveable-horizontal {
+        border-top: 1px dashed #4f46e5 !important;
+        height: 1px !important;
+    }
+
+    /* ب- خطوط السنتر: أحمر منقط وطويل (Red & Dashed) - تم تقوية الاستهداف */
+    /* العمودي (Center) */
+    .moveable-control-box .moveable-line.moveable-guideline.moveable-vertical.moveable-center {
+        border-left: 1px dashed #ff0000 !important;
+        height: 10000px !important;
+        top: -5000px !important;
+        z-index: 9999999 !important;
+        background: transparent !important;
+    }
+
+    /* الأفقي (Middle) */
+    .moveable-control-box .moveable-line.moveable-guideline.moveable-horizontal.moveable-middle {
+        border-top: 1px dashed #ff0000 !important;
+        width: 10000px !important;
+        left: -5000px !important;
+        z-index: 9999999 !important;
+        background: transparent !important;
+    }
+
+    /* تنسيق خط السناب الأساسي */
+    .moveable-line.moveable-snap-line {
+        background: transparent !important;
+        border-top: 1px dashed #4f46e5 !important;
+    }
+
+    /* تنسيق خط تحديد العنصر الأساسي */
+    .moveable-line.moveable-direction {
+        background: transparent !important;
+        border-top: 1px dashed #4f46e5 !important;
+    }
+`}</style>
+
+</div>
   );
 }
 
@@ -617,30 +748,30 @@ const styles = {
     display: "flex", alignItems: "center", justifyContent: "center",
     boxShadow: "0 2px 8px rgba(0,0,0,0.3)", pointerEvents: "auto"
   },
- sectionToolbar: {
-  position: "absolute",
-  right: "-45px", 
-  top: "10px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-  zIndex: 10000,
-  background: "white",
-  padding: "5px",
-  borderRadius: "8px",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  border: "1px solid #e2e8f0"
+sectionToolbar: {
+    position: "absolute",
+    top: "-50px", // يرفعها فوق السكشن
+    left: "0",
+    display: "flex",
+    gap: "4px",
+    padding: "6px",
+    backgroundColor: "#ffffff",
+    borderRadius: "8px",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)",
+    zIndex: 1000000,
 },
-  toolBtn: {
-    background: "white",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
+toolBtn: {
     width: "32px",
     height: "32px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    border: "none",
+    backgroundColor: "transparent",
+    borderRadius: "6px",
     cursor: "pointer",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-  }
+    transition: "background 0.2s",
+    color: "#4b5563",
+},
+
 };

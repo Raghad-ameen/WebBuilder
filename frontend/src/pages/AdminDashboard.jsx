@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // أو استخدم fetch
+import axios from 'axios';
 
 const AdminDashboard = () => {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. جلب البيانات من Django عند فتح الصفحة
 useEffect(() => {
   const fetchSites = async () => {
     try {
-      // نأخذ التوكن من الـ localStorage
       const token = localStorage.getItem('access_token'); 
 
       if (!token) {
@@ -19,7 +17,6 @@ useEffect(() => {
 
       const response = await axios.get('http://127.0.0.1:8000/api/admin/sites/', {
         headers: { 
-          // تأكد من المسافة بعد كلمة Bearer
           'Authorization': `Bearer ${token}` 
         }
       });
@@ -34,10 +31,8 @@ useEffect(() => {
   fetchSites();
 }, []);
 
-  // 2. دالة تغيير الحالة (Activate / Deactivate)
   const handleToggleStatus = async (siteId) => {
   try {
-    // 1. جلب التوكن الصحيح (تأكد من الاسم access_token)
     const token = localStorage.getItem('access_token'); 
 
     if (!token) {
@@ -45,18 +40,16 @@ useEffect(() => {
       return;
     }
 
-    // 2. إرسال الطلب مع الـ Headers الصحيحة
     const response = await axios.post(
       `http://127.0.0.1:8000/api/admin/sites/toggle/${siteId}/`, 
-      {}, // البودي فارغ
+      {},
       {
         headers: { 
-          'Authorization': `Bearer ${token}` // تأكد من كلمة Bearer
+          'Authorization': `Bearer ${token}`
         }
       }
     );
     
-    // 3. تحديث الحالة في الواجهة فوراً
     if (response.data.status === 'success') {
       setSites(prev => prev.map(s => 
         s.id === siteId ? { ...s, is_active: response.data.is_active } : s
@@ -72,7 +65,6 @@ useEffect(() => {
 
   return (
     <div className="bg-slate-50 min-h-screen">
-      {/* Navbar و Header كما في صورك */}
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
            <h1 className="text-3xl font-bold text-slate-800">Admin <span className="text-indigo-600">Dashboard</span></h1>

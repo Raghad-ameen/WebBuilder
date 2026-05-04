@@ -3,7 +3,7 @@ import EditorLayout from "../components/EditorLayout";
 import { useEditorStore } from "../store/editorStore";
 import CustomModal from "../components/CustomModal";
 import TopBar from "../components/TopBar"; 
-import { useParams } from "react-router-dom"; // تأكد من الاستيراد
+import { useParams } from "react-router-dom";
 import axios from "axios";
 
 export default function Editor() {
@@ -32,7 +32,6 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        // استخدام حقل content المخزن في قاعدة البيانات
         if (res.data.content && Object.keys(res.data.content).length > 0) {
           store.setState(res.data.content);
         } else {
@@ -44,7 +43,7 @@ useEffect(() => {
     };
 
     if (siteId) fetchSiteData();
-  }, [siteId]); // سيعمل الكود فور فتح الصفحة بناءً على الـ ID في الرابط
+  }, [siteId]); 
   useEffect(() => {
     const handleClickOutside = (e) => {
       const isSelectable = e.target.closest(".selectable-item");
@@ -76,7 +75,6 @@ useEffect(() => {
       }
     }
     else {
-      // إذا لم توجد بيانات، نُصفر المحرر تماماً للموقع الجديد
       store.clearCanvas(); 
     }
   }, [siteId]);
@@ -84,17 +82,13 @@ useEffect(() => {
   useEffect(() => {
     if (store.state && siteId) {
       localStorage.setItem(`project_id_${siteId}`, JSON.stringify(store.state));
-      console.log(`Saved changes for site ${siteId}`);
     }
-  }, [store.state, siteId]); // يحفظ في كل مرة تتغير فيها حالة الـ store
+  }, [store.state, siteId]);
 
-  // أضف هذه الدالة داخل مكون Editor
-// داخل مكون Editor
 const handleSave = async () => {
   try {
     const token = localStorage.getItem('access_token');
     
-    // الحل الأضمن: جلب الحالة مباشرة من الـ Store لضمان شمول آخر تحريك للعناصر
     const latestState = store.getState ? store.getState() : store.state;
 
     await axios.patch(`http://127.0.0.1:8000/api/websites/${siteId}/`, {

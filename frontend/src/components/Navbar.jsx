@@ -5,12 +5,9 @@ import { useNavigate } from 'react-router-dom';
 export const Navbar = () => {
   const navigate = useNavigate();
   return (
-    // 1. قمنا بتغيير sticky إلى relative (أو حذفها تماماً)
-    // 2. تأكد من إزالة z-50 لأن الـ SortableContext يحتاج لإدارة الـ z-index بنفسه
     <nav className="w-full flex justify-between items-center py-6 px-6 md:px-16 bg-[#0a0026] font-sans relative" dir="ltr">
       
       <div className="flex items-center gap-3">
-        {/* حاوية اللوجو */}
         <div className="w-11 h-11 flex items-center justify-center"> 
 
          <p className=' text-white text-2xl'  style={{fontFamily:'fantasy'}}>
@@ -23,7 +20,6 @@ export const Navbar = () => {
       </div>
 
       <div className="flex items-center gap-6"> 
-        {/* في المحرر، يفضل استخدام div بدلاً من Link مؤقتاً إذا كان يسبب مشاكل في الضغط */}
         <div className="hidden md:block text-white/70 hover:text-white font-medium transition text-sm cursor-pointer">
           Home
         </div>
@@ -35,7 +31,7 @@ export const Navbar = () => {
         </div>
 
        <div 
-        onClick={() => navigate('/login')} // توجيه المستخدم لصفحة تسجيل الدخول
+        onClick={() => navigate('/login')} 
         className="text-white/80 hover:text-white font-bold text-sm px-2 cursor-pointer"
       >
         Log in

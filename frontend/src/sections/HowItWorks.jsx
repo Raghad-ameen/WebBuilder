@@ -7,7 +7,6 @@ export const HowItWorks = () => {
     <section className="py-24 px-6 md:px-16 bg-gray-50 overflow-hidden">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         
-        {/* النصف الأيسر */}
         <div className="space-y-8">
           <div className="space-y-4">
            
@@ -31,10 +30,8 @@ export const HowItWorks = () => {
 </Link>
         </div>
 
-        {/* النصف الأيمن */}
         <div className="relative flex justify-center items-center">
           
-          {/* الصورة الخلفية الثابتة */}
           <div className="relative z-0 transform translate-x-4 translate-y-4 opacity-0 grayscale-50">
              <img 
                src="https://framerusercontent.com/images/beautiful-site-bg.jpg"
@@ -43,25 +40,19 @@ export const HowItWorks = () => {
              />
           </div>
 
-          {/* الصورة الأمامية (الـ GIF) */}
           <div className="absolute z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-105">
             <div className="bg-white p-3 rounded-4xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] border border-slate-100">
               
-              {/* ملاحظة: استخدمنا <img> لملف الـ .gif بدلاً من <video> */}
               <img 
                 src="/drag-and-drop.gif" 
                 alt="Drag and Drop Animation"
                 className="w-full rounded-3xl shadow-2xl transition-transform hover:scale-[1.02] duration-500"
               />
 
-              {/* الأيقونات الجانبية */}
               
             </div>
-
-            {/* بطاقة الإحصائيات */}
-           <div className="absolute -bottom-12 -left-40 z-30"> {/* زدنا التباعد والـ z-index */}
+           <div className="absolute -bottom-12 -left-40 z-30"> 
         <div className="bg-white p-2 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-50 overflow-hidden w-95 h-55 flex items-center justify-center">
-          {/* هنا تضع صورتك الثابتة المجهزة بدلاً من الـ uptime */}
           <img 
             src={NewStatusImage}
             alt="Feature Detail"

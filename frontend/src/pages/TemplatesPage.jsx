@@ -24,7 +24,6 @@ export const TemplatesPage = () => {
               <div className="absolute inset-0 bg-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button className="bg-white text-black px-8 py-3 rounded-2xl font-black shadow-2xl">Preview Template</button>
               </div>
-              {/* ضع صور القوالب هنا */}
               <div className="w-full h-full bg-linear-to-br from-emerald-500/10 to-fuchsia-500/10" />
             </div>
             <h3 className="text-white text-xl font-bold">Modern SaaS Template 0{i}</h3>

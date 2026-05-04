@@ -191,7 +191,7 @@ const handleStartDrag = (e, type) => {
 
       {isShapesOpen && (
         <div style={styles.shapesGridPopup}>
-          {SHAPE_LIBRARY.map(s => (
+{SHAPE_LIBRARY.map(s => (
   <div 
     key={s.id} 
     style={styles.shapeIconItem} 
@@ -201,19 +201,25 @@ const handleStartDrag = (e, type) => {
     }}
     onMouseDown={(e) => {
       e.stopPropagation();
+      // التعديل هنا: نمرر ستايلات الشكل بالكامل في draggingShapeData
       setState(prev => ({ 
         ...prev, 
         isDraggingNow: true, 
         draggingType: 'shape',
-        draggingShapeData: s
+        draggingShapeData: {
+          styles: {
+            clipPath: s.path,
+            borderRadius: s.radius,
+            backgroundColor: "#4f46e5"
+          }
+        }
       }));
     }}
   >
     {s.icon}
     <span style={{fontSize: '10px'}}>{s.label}</span>
   </div>
-))}
-        </div>
+))}        </div>
       )}
     </div>
   </div>

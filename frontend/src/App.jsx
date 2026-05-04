@@ -13,9 +13,8 @@ import AdminDashboard from './pages/AdminDashboard';
 
 
 const ProtectedAdminRoute = ({ children }) => {
-  const user = JSON.parse(localStorage.getItem('user')); // جلب بيانات المستخدم من التخزين المحلي
+  const user = JSON.parse(localStorage.getItem('user')); 
   
-  // التحقق: هل المستخدم مسجل دخول وهل هو أدمن (is_staff)؟
   if (!user || !user.is_staff) {
     return <Navigate to="/login" replace />; 
   }

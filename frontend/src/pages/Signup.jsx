@@ -10,16 +10,15 @@ const Signup = () => {
   e.preventDefault();
   try {
     const dataToSend = {
-      username: formData.email, // أضف هذا السطر ضروري جداً لدجانغو
+      username: formData.email,
       email: formData.email,
       password: formData.password,
-      first_name: formData.name // تأكد أن السيريالايزر في دجانغو يستقبل هذا الاسم
+      first_name: formData.name
     };
     const res = await axios.post('http://127.0.0.1:8000/api/register/', dataToSend);
     console.log("Success:", res.data);
     navigate('/login');
   } catch (err) {
-    // هذا السطر سيطبع لك في المتصفح بالضبط أي حقل ناقص
     console.log("Details of Error 400:", err.response.data);
     alert(JSON.stringify(err.response.data)); 
   }

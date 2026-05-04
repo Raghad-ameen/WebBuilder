@@ -42,13 +42,11 @@ export default function RightPanel({ store }) {
  const handlePropertyChange = (config, value) => {
     if (!selectedItem) return;
 
-    // 1. تحديد نوع الحقل: هل هو ستايل (CSS) أم بيانات نصية؟
     const isStyle = !['text', 'src', 'linkUrl'].includes(config.field);
     
     let updatePayload = {};
 
     if (config.field === 'linkUrl') {
-      // 2. إذا كان الحقل هو رابط اللينك، نقوم بتحديثه داخل كائن action
       updatePayload = { 
         action: { 
           ...selectedItem.action, 
@@ -56,7 +54,6 @@ export default function RightPanel({ store }) {
         } 
       };
     } else if (isStyle) {
-      // 3. إذا كان ستايل (لون، حجم خط.. إلخ)
       const formattedValue = config.unit ? `${value}${config.unit}` : value;
       updatePayload = { 
         styles: { 
@@ -65,35 +62,28 @@ export default function RightPanel({ store }) {
         } 
       };
     } else {
-      // 4. إذا كان نصاً عادياً أو مصدر صورة
       updatePayload = { [config.field]: value };
     }
 
-    // إرسال التحديثات للمتجر (Store)
     previewUpdateItem(state.activePageId, selectedItem.sectionId, selectedId, updatePayload);
     debouncedUpdate(updatePayload);
   };
 
 const renderControl = (config) => {
-    // تحديد القيمة التي ستظهر داخل الـ Input
     let rawValue;
     
     if (config.field === 'linkUrl') {
-      // إذا كان الحقل للرابط، نسحب القيمة من المسار الصحيح
       rawValue = selectedItem.action?.url;
     } else {
-      // للمجالات الأخرى (نصوص أو ستايلات)
       rawValue = !['text', 'src'].includes(config.field) 
         ? selectedItem.styles?.[config.field] 
         : selectedItem[config.field];
     }
     
-    // معالجة القيمة لتناسب نوع الحقل (رقم أو نص)
     const value = config.type === 'number' && typeof rawValue === 'string' 
       ? parseInt(rawValue) 
       : rawValue || (config.type === 'number' ? 0 : "");
 
-    // جزء الـ switch يبقى كما هو دون تغيير
     switch (config.type) {
       case "number":
       case "text":

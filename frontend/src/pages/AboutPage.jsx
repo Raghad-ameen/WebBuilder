@@ -4,7 +4,6 @@ export const AboutPage = () => {
   return (
     <div className="min-h-screen font-sans">
       
-      {/* القسم العلوي: الخلفية الكحلية الداكنة */}
       <section className="bg-[#0a0026] pt-32 pb-40 px-6 md:px-16">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12 text-left">
@@ -28,14 +27,11 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      {/* القسم السفلي: الخلفية البيضاء والمستطيل الملون */}
-     {/* القسم السفلي: الخلفية البيضاء والمستطيل الملون */}
 <section className="bg-white pt-20 pb-32 px-6">
   <div className="max-w-6xl mx-auto"> 
     
     <div className="rounded-[40px] p-12 md:p-24 text-center shadow-[0_40px_100px_-20px_rgba(0,0,0,0.2)] bg-linear-to-br from-emerald-600 to-teal-600 relative overflow-hidden">
       
-      {/* لمسة تصميمية خلفية */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <div className="absolute -top-24 -left-24 w-64 h-64 bg-white rounded-full blur-3xl"></div>
       </div>
@@ -44,7 +40,6 @@ export const AboutPage = () => {
         Join the creators <br className="hidden md:block" /> building on StructPeak
       </h2>
       
-      {/* التعديل هنا: أضفنا mt-10 لإنزال الزر قليلاً و inline-block لضمان ظهور المسافات */}
       <Link 
         to="/login" 
         className="mt-10 inline-block bg-white text-emerald-600 px-12 py-5 rounded-2xl font-black text-xl hover:shadow-[0_20px_40px_rgba(255,255,255,0.3)] transition-all hover:-translate-y-1 active:scale-95 relative z-10"

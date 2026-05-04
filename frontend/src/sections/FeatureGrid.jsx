@@ -6,13 +6,12 @@ const features = [
     title: "Easy Drag & Drop",
     desc: "No coding required. Just pick a block, drop it, and customize your site visually.",
     icon: <MousePointer2 className="w-6 h-6 text-indigo-500" />,
-    // بوردر متناسب مع ثيم الـ Indigo
     hoverBorder: "hover:border-indigo-500/40", 
   },
   {
     title: "Ultra Fast Loading",
     desc: "We optimize every image and script so your website loads instantly for everyone.",
-    icon: <Zap className="w-6 h-6 text-fuchsia-500" />, // غيرنا اللون لفوشيا ليطابق الـ Gradient
+    icon: <Zap className="w-6 h-6 text-fuchsia-500" />,
     hoverBorder: "hover:border-fuchsia-500/40",
   },
   {
@@ -43,10 +42,8 @@ export const FeatureGrid = () => {
               key={index}
               className={`
                 p-10 rounded-[2.5rem] border transition-all duration-500 ease-out group relative
-                /* الحالة العادية: بوردر خفيف جداً يميل للكحلي الشفاف */
                 bg-slate-50/50 border-slate-200/60 
                 
-                /* حالة الهوفر: بوردر ملون حسب الثيم مع ظل ناعم */
                 hover:bg-white hover:-translate-y-3 hover:shadow-[0_32px_64px_-15px_rgba(79,70,229,0.15)]
                 ${f.hoverBorder}
               `}
@@ -63,7 +60,6 @@ export const FeatureGrid = () => {
                 {f.desc}
               </p>
 
-              {/* اللمسة الأخيرة: خط سفلي متدرج يربط الكرت بالثيم العام */}
               <div className="absolute bottom-0 left-12 right-12 h-1 bg-linear-to-r from-transparent via-indigo-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
             </div>
           ))}

@@ -24,7 +24,6 @@ export function useEditorStore(initialState) {
   isPreviewMode: false,
     ...initialState
 });
-// أضيفي هذه الدالة مع باقي الدوال مثل addPage و deletePage
 const togglePreview = useCallback(() => {
   setState(prev => ({
     ...prev,
@@ -263,43 +262,33 @@ const newItem = {
   width: finalWidth,
   height: finalHeight,
   text: extraData.text !== undefined ? extraData.text : config.text,
-  action: type === 'link' ? { url: 'https://www.google.com' } : {},
-  
   styles: {
-    position: 'absolute',
+    ...config.styles, 
     zIndex: 100,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     pointerEvents: 'auto',
-    // 1. نضع ستايلات الكوفيج أولاً
-    ...config.styles,
-    // 2. ثم نضع ستايلات الـ extraData
     ...(extraData.styles || {}),
-    // 3. أخيراً، نفرض لون الرابط والخط السفلي لضمان عدم مسحهما من أي ملف آخر
-    ...(type === 'link' && {
-      color: '#2563eb',
-      textDecoration: 'underline',
-      cursor: 'pointer'
-    })
+    
+    ...Object.fromEntries(
+      Object.entries(extraData.styles || {}).filter(([key]) => 
+        !['position', 'top', 'left', 'transform'].includes(key)
+      )
+    ),
   }
-};
-    let updatedSections = [...activePage.sections];
+};    let updatedSections = [...activePage.sections];
 
 if (updatedSections.length === 0) {
-    // التحقق هل العنصر المضاف هو أصلاً سكشن (مثل هيرو) أم عنصر بسيط (مثل نص)
     const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
 
     updatedSections = [{
         id: `s-${Date.now()}`,
         type: isLargeSection ? type : "blank",
-        // إذا كان سكشن كبير نعطيه 600، إذا كان نص نعطيه 100 فقط
         height: isLargeSection ? 600 : 100, 
         styles: { 
-            // السكاشن البسيطة دائماً شفافة لتظهر خلفية الكانفاس
             backgroundColor: isLargeSection ? "#ffffff" : "transparent", 
             padding: "0px",
-            // منع الارتفاع الإجباري الكبير للعناصر البسيطة
             minHeight: isLargeSection ? "400px" : "50px" 
         },
         data: { items: [newItem] }
@@ -381,9 +370,9 @@ const templates = {
   blank: {
     id: `s-${Date.now()}`,
     type: "blank",
-    height: 150, // تقليل الارتفاع الافتراضي للسكشن الفارغ
+    height: 150,
     styles: { 
-        backgroundColor: "transparent", // جعله شفافاً ليعكس لون الكانفاس
+        backgroundColor: "transparent", 
         padding: "0px",
         minHeight: "50px"
     },
@@ -474,9 +463,10 @@ selectedElementIds: [],
   });
 }, [saveToHistory]);
 
- const deleteSection = useCallback((sectionId) => {
-  saveToHistory(state); 
+const deleteSection = useCallback((sectionId) => {
+  // لا تستخدمي state هنا مباشرة، استخدمي prev
   setState(prev => {
+    saveToHistory(prev); // حفظ النسخة السابقة قبل الحذف
     const newState = {
       ...prev,
       pages: prev.pages.map(p => ({
@@ -484,11 +474,9 @@ selectedElementIds: [],
         sections: p.sections.filter(s => s.id !== sectionId)
       }))
     };
-    localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
-}, [state, saveToHistory]);
-
+}, [saveToHistory]); // احذفي state من هنا
 const deleteElement = useCallback((itemId) => {
   saveToHistory(state);
   
@@ -544,6 +532,8 @@ const redo = useCallback(() => {
 }, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
   setState(prev => {
+    saveToHistory(prev); 
+
     return {
       ...prev,
       pages: prev.pages.map(p => {
@@ -561,7 +551,10 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
                     return {
                       ...it,
                       ...data,
-                      styles: { ...it.styles, ...(data.styles || {}) }
+                      styles: { 
+                        ...(it.styles || {}), 
+                        ...(data.styles || {}) 
+                      }
                     };
                   }
                   return it;
@@ -573,7 +566,8 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
       })
     };
   });
-}, []);
+}, [saveToHistory]); 
+
 
 const previewUpdateItem = useCallback((pageId, sectionId, itemId, data) => {
   setState(prev => ({

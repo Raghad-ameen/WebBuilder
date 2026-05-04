@@ -1,14 +1,11 @@
 import EditableText from '../components/EditableText.jsx';
 
-// 1. Hero Section: بتصميم خلفية احترافي وعميق
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// أضف كلمة export هنا
 export const Hero = () => {
   return (
     <header className="relative pt-36 pb-32 px-6 text-center overflow-hidden bg-[#0a0026]">
-      {/* التمويهات الخلفية */}
       <div className="absolute top-1/4 left-0 w-125 h-125 bg-indigo-700/30 rounded-full blur-[150px] -translate-x-1/2"></div>
       <div className="absolute bottom-0 right-1/4 w-100 h-100 bg-fuchsia-600/20 rounded-full blur-[120px]"></div>
 

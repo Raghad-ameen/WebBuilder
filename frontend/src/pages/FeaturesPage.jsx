@@ -1,5 +1,5 @@
 import React from 'react';
-import * as Icons from 'lucide-react'; // تأكد من تثبيتها أو استخدم الـ SVGs اليدوية
+import * as Icons from 'lucide-react';
 
 export const FeaturesPage = () => {
   const features = [
@@ -29,7 +29,6 @@ export const FeaturesPage = () => {
         {features.map((f, i) => (
           <div key={i} className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-emerald-500/50 transition-all group">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
-               {/* هنا استبدل بالـ SVG اليدوي إذا استمرت مشاكل المكتبة */}
                <Icons.Zap className="w-6 h-6" /> 
             </div>
             <h3 className="text-white text-2xl font-bold mb-4">{f.title}</h3>

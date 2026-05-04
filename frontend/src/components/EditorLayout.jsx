@@ -11,32 +11,27 @@ export default function EditorLayout({ store,onSave }) {
   const { state, closeModal, deletePage, renamePage } = store;
   const activePage = state.pages.find((p) => p.id === state.activePageId);
 
-  // 1. منطق تحديد أبعاد الكانفاس والسكيل بناءً على وضع العرض
   const getCanvasConfig = () => {
     if (state.viewMode === 'mobile') return { width: '375px', scale: 0.8 }; 
     if (state.viewMode === 'tablet') return { width: '768px', scale: 0.7 }; 
-    return { width: '100%', scale: 1 }; // Desktop
+    return { width: '100%', scale: 1 };  
   };
 
   const { width, scale } = getCanvasConfig();
 
-  // 2. إدارة اختصارات لوحة المفاتيح (Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // التحقق من أن المستخدم لا يكتب في input أو text editor لمنع تداخل الاختصارات
       const isEditing = document.activeElement.tagName === 'INPUT' || 
                         document.activeElement.tagName === 'TEXTAREA' || 
                         document.activeElement.isContentEditable;
 
       if (isEditing) return;
 
-      // التراجع (Undo)
       if (e.ctrlKey && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         store.undo();
       }
 
-      // النسخ (Copy)
       if (e.ctrlKey && e.key.toLowerCase() === 'c') {
         if (state.selectedElementIds?.length > 0) {
           e.preventDefault();
@@ -44,7 +39,6 @@ export default function EditorLayout({ store,onSave }) {
         }
       }
 
-      // اللصق (Paste)
       if (e.ctrlKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         e.stopImmediatePropagation(); 
@@ -53,7 +47,6 @@ export default function EditorLayout({ store,onSave }) {
         }
       }
 
-      // الحذف (Delete)
       if (e.key === 'Delete' || e.key === 'Backspace') {
         state.selectedElementIds?.forEach(id => store.deleteElement(id));
       }
@@ -73,7 +66,7 @@ export default function EditorLayout({ store,onSave }) {
 
         <main style={{ 
           flex: 1, 
-          backgroundColor: "#cbd5e1", // لون الخلفية المحيطة بالكانفاس
+          backgroundColor: "#cbd5e1",
           padding: '40px', 
           display: "flex", 
           justifyContent: "center", 
@@ -83,7 +76,6 @@ export default function EditorLayout({ store,onSave }) {
         }}>
   
           {state.pages.length > 0 ? (
-            /* CanvasElement: المكون المسؤول عن حسابات رمي العناصر (Drag & Drop) */
             <CanvasElement store={store} scale={scale}>
               <div
                 id="main-canvas"
@@ -91,7 +83,6 @@ export default function EditorLayout({ store,onSave }) {
               style={{
   width: width, 
   minWidth: width === '100%' ? 'auto' : width,
-  // 1. تفعيل لون الخلفية الأساسي للكانفاس ليكون هو الأرضية البيضاء
   backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff", 
   minHeight: state.canvasHeight || "100vh", 
   transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
@@ -100,9 +91,7 @@ export default function EditorLayout({ store,onSave }) {
   overflow: "visible", 
   display: "flex",
   flexDirection: "column",
-  // 2. ضمان عدم وجود أي فجوات هوائية بين السكاشن
   gap: "0px",
-  // 3. إضافة ظل خفيف لتمييز حدود الصفحة عن خلفية البرنامج الرمادية
   boxShadow: "0 4px 20px rgba(0,0,0,0.08)" 
 }}
               >
@@ -112,7 +101,7 @@ export default function EditorLayout({ store,onSave }) {
                       key={section.id}
                       section={section}
                       store={store}
-                      canvasScale={scale} // نمرر السكيل لإصلاح دقة أدوات الـ Moveable
+                      canvasScale={scale}
                       onSelect={(id) => store.selectItems([id])}
                       selectedElementIds={state.selectedElementIds || []}
                     />
@@ -125,7 +114,6 @@ export default function EditorLayout({ store,onSave }) {
               </div>
             </CanvasElement>
           ) : (
-            /* واجهة إضافة أول صفحة في حال كان المشروع فارغاً */
             <div 
               onClick={() => store.addPage("Main Page")}
               style={{
@@ -144,10 +132,6 @@ export default function EditorLayout({ store,onSave }) {
 
         <RightPanel store={store} />
       </div>
-
-      {/* --- قسم المودالات (Modals) --- */}
-
-      {/* مودال حذف الصفحة */}
       <CustomModal 
         isOpen={state.modal?.isOpen && state.modal?.type === "deletePage"}
         title="Delete Page"
@@ -164,7 +148,6 @@ export default function EditorLayout({ store,onSave }) {
         Are you sure you want to delete this page? This action cannot be undone.
       </CustomModal>
 
-      {/* مودال نجاح الحفظ */}
       <CustomModal 
         isOpen={state.modal?.isOpen && state.modal?.type === "saveSuccess"}
         title="Project Saved"
@@ -180,7 +163,6 @@ export default function EditorLayout({ store,onSave }) {
         </div>
       </CustomModal>
 
-      {/* مودال تغيير اسم الصفحة */}
       <CustomModal 
         isOpen={state.modal?.isOpen && state.modal?.type === "renamePage"}
         title="Rename Page"

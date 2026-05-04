@@ -2,6 +2,7 @@ import React from 'react';
 
 export default function CanvasElement({ store, children }) {
   const { state, setState, addItemAtPosition } = store;
+  const canvasBg = state.canvasBg || "#ffffff";
 
   const getCanvasConfig = () => {
     switch (state.viewMode) {
@@ -13,7 +14,6 @@ export default function CanvasElement({ store, children }) {
 
   const { width, scale } = getCanvasConfig();
 
-// داخل ملف CanvasElement.jsx في دالة handleMouseUp
 
 const handleMouseUp = (e) => {
   if (!state.isDraggingNow) return;
@@ -21,22 +21,16 @@ const handleMouseUp = (e) => {
   const canvas = document.getElementById('main-canvas');
   if (!canvas) return;
 
-  // 1. الحصول على العرض الأصلي للكانفاس بناءً على المود الحالي
-  // نستخدم القيم الافتراضية التي حددتِها (768 للتابلت، 375 للموبايل، و1200 كافتراضي للديسكتوب)
   let canvasWidth;
   if (state.viewMode === 'mobile') canvasWidth = 375;
   else if (state.viewMode === 'tablet') canvasWidth = 768;
-  else canvasWidth = canvas.offsetWidth; // للديسكتوب يأخذ عرض الحاوية
+  else canvasWidth = canvas.offsetWidth; 
 
-  // 2. حساب المنتصف (Center)
-  // العرض مقسوم على 2 (المنتصف) ثم نطرح نصف عرض العنصر (75) ليكون متمركزاً تماماً
   const centerX = (canvasWidth / 2) - 75;
   
-  // بالنسبة للارتفاع (Y)، سنضعه في بداية السكرول أو على بعد 100 بكسل من الأعلى
   const centerY = 100; 
 
 
-  // إرسال الإحداثيات المركزية للـ Store
   addItemAtPosition(state.draggingType, centerX, centerY);
   
   setState(prev => ({ 
@@ -62,7 +56,6 @@ return (
         padding: state.viewMode === 'desktop' ? '0' : '40px 0',
       }}
     >
-      {/* طبقة الحماية - يجب أن تحمل handleMouseUp لأنها فوق كل شيء */}
       {state.isDraggingNow && (
         <div 
           onMouseUp={handleMouseUp}
@@ -79,10 +72,11 @@ return (
       <div 
         id="main-canvas" 
         onMouseUp={handleMouseUp}
+        className="main-canvas-area"
         style={{ 
             width: width, 
             minHeight: "100vh", 
-            backgroundColor: "#ffffff",
+            backgroundColor: canvasBg,
             boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.1)", 
             position: "relative", 
             zIndex: 1,

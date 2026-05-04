@@ -30,24 +30,21 @@ html, body, #root {
   flex-direction: column;
 }
 
-/* --- منطق الشفافية والكانفاس الموحد --- */
 
 #main-canvas {
-    /* الكانفاس هو الوحيد الأبيض والذي يحمل الظل */
     background-color: #ffffff !important;
     box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
     border: none;
     transition: width 0.4s ease, transform 0.4s ease;
     overflow: visible;
     margin: 0 auto;
-    position: relative; /* 👈 هذا السطر هو مفتاح الحل */
+    position: relative; 
     padding: 0;
 }
 
 #canvas-wrapper, 
 .section-container, 
 [class*="section-"] {
-    /* جعل كل شيء داخل الكانفاس شفافاً تماماً */
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
@@ -59,7 +56,6 @@ html, body, #root {
     position: relative;
 }
 
-/* --- باقي التنسيقات الأصلية دون تغيير --- */
 
 h1, h2, h3 {
   letter-spacing: -0.04em; 

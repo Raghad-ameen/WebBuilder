@@ -23,7 +23,6 @@ export default function TopBar({ store,exportToHTML,onSave }) {
     <div style={styles.container}>
       <div style={styles.section}>
        <div style={styles.buttonGroup}>
-  {/* زر التراجع Undo */}
   <button 
     onClick={undo} 
     disabled={!canUndo} 
@@ -82,7 +81,6 @@ export default function TopBar({ store,exportToHTML,onSave }) {
 
 
 
-  {/* القسم الأيمن (استخدام styles.sectionRight) */}
   <div style={styles.sectionRight}>
 
     <button 
@@ -144,11 +142,8 @@ export default function TopBar({ store,exportToHTML,onSave }) {
 
    <button 
   onClick={() => {
-    console.log("Saving..."); 
-    // تنفيذ الحفظ المحلي أولاً
     if (store.saveProject) store.saveProject(); 
     
-    // تنفيذ الحفظ في السيرفر (الدالة التي مررناها من Editor.jsx)
     if (typeof onSave === 'function') {
       onSave();
     } else {

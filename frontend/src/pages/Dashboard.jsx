@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false); // التحكم في ظهور النافذة
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSiteData, setNewSiteData] = useState({ name: '', slug: '' });
   const navigate = useNavigate();
 
@@ -31,14 +31,12 @@ const Dashboard = () => {
     fetchSites();
   }, [navigate, token]);
 
-  // وظيفة إنشاء الموقع الجديد
   const handleCreateSite = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post('http://127.0.0.1:8000/api/websites/', newSiteData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // بعد النجاح، ننتقل مباشرة للمحرر باستخدام ID الموقع الجديد
       navigate(`/editor/${res.data.id}`); 
     } catch (err) {
       alert("Error: Check if the slug is unique or fill all fields.");
@@ -50,14 +48,12 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#f8fafc] font-sans" dir="ltr">
       <div className="p-8 md:p-16 max-w-7xl mx-auto">
         
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div>
             <h2 className="text-4xl font-black text-[#0a0026] tracking-tighter">My Projects</h2>
             <p className="text-slate-500 mt-2 font-medium">Manage and edit your professional websites.</p>
           </div>
           
-          {/* زر فتح الـ Modal */}
           <button 
             onClick={() => setIsModalOpen(true)}
             className="group flex items-center gap-2 bg-[#0a0026] text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:bg-blue-950 transition-all active:scale-95"
@@ -67,7 +63,6 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* --- القائمة الحالية (نفس كودك السابق) --- */}
         {loading ? (
           <div className="flex justify-center items-center py-20">
              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
@@ -95,7 +90,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* --- Create New Site Modal --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#0a0026]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-300">

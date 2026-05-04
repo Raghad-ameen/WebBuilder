@@ -1,9 +1,8 @@
-// EditableText.jsx
 import React from 'react';
 
 const EditableText = ({ initialValue, onSave }) => {
   return (
-    <span // تم التغيير من div إلى span
+    <span 
       contentEditable={true}
       suppressContentEditableWarning={true}
       onBlur={(e) => {

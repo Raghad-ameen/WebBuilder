@@ -1,4 +1,3 @@
-/* --- 1. الإعدادات العامة والمتغيرات --- */
 :root {
   --text: #334155;
   --text-h: #020617;
@@ -12,7 +11,6 @@
   direction: ltr;
 }
 
-/* --- 2. تنسيقات الـ Body والـ Root --- */
 html, body, #root {
   background-color: #f3f4f6 !important; 
   margin: 0;
@@ -25,10 +23,8 @@ html, body, #root {
   flex-direction: column;
 }
 
-/* --- 3. منطق الشفافية والكانفاس الموحد (حل مشكلة اللون الأبيض) --- */
 
 #main-canvas {
-    /* الكانفاس هو الوحيد الأبيض والذي يحمل الظل */
     background-color: #ffffff !important;
     box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
     border: none;
@@ -39,7 +35,6 @@ html, body, #root {
     padding: 0;
 }
 
-/* إجبار السكاشن والحاويات داخل الكانفاس على الشفافية المطلقة */
 #canvas-wrapper, 
 .section-container, 
 [class*="section-"],
@@ -57,17 +52,15 @@ html, body, #root {
     position: relative;
 }
 
-/* قتل أي عنصر "شبح" قد ينشأ بنوع blank أو كانفاس قديم */
 [data-type="blank"], 
 .is-blank-canvas,
 div[class*="blank-canvas"] {
     background-color: transparent !important;
     height: 0px !important;
     min-height: 0px !important;
-    display: none !important; /* إخفاء تماماً إذا كان عنصراً مستقلاً */
+    display: none !important; 
 }
 
-/* --- 4. تنسيقات العناصر التفاعلية (Counter, Hero, الخ) --- */
 
 .counter {
   font-size: 16px;
@@ -126,12 +119,11 @@ div[class*="blank-canvas"] {
   transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg) scale(0.8);
 }
 
-/* --- 5. الهيكل التنظيمي (Center, Steps, Docs) --- */
 
 #center {
   display: flex;
   flex-direction: column;
-  gap: 0px; /* تم تقليله لمنع الفراغات الزائدة */
+  gap: 0px; 
   place-content: center;
   place-items: center;
   flex-grow: 1;
@@ -233,7 +225,7 @@ div[class*="blank-canvas"] {
 }
 
 #spacer {
-  height: 40px; /* تقليل الارتفاع لمنع المساحات البيضاء العملاقة */
+  height: 40px;
   border-top: 1px solid var(--border);
 }
 
@@ -243,7 +235,6 @@ div[class*="blank-canvas"] {
   }
 }
 
-/* --- 6. تأثيرات بصرية وعناصر إضافية --- */
 
 .ticks {
   position: relative;
@@ -268,7 +259,6 @@ div[class*="blank-canvas"] {
   border-right-color: var(--border);
 }
 
-/* ضمان شفافية العناصر "الحرة" */
 .free-element,
 .free-element * {
   background: transparent !important;
@@ -276,7 +266,6 @@ div[class*="blank-canvas"] {
   box-shadow: none !important;
 }
 
-/* تنظيف حالة التحرير (Content Editable) */
 [contenteditable="true"],
 [contenteditable="true"]:focus,
 [contenteditable="true"]:active {
@@ -290,7 +279,6 @@ div[class*="blank-canvas"] {
   background: rgba(79, 70, 229, 0.25);
 }
 
-/* --- 7. إضافات خاصة بالخطوط والتمرير --- */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

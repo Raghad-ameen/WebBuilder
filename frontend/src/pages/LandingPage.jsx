@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Hero } from '../sections/Hero'; 
 import { FeatureGrid} from '../sections/FeatureGrid';
-import { HowItWorks } from '../sections/HowItWorks'; // استيراد المكون الجديد
+import { HowItWorks } from '../sections/HowItWorks';
 
 
 const LandingPage = () => {
