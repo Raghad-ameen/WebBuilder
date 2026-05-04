@@ -113,8 +113,7 @@ style={{
   height: isMobile ? "auto" : (section.height ? `${section.height}px` : "auto"),
   minHeight: section.height ? `${section.height}px` : "50px",  
   
-  backgroundColor: section.type === "blank" ? "transparent" : (section.styles?.backgroundColor || "#ffffff"),
-  
+backgroundColor: section.styles?.backgroundColor || "transparent",  
   zIndex: allSections.length - sectionIndex,
   overflow: "visible", 
   display: isMobile ? "flex" : "block",

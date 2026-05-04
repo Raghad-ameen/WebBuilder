@@ -146,11 +146,15 @@ const deletePage = useCallback((pageId) => {
     }));
   }, [state, saveToHistory]);
 const updateCanvasStyles = useCallback((newStyles) => {
-  setState(prev => ({
-    ...prev,
-    canvasStyles: { ...prev.canvasStyles, ...newStyles }
-  }));
-}, []);
+  setState(prev => {
+    // حفظ الحالة قبل تغيير اللون لتمكين التراجع (Undo)
+    saveToHistory(prev); 
+    return {
+      ...prev,
+      canvasStyles: { ...prev.canvasStyles, ...newStyles }
+    };
+  });
+}, [saveToHistory]); // تأكدي من إضافة saveToHistory هنا
 
 const openModal = useCallback((type, data = null) => {
   setState(prev => ({

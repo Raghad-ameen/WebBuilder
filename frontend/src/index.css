@@ -32,8 +32,8 @@ html, body, #root {
 
 
 #main-canvas {
-    background-color: #ffffff !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+    /* background-color: #ffffff !important; */
+    /* box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; */
     border: none;
     transition: width 0.4s ease, transform 0.4s ease;
     overflow: visible;

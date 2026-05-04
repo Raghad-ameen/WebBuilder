@@ -2,8 +2,7 @@ import React from 'react';
 
 export default function CanvasElement({ store, children }) {
   const { state, setState, addItemAtPosition } = store;
-  const canvasBg = state.canvasBg || "#ffffff";
-
+const canvasBgColor = state.canvasStyles?.backgroundColor || state.canvasBg || "#ffffff";
   const getCanvasConfig = () => {
     switch (state.viewMode) {
       case 'mobile': return { width: '375px', scale: 0.8 };
@@ -76,7 +75,7 @@ return (
         style={{ 
             width: width, 
             minHeight: "100vh", 
-            backgroundColor: canvasBg,
+          backgroundColor: canvasBgColor, // استخدام المتغير الصحيح
             boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.1)", 
             position: "relative", 
             zIndex: 1,

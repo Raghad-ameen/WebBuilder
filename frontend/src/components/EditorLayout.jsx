@@ -74,7 +74,38 @@ export default function EditorLayout({ store,onSave }) {
           overflow: "auto",
           position: "relative"
         }}>
-  
+
+{state.pages.length > 0 && (
+    <div style={{ 
+      position: "absolute", // تجعلها عائمة
+      top: "20px", 
+      left: "20px", 
+      zIndex: 100, // لتكون فوق كل شيء
+      background: "white",
+      padding: "8px 12px",
+      borderRadius: "10px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      border: "1px solid #e2e8f0"
+    }}>
+      <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Canvas Color:</span>
+      <input 
+        type="color" 
+        value={state.canvasStyles?.backgroundColor || "#ffffff"} 
+        onChange={(e) => store.updateCanvasStyles({ backgroundColor: e.target.value })} 
+        style={{ 
+          width: "24px", 
+          height: "24px", 
+          border: "none", 
+          cursor: "pointer", 
+          borderRadius: "4px",
+          backgroundColor: "transparent" 
+        }}
+      />
+    </div>
+  )}  
           {state.pages.length > 0 ? (
             <CanvasElement store={store} scale={scale}>
               <div
