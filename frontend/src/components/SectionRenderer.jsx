@@ -53,27 +53,6 @@ const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
-// const formatAllStyles = (item) => {
-//   const s = item.styles || {};
-  
-//   const filters = [];
-//   if (s.filterBlur) filters.push(`blur(${s.filterBlur}px)`);
-//   if (s.filterBrightness !== undefined) filters.push(`brightness(${s.filterBrightness}%)`);
-//   if (s.filterContrast !== undefined) filters.push(`contrast(${s.filterContrast}%)`);
-//   if (s.filterGrayscale !== undefined) filters.push(`grayscale(${s.filterGrayscale}%)`);
-
-//   const boxShadow = s.shadowColor 
-//     ? `${s.shadowX || 0}px ${s.shadowY || 0}px ${s.shadowBlur || 0}px ${s.shadowColor}` 
-//     : s.boxShadow;
-
-//   return {
-//     ...s,
-//     filter: filters.length > 0 ? filters.join(" ") : s.filter,
-//     boxShadow: boxShadow,
-//     fontSize: typeof s.fontSize === 'number' ? `${s.fontSize}px` : s.fontSize,
-//     letterSpacing: typeof s.letterSpacing === 'number' ? `${s.letterSpacing}px` : s.letterSpacing,
-//   };
-// };
 useEffect(() => {
     if (selectedElementIds.length > 0) {
       const elements = selectedElementIds
@@ -140,6 +119,7 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
   backgroundPosition: "center",
   
   borderBottom: isSectionSelected ? "2px solid #4f46e5" : "1px solid rgba(204, 204, 204, 0.3)",
+  pointerEvents: "auto",
   ...section.styles,
 }}
     > 
@@ -403,9 +383,6 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
     style={{ 
       width: `${item.width}px`, 
       height: `${item.height}px`, 
-      // position: "absolute",
-      // top: `${item.y}px`, 
-      // left: `${item.x}px`,
       overflow: "visible",
       zIndex: item.styles?.zIndex || 100,
     }}
@@ -538,8 +515,6 @@ target={targets}
     snapVertical={true}
     snapHorizontal={true}
     snapCenter={true}
-
-
    verticalGuidelines={[
        (document.querySelector(".section-container")?.offsetWidth || 0) / 2
     ]}
@@ -551,7 +526,7 @@ target={targets}
         document.querySelector("#main-canvas"),
         ...Array.from(document.querySelectorAll(".section-container, .text-element-wrapper, .button-container-wrapper"))
     ]}    
-    portalContainer={document.body}
+portalContainer={sectionRef.current}
     isDisplaySnapDigit={false} 
     isDisplayInnerSnapDigit={false}
 
@@ -638,7 +613,6 @@ onResizeGroupEnd={({ events }) => {
     renderDirections={["n", "nw", "ne", "s", "sw", "se", "w", "e"]}
     origin={false}
     zoom={1 / canvasScale}
-
     onDrag={({ target, left, top }) => {
         target.style.left = `${left}px`;
         target.style.top = `${top}px`;
@@ -683,43 +657,66 @@ onResizeGroupEnd={({ events }) => {
 )}
 
 <Selecto
-  dragContainer={"#main-canvas"}
-  selectableTargets={[".canvas-element"]}
-  hitRate={10}
-  selectByClick={true}
+ container={document.body}
+  dragContainer={sectionRef.current}
+  rootContainer={document.body}
+    selectableTargets={[".canvas-element"]}
+  hitRate={0}
+  selectByClick={false}
   selectFromInside={false}
-  toggleContinueSelect={["ctrlKey", "metaKey"]}
+  preventDragFromInside={true}
+  
+  //  onDragStart={(e) => {
+  //   const rect = sectionRef.current.getBoundingClientRect();
 
-  onDragStart={e => {
-    const target = e.inputEvent.target;
+  //   console.log("==== SELECTO START ====");
+  //   console.log("mouse:", {
+  //     clientX: e.inputEvent.clientX,
+  //     clientY: e.inputEvent.clientY,
+  //   });
 
-    if (
-      target.closest(".moveable-control-box") ||
-      target.closest(".control-btn") ||
-      target.closest(".moveable") ||
-      editingId
-    ) {
-      e.stop();
+  //   console.log("sectionRect:", {
+  //     left: rect.left,
+  //     top: rect.top,
+  //     width: rect.width,
+  //     height: rect.height,
+  //   });
+
+  //   console.log("target:", e.inputEvent.target);
+  //   console.log("target class:", e.inputEvent.target.className);
+
+  //   const targetRect = e.inputEvent.target.getBoundingClientRect?.();
+
+  //   if (targetRect) {
+  //     console.log("targetRect:", {
+  //       left: targetRect.left,
+  //       top: targetRect.top,
+  //       width: targetRect.width,
+  //       height: targetRect.height,
+  //     });
+  //   }
+  // }}
+
+  onDrag={(e) => {
+    const box = document.querySelector(".selecto-selection");
+
+    if (box) {
+      console.log("selectionBox:", {
+        left: box.style.left,
+        top: box.style.top,
+        transform: box.style.transform,
+        width: box.style.width,
+        height: box.style.height,
+      });
     }
   }}
-
-onSelect={e => {
-    const ids = e.selected
-        .map(el => el.getAttribute("id"))
-        .filter(Boolean)
-        .map(String);
-
+  
+  onSelect={e => {
+    const ids = e.selected.map(el => String(el.id));
     store.selectItems(ids);
-
-    if (typeof onSelect === "function" && ids.length > 0) {
-        onSelect(ids[ids.length - 1]);
-    }
-
-    if (!ids.length) {
-        store.selectItems([]);
-    }
-}}
+  }}
 />
+
 <style>{`
     #main-canvas {
         position: relative;
@@ -731,11 +728,21 @@ onSelect={e => {
         cursor: crosshair;
     }
 
-    .section-container.selected, 
+
+
+.section-container {
+    position: relative !important; /* ضروري جداً ليعمل المربع داخله بدقة */
+    pointer-events: auto !important;
+    overflow: visible !important; /* للسماح للمربع بالتحرك بحرية */
+}
+    
+
+.section-container.selected, 
     .section-container > *, 
     .text-element-wrapper, 
     .button-container-wrapper {
         pointer-events: auto !important;
+       
     }
 
     .section-container[style*="position: absolute"] {
@@ -743,7 +750,7 @@ onSelect={e => {
     }
 
     .is-blank-layer { 
-        pointer-events: none !important; 
+        pointer-events: auto !important; 
     }
 
     .moveable-target {
@@ -858,19 +865,19 @@ onSelect={e => {
 
 
 .selecto-selection {
-    background: rgba(66, 133, 244, 0.3) !important;
+    background: rgba(66,133,244,.25) !important;
     border: 1px solid #4285f4 !important;
-    z-index: 10000 !important;
-    position: absolute !important;
+    z-index: 2147483647 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     pointer-events: none !important;
-    will-change: transform; 
+    will-change: transform;
 }
-    .selecto-selection:not([style*="width"]) {
+/* لمنع ظهور النقطة المزعجة في الزاوية قبل السحب */
+.selecto-selection:not([style*="width"]) {
     display: none !important;
 }
 
-
-    
 `}</style>
 
 </div>
