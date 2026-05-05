@@ -15,6 +15,8 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const [editingId, setEditingId] = useState(null);
   const [canvasColor, setCanvasColor] = useState('#ffffff');
 const [targets, setTargets] = useState([]); 
+const [interactionMode, setInteractionMode] = useState("select"); 
+
   const getShapePath = (shapeType) => {
   const paths = {
     'triangle': "M50 0 L100 100 L0 100 Z",
@@ -162,6 +164,7 @@ const isMobileOrTablet =
 
 
 onMouseDown={(e) => {
+  setInteractionMode("move");
     const isCtrl = e.ctrlKey || e.metaKey;
     if (item.isEditing) return;
 
@@ -201,7 +204,9 @@ store.setState(prev => ({
 }}
 
 
-
+onMouseUp={() => {
+    setInteractionMode("select");
+}}
 
 style={{
 position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolute",
@@ -660,44 +665,32 @@ onResizeGroupEnd={({ events }) => {
  container={document.body}
   dragContainer={sectionRef.current}
   rootContainer={document.body}
-    selectableTargets={[".canvas-element"]}
+  selectableTargets={
+  interactionMode === "select"
+    ? [".canvas-element"]
+    : []
+}
   hitRate={0}
   selectByClick={false}
   selectFromInside={false}
   preventDragFromInside={true}
   
-  //  onDragStart={(e) => {
-  //   const rect = sectionRef.current.getBoundingClientRect();
+onDragStart={e => {
+  if (e.inputEvent.target.closest(".moveable-control-box")) {
+    e.stop();
+    return;
+  }
 
-  //   console.log("==== SELECTO START ====");
-  //   console.log("mouse:", {
-  //     clientX: e.inputEvent.clientX,
-  //     clientY: e.inputEvent.clientY,
-  //   });
+  if (e.inputEvent.target.closest(".canvas-element")) {
+    e.stop(); // مهم: يمنع اللاسو عند تحريك عنصر
+    return;
+  }
 
-  //   console.log("sectionRect:", {
-  //     left: rect.left,
-  //     top: rect.top,
-  //     width: rect.width,
-  //     height: rect.height,
-  //   });
+  const rect = sectionRef.current.getBoundingClientRect();
+  e.datas.offset = [rect.left, rect.top];
+}}
 
-  //   console.log("target:", e.inputEvent.target);
-  //   console.log("target class:", e.inputEvent.target.className);
-
-  //   const targetRect = e.inputEvent.target.getBoundingClientRect?.();
-
-  //   if (targetRect) {
-  //     console.log("targetRect:", {
-  //       left: targetRect.left,
-  //       top: targetRect.top,
-  //       width: targetRect.width,
-  //       height: targetRect.height,
-  //     });
-  //   }
-  // }}
-
-  onDrag={(e) => {
+onDrag={(e) => {
     const box = document.querySelector(".selecto-selection");
 
     if (box) {
