@@ -9,7 +9,7 @@ import CanvasElement from "./CanvasElement";
 
 export default function EditorLayout({ store,onSave }) {
   const { state, closeModal, deletePage, renamePage } = store;
-  const activePage = state.pages.find((p) => p.id === state.activePageId);
+  const activePage = state.pages?.find((p) => p.id === state.activePageId);
 
   const getCanvasConfig = () => {
     if (state.viewMode === 'mobile') return { width: '375px', scale: 0.8 }; 
@@ -42,7 +42,7 @@ export default function EditorLayout({ store,onSave }) {
       if (e.ctrlKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         e.stopImmediatePropagation(); 
-        if (state.clipboard && state.clipboard.length > 0) {
+        if (state.clipboard && state.clipboard?.length > 0) {
           store.pasteElements();
         }
       }
@@ -55,7 +55,18 @@ export default function EditorLayout({ store,onSave }) {
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [state.selectedElementIds, state.clipboard, store]);
-
+// داخل EditorLayout.jsx قبل الـ return
+const styles = {
+  groupBtn: {
+    padding: '8px 16px',
+    backgroundColor: '#4f46e5',
+    color: 'white',
+    borderRadius: '4px',
+    border: 'none',
+    cursor: 'pointer',
+    margin: '0 10px'
+  }
+};
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#f0f2f5", overflow: "hidden" }}>
@@ -75,7 +86,7 @@ export default function EditorLayout({ store,onSave }) {
           position: "relative"
         }}>
 
-{state.pages.length > 0 && (
+{state.pages?.length > 0 && (
     <div style={{ 
       position: "absolute", // تجعلها عائمة
       top: "20px", 
@@ -104,9 +115,12 @@ export default function EditorLayout({ store,onSave }) {
           backgroundColor: "transparent" 
         }}
       />
+      <button onClick={() => store.groupSelectedItems()} style={styles.groupBtn}>
+    Group Elements
+  </button>
     </div>
   )}  
-          {state.pages.length > 0 ? (
+          {state.pages?.length > 0 ? (
             <CanvasElement store={store} scale={scale}>
               <div
                 id="main-canvas"
@@ -127,7 +141,7 @@ export default function EditorLayout({ store,onSave }) {
 }}
               >
                 {activePage?.sections?.length > 0 ? (
-                  activePage.sections.map((section) => (
+                  activePage.sections?.map((section) => (
                     <SectionRenderer
                       key={section.id}
                       section={section}

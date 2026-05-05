@@ -54,7 +54,7 @@ useEffect(() => {
                       e.target.closest(".color-picker-container"); 
 
       if (!isSelectable && !isPanel && !isMoveableControl) {
-        if (selectedRef.current.length > 0) {
+        if (selectedRef.current?.length > 0) {
           storeRef.current.selectItems([]); 
         }
       }
@@ -141,7 +141,7 @@ useEffect(() => {
       return; 
     } else {
       const selectedIds = s.state.selectedElementIds || s.state.selected || [];
-      if (selectedIds.length > 0) {
+      if (selectedIds?.length > 0) {
         e.preventDefault();
         e.stopPropagation();
         selectedIds.forEach(id => s.deleteElement(id));

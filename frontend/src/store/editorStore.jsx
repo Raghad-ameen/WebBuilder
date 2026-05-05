@@ -44,7 +44,7 @@ const saveToHistory = useCallback((stateToSave) => {
 
 const copyElements = useCallback((elementIds) => {
     setState(prev => {
-        const activePage = prev.pages.find(p => p.id === prev.activePageId);
+        const activePage = prev.pages?.find(p => p.id === prev.activePageId);
         if (!activePage) return prev;
 
         const elementsToCopy = [];
@@ -60,7 +60,7 @@ const copyElements = useCallback((elementIds) => {
             });
         });
 
-        if (elementsToCopy.length > 0) {
+        if (elementsToCopy?.length > 0) {
             return { ...prev, clipboard: elementsToCopy };
         }
         return prev;
@@ -69,14 +69,14 @@ const copyElements = useCallback((elementIds) => {
 
 const pasteElements = useCallback(() => {
   setState(prev => {
-    if (!prev.clipboard || prev.clipboard.length === 0) return prev;
+    if (!prev.clipboard || prev.clipboard?.length === 0) return prev;
 
-    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
     saveToHistory(prev);
 
-    const targetSection = activePage.sections.find(s => s.id === prev.activeSectionId) || activePage.sections[activePage.sections.length - 1];
+    const targetSection = activePage.sections?.find(s => s.id === prev.activeSectionId) || activePage.sections[activePage.sections?.length - 1];
     
     if (!targetSection) return prev;
 
@@ -133,7 +133,7 @@ const deletePage = useCallback((pageId) => {
       return {
         ...prev,
         pages: filtered,
-        activePageId: filtered.length > 0 ? (prev.activePageId === pageId ? filtered[0].id : prev.activePageId) : null
+        activePageId: filtered?.length > 0 ? (prev.activePageId === pageId ? filtered[0].id : prev.activePageId) : null
       };
     });
   }, [saveToHistory]);
@@ -145,6 +145,37 @@ const deletePage = useCallback((pageId) => {
       pages: prev.pages.map(p => p.id === pageId ? { ...p, name: newName } : p)
     }));
   }, [state, saveToHistory]);
+  // 1. دالة التجميع
+const groupSelectedItems = useCallback(() => {
+  setState(prev => {
+    const selectedIds = prev.selectedElementIds || [];
+    if (selectedIds?.length < 2) return prev;
+saveToHistory(prev); // أضيفي هذه للتراجع
+    const groupId = `group-${Date.now()}`;
+    const newGroup = { id: groupId, elementIds: [...selectedIds] };
+
+    return {
+      ...prev,
+      pages: prev.pages.map(p => 
+        p.id === prev.activePageId 
+        ? { ...p, groups: [...(p.groups || []), newGroup] } 
+        : p
+      )
+    };
+  });
+}, [setState]);
+
+// 2. دالة فك التجميع
+const ungroupItems = useCallback((groupId) => {
+  setState(prev => ({
+    ...prev,
+    pages: prev.pages.map(p => 
+      p.id === prev.activePageId 
+      ? { ...p, groups: (p.groups || []).filter(g => g.id !== groupId) } 
+      : p
+    )
+  }));
+}, [setState]);
 const updateCanvasStyles = useCallback((newStyles) => {
   setState(prev => {
     // حفظ الحالة قبل تغيير اللون لتمكين التراجع (Undo)
@@ -173,7 +204,7 @@ const closeModal = useCallback(() => {
 const updateSection = useCallback((pageId, sectionId, newData) => {
 
   setState(prev => {
-    const activePage = prev.pages.find(p => p.id === pageId);
+    const activePage = prev.pages?.find(p => p.id === pageId);
     
     if (!activePage) {
       console.warn("⚠️ Page not found in store:", pageId);
@@ -255,7 +286,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
   const finalY = (typeof y === 'number' ? y : 100) - (finalHeight / 2);
 
   setState(prev => {
-    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
 const newItem = {
@@ -283,7 +314,7 @@ const newItem = {
   }
 };    let updatedSections = [...activePage.sections];
 
-if (updatedSections.length === 0) {
+if (updatedSections?.length === 0) {
     const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
 
     updatedSections = [{
@@ -335,17 +366,38 @@ if (updatedSections.length === 0) {
 
 const selectItems = useCallback((ids) => {
   setState(prev => {
-    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(ids)) {
+    // 1. العثور على الصفحة الحالية للحصول على المجموعات (Groups) المعرفة فيها
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
+    const groups = activePage?.groups || [];
+    
+    // 2. مصفوفة لتخزين المعرفات النهائية (العناصر المختارة + أعضاء مجموعاتهم)
+    let finalIds = [...ids];
+
+    // 3. منطق التحقق من المجموعات:
+    // لكل مجموعة، إذا كان أحد العناصر المختارة موجوداً داخلها، أضف كل المجموعة
+    groups.forEach(group => {
+      const hasSelectedMember = group.elementIds.some(memberId => ids.includes(memberId));
+      if (hasSelectedMember) {
+        finalIds = [...finalIds, ...group.elementIds];
+      }
+    });
+
+    // 4. تنظيف المصفوفة من التكرار (Unique IDs)
+    finalIds = [...new Set(finalIds)];
+
+    // 5. التحقق من التغيير لمنع إعادة الرندرة (Optimization)
+    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(finalIds)) {
       return prev;
     }
+
     return {
       ...prev,
-      selectedElementIds: ids,
-      activeElementId: ids.length > 0 ? ids[0] : null
+      selectedElementIds: finalIds,
+      // جعل أول عنصر تم النقر عليه هو النشط (لإظهار خصائصه في الـ Sidebar)
+      activeElementId: finalIds?.length > 0 ? finalIds[0] : null
     };
   });
 }, [setState]);
-
 const saveProject = useCallback(() => {
   try {
     localStorage.setItem(`project_${state.projectName}`, JSON.stringify(state));
@@ -505,9 +557,9 @@ const deleteElement = useCallback((itemId) => {
 
 const undo = useCallback(() => {
   setHistory((prevHistory) => {
-    if (prevHistory.length === 0) return prevHistory;
+    if (prevHistory?.length === 0) return prevHistory;
 
-    const previousState = safeClone(prevHistory[prevHistory.length - 1]);
+    const previousState = safeClone(prevHistory[prevHistory?.length - 1]);
     const newHistory = prevHistory.slice(0, -1);
 
     setState((currentState) => {
@@ -521,7 +573,7 @@ const undo = useCallback(() => {
 
 const redo = useCallback(() => {
   setRedoStack((prevRedo) => {
-    if (prevRedo.length === 0) return prevRedo;
+    if (prevRedo?.length === 0) return prevRedo;
 
     const nextState = safeClone(prevRedo[0]);
     const newRedo = prevRedo.slice(1);
@@ -595,7 +647,7 @@ const previewUpdateItem = useCallback((pageId, sectionId, itemId, data) => {
 
 const cutElements = useCallback((elementIds) => {
   setState(prev => {
-    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
     const elementsToCopy = [];
@@ -604,7 +656,7 @@ const cutElements = useCallback((elementIds) => {
         if (elementIds.includes(item.id)) elementsToCopy.push(safeClone(item));
       });
     });
-    if (elementsToCopy.length === 0) return prev;
+    if (elementsToCopy?.length === 0) return prev;
     saveToHistory(prev);
 
     const updatedPages = prev.pages.map(p => ({
@@ -628,13 +680,13 @@ selectedElementIds: [],    };
 
 const moveSection = useCallback((sectionId, direction) => {
   setState(prev => {
-    const activePage = prev.pages.find(p => p.id === prev.activePageId);
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
     const sections = [...activePage.sections];
-    const index = sections.findIndex(s => s.id === sectionId);
+    const index = sections?.findIndex(s => s.id === sectionId);
     
-    if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections.length - 1)) {
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections?.length - 1)) {
       return prev;
     }
 
@@ -697,5 +749,7 @@ setViewMode: (mode) => {
     moveSection,
     moveSectionUp: (id) => moveSection(id, 'up'),
   moveSectionDown: (id) => moveSection(id, 'down'),
+  groupSelectedItems,
+  ungroupItems,
   };
 }
