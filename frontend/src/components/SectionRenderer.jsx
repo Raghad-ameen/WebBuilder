@@ -80,7 +80,7 @@ useEffect(() => {
        .map(id => itemRefs.current[id])
         .filter(el => el !== null);
       
-      setTargets(elements);
+     setTargets(selectedElementIds.map(id => document.getElementById(id)).filter(Boolean));
     } else {
       setTargets([]);
     }
@@ -91,8 +91,14 @@ useEffect(() => {
       ref={sectionRef}
 className={`section-container selecto-area section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
 onMouseDown={(e) => {
-  if (e.target === e.currentTarget) {
+  const clickedEmpty = e.target === e.currentTarget;
+
+  if (clickedEmpty) {
     store.selectItems([]);
+    store.setState(prev => ({
+      ...prev,
+      selectionGroupMode: false
+    }));
   }
 }}onMouseUp={(e) => {
     if (!state.isDraggingNow) return;
@@ -153,7 +159,11 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
 )}
 
 {section.data.items?.map((item,index) => {
-const isSelected = (state.selectedElementIds || []).includes(item.id) || (state.selected || []).includes(item.id); 
+const isSelected =
+  state.selectedElementIds.includes(item.id) &&
+  state.selectionGroupMode
+    ? true
+    : state.selectedElementIds.includes(item.id);
 const leftPercent = (item.x / BASE_WIDTH) * 100;
   const widthPercent = (item.width / BASE_WIDTH) * 100;
 const isMobileOrTablet =
@@ -193,7 +203,12 @@ onMouseDown={(e) => {
         }
 
         console.log("Updating store with:", newSelection);
-       store.selectItems(newSelection);
+      store.selectItems(newSelection);
+
+store.setState(prev => ({
+  ...prev,
+  selectionGroupMode: newSelection.length > 1
+}));
         return;
     }
 
@@ -668,42 +683,42 @@ onResizeGroupEnd={({ events }) => {
 )}
 
 <Selecto
-   dragContainer={"#main-canvas"}
-    selectableTargets={[".canvas-element"]}
-    hitRate={0}
-    selectByClick={true}
-    selectFromInside={true}
-    toggleContinueSelect={["ctrlKey", "metaKey"]}
-    
-    onDragStart={e => {
-        const target = e.inputEvent.target;
-        if (
-            target.closest(".moveable-control-box") || 
-            target.closest(".control-btn") ||
-            target.closest(".canvas-element")||
-              target.closest(".moveable")||
+  dragContainer={"#main-canvas"}
+  selectableTargets={[".canvas-element"]}
+  hitRate={10}
+  selectByClick={true}
+  selectFromInside={false}
+  toggleContinueSelect={["ctrlKey", "metaKey"]}
 
-            editingId
-        ) {
-            e.stop();
-        }
-    }}
+  onDragStart={e => {
+    const target = e.inputEvent.target;
 
-    onSelect={e => {
-        if (!e.selected || e.selected.length === 0) {
-            return;
-        }
+    if (
+      target.closest(".moveable-control-box") ||
+      target.closest(".control-btn") ||
+      target.closest(".moveable") ||
+      editingId
+    ) {
+      e.stop();
+    }
+  }}
 
-        const ids = e.selected.map(el => String(el.id));
+onSelect={e => {
+    const ids = e.selected
+        .map(el => el.getAttribute("id"))
+        .filter(Boolean)
+        .map(String);
 
-        if (store && typeof store.selectItems === 'function') {
-            store.selectItems(ids);
-        }
+    store.selectItems(ids);
 
-        if (typeof onSelect === 'function' && ids.length > 0) {
-          onSelect(ids[ids.length - 1]);
-        }
-    }}
+    if (typeof onSelect === "function" && ids.length > 0) {
+        onSelect(ids[ids.length - 1]);
+    }
+
+    if (!ids.length) {
+        store.selectItems([]);
+    }
+}}
 />
 <style>{`
     #main-canvas {
