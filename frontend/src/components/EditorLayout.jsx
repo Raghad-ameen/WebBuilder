@@ -10,7 +10,6 @@ import CanvasElement from "./CanvasElement";
 export default function EditorLayout({ store,onSave }) {
   const { state, closeModal, deletePage, renamePage } = store;
   const activePage = state.pages?.find((p) => p.id === state.activePageId);
-
   const getCanvasConfig = () => {
     if (state.viewMode === 'mobile') return { width: '375px', scale: 0.8 }; 
     if (state.viewMode === 'tablet') return { width: '768px', scale: 0.7 }; 
@@ -68,6 +67,14 @@ const styles = {
   }
 };
 
+const selectedIds = state.selectedElementIds || [];
+
+
+const hasGroup =
+  activePage?.groups?.some(g =>
+    selectedIds.every(id => g.elementIds.includes(id))
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "#f0f2f5", overflow: "hidden" }}>
       <TopBar store={store} onSave={onSave} />
@@ -115,9 +122,33 @@ const styles = {
           backgroundColor: "transparent" 
         }}
       />
-      <button onClick={() => store.groupSelectedItems()} style={styles.groupBtn}>
-    Group Elements
-  </button>
+
+      
+ {selectedIds.length > 1 && (
+  !hasGroup ? (
+ <button
+  onMouseDown={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    store.groupSelectedItems();
+  }}
+  style={styles.groupBtn}
+>
+      Group
+    </button>
+  ) : (
+   <button
+  onMouseDown={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    store.ungroupSelectedItems();
+  }}
+  style={styles.groupBtn}
+>
+      Ungroup
+    </button>
+  )
+)}
     </div>
   )}  
           {state.pages?.length > 0 ? (

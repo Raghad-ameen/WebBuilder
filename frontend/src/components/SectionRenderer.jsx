@@ -56,17 +56,29 @@ const hasSelectedChild = section.data.items.some(it => selectedElementIds.includ
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
 useEffect(() => {
-    if (selectedElementIds.length > 0) {
-      const elements = selectedElementIds
-       .map(id => itemRefs.current[id])
-        .filter(el => el !== null);
-      
-     setTargets(selectedElementIds.map(id => document.getElementById(id)).filter(Boolean));
-    } else {
-      setTargets([]);
-    }
-  }, [selectedElementIds]);
+  if (state.activeGroupId) {
+    const group = activePage?.groups?.find(
+      g => g.id === state.activeGroupId
+    );
 
+    if (group) {
+      setTargets(
+        group.elementIds.map(id => itemRefs.current[id]).filter(Boolean)
+      );
+      return;
+    }
+  }
+
+  if (selectedElementIds.length > 0) {
+    const selectedItems = selectedElementIds
+      .map(id => itemRefs.current[id])
+      .filter(Boolean);
+
+    setTargets(selectedItems);
+  } else {
+    setTargets([]);
+  }
+}, [selectedElementIds, state.activeGroupId]);
   return (
     <div
       ref={sectionRef}
@@ -141,12 +153,16 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
 )}
 
 {section.data.items?.map((item,index) => {
-const isSelected =
-  state.selectedElementIds.includes(item.id) &&
-  state.selectionGroupMode
-    ? true
-    : state.selectedElementIds.includes(item.id);
-const leftPercent = (item.x / BASE_WIDTH) * 100;
+const selectedIds = state.selectedElementIds || [];
+const activePage = state.pages?.find(p => p.id === state.activePageId);
+
+const isGroupedSelected =
+  activePage?.groups?.some(g =>
+    selectedIds.every(id => g.elementIds.includes(id)) &&
+    g.elementIds.includes(item.id)
+  );
+
+const isSelected = selectedIds.includes(item.id);
   const widthPercent = (item.width / BASE_WIDTH) * 100;
 const isMobileOrTablet =
   typeof window !== "undefined" && window.innerWidth < 1024;
@@ -185,7 +201,6 @@ onMouseDown={(e) => {
             newSelection = [...currentSelected, targetId];
         }
 
-        console.log("Updating store with:", newSelection);
       store.selectItems(newSelection);
 
 store.setState(prev => ({
@@ -501,7 +516,7 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 {targets.length > 0 && !state.isPreviewMode && (
                <>
 <Moveable
-target={targets}
+target={targets.length === 1 ? targets[0] : targets}
     draggable={true}
     resizable={true}
     origin={false}
@@ -693,15 +708,7 @@ onDragStart={e => {
 onDrag={(e) => {
     const box = document.querySelector(".selecto-selection");
 
-    if (box) {
-      console.log("selectionBox:", {
-        left: box.style.left,
-        top: box.style.top,
-        transform: box.style.transform,
-        width: box.style.width,
-        height: box.style.height,
-      });
-    }
+    
   }}
   
   onSelect={e => {

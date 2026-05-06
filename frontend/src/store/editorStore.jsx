@@ -149,32 +149,90 @@ const deletePage = useCallback((pageId) => {
 const groupSelectedItems = useCallback(() => {
   setState(prev => {
     const selectedIds = prev.selectedElementIds || [];
-    if (selectedIds?.length < 2) return prev;
-saveToHistory(prev); // أضيفي هذه للتراجع
+    if (selectedIds.length < 2) return prev;
+
+    saveToHistory(prev);
+
     const groupId = `group-${Date.now()}`;
-    const newGroup = { id: groupId, elementIds: [...selectedIds] };
 
     return {
       ...prev,
-      pages: prev.pages.map(p => 
-        p.id === prev.activePageId 
-        ? { ...p, groups: [...(p.groups || []), newGroup] } 
-        : p
+  selectedElementIds: selectedIds,
+  activeGroupId: groupId,
+      pages: prev.pages.map(p =>
+        p.id === prev.activePageId
+          ? {
+              ...p,
+              groups: [
+                ...(p.groups || []),
+               {
+  id: groupId,
+  elementIds: selectedIds,
+  createdAt: Date.now()
+}
+              ],
+              // مهم جداً: ربط العناصر بالـ group
+              sections: p.sections.map(s => ({
+                ...s,
+                data: {
+                  ...s.data,
+                  items: s.data.items.map(item =>
+                    selectedIds.includes(item.id)
+                      ? { ...item, groupId }
+                      : item
+                  )
+                }
+              }))
+            }
+          : p
       )
     };
   });
 }, [setState]);
-
 // 2. دالة فك التجميع
-const ungroupItems = useCallback((groupId) => {
-  setState(prev => ({
-    ...prev,
-    pages: prev.pages.map(p => 
-      p.id === prev.activePageId 
-      ? { ...p, groups: (p.groups || []).filter(g => g.id !== groupId) } 
-      : p
-    )
-  }));
+const ungroupSelectedItems = useCallback(() => {
+  setState(prev => {
+    const selectedIds = prev.selectedElementIds || [];
+
+    if (!selectedIds.length) return prev;
+
+    saveToHistory(prev);
+
+    let groupIdToRemove = null;
+
+    const page = prev.pages.find(p => p.id === prev.activePageId);
+
+    const group = page?.groups?.find(g =>
+      g.elementIds.some(id => selectedIds.includes(id))
+    );
+
+    if (!group) return prev;
+
+    groupIdToRemove = group.id;
+
+    return {
+      ...prev,
+      pages: prev.pages.map(p =>
+        p.id === prev.activePageId
+          ? {
+              ...p,
+              groups: p.groups.filter(g => g.id !== groupIdToRemove),
+              sections: p.sections.map(s => ({
+                ...s,
+                data: {
+                  ...s.data,
+                  items: s.data.items.map(item =>
+                    group.elementIds.includes(item.id)
+                      ? { ...item, groupId: null }
+                      : item
+                  )
+                }
+              }))
+            }
+          : p
+      )
+    };
+  });
 }, [setState]);
 const updateCanvasStyles = useCallback((newStyles) => {
   setState(prev => {
@@ -368,7 +426,7 @@ const selectItems = useCallback((ids) => {
   setState(prev => {
     // 1. العثور على الصفحة الحالية للحصول على المجموعات (Groups) المعرفة فيها
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
-    const groups = activePage?.groups || [];
+const groups = activePage?.groups || [];
     
     // 2. مصفوفة لتخزين المعرفات النهائية (العناصر المختارة + أعضاء مجموعاتهم)
     let finalIds = [...ids];
@@ -379,8 +437,14 @@ const selectItems = useCallback((ids) => {
       const hasSelectedMember = group.elementIds.some(memberId => ids.includes(memberId));
       if (hasSelectedMember) {
         finalIds = [...finalIds, ...group.elementIds];
+        const activeGroup = groups.find(group =>
+  group.elementIds.includes(ids[0])
+);
       }
     });
+    const activeGroup = groups.find(group =>
+  ids.some(id => group.elementIds.includes(id))
+);
 
     // 4. تنظيف المصفوفة من التكرار (Unique IDs)
     finalIds = [...new Set(finalIds)];
@@ -392,8 +456,8 @@ const selectItems = useCallback((ids) => {
 
     return {
       ...prev,
-      selectedElementIds: finalIds,
-      // جعل أول عنصر تم النقر عليه هو النشط (لإظهار خصائصه في الـ Sidebar)
+selectedElementIds: finalIds,
+activeGroupId: activeGroup?.id || null,
       activeElementId: finalIds?.length > 0 ? finalIds[0] : null
     };
   });
@@ -750,6 +814,6 @@ setViewMode: (mode) => {
     moveSectionUp: (id) => moveSection(id, 'up'),
   moveSectionDown: (id) => moveSection(id, 'down'),
   groupSelectedItems,
-  ungroupItems,
+  ungroupSelectedItems,
   };
 }
