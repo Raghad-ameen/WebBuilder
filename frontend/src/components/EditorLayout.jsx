@@ -4,7 +4,7 @@ import LeftSidebar from "./LeftSidebar";
 import RightPanel from "./RightPanel";
 import SectionRenderer from "./SectionRenderer";
 import CustomModal from "./CustomModal";
-import { Plus } from "lucide-react";
+import { Plus, Group, Ungroup, Palette } from "lucide-react";
 import CanvasElement from "./CanvasElement";
 
 export default function EditorLayout({ store,onSave }) {
@@ -46,9 +46,17 @@ export default function EditorLayout({ store,onSave }) {
         }
       }
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        state.selectedElementIds?.forEach(id => store.deleteElement(id));
-      }
+     if (e.key === "Delete" || e.key === "Backspace") {
+  state.selectedElementIds?.forEach(id => {
+    const isSection = activePage?.sections?.some(s => s.id === id);
+
+    if (isSection) {
+      store.deleteSection(id);
+    } else {
+      store.deleteElement(id);
+    }
+  });
+}
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
@@ -83,94 +91,104 @@ const hasGroup =
         <LeftSidebar store={store} />
 
         <main style={{ 
-          flex: 1, 
-          backgroundColor: "#cbd5e1",
-          padding: '40px', 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "flex-start",
-          overflow: "auto",
-          position: "relative"
+         flex: 1, 
+  backgroundColor: "#cbd5e1",
+  padding: '40px', 
+  display: "flex", 
+  flexDirection: "row", // ترتيب العناصر أفقياً
+  justifyContent: "center", // توسيط المجموعة كاملة
+  alignItems: "flex-start", // البدء من الأعلى
+  overflow: "auto",
+  position: "relative",
+  gap: "20px" // مسافة بين الشريط العمودي والكانفاس
         }}>
 
 {state.pages?.length > 0 && (
+  <div style={{ 
+    position: "absolute", 
+    top: "8px", // مسافة بسيطة من الأعلى
+    left: "54%", // توسيط
+    transform: "translateX(-50%)", // موازن التوسيط مع عرض الكانفاس
+    width: width, // نفس عرض الكانفاس ليكون محاذياً له
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+    padding: "10 0px",
+    marginBottom: "10px", // مسافة تفصلها عن بداية الكانفاس الأبيض
+    background: "transparent", // بدون خلفية
+    pointerEvents: "none" // لكي لا يمنع الضغط على ما تحته
+  }}>
+    
+    {/* أيقونة اختيار اللون */}
     <div style={{ 
-      position: "absolute", // تجعلها عائمة
-      top: "20px", 
-      left: "20px", 
-      zIndex: 100, // لتكون فوق كل شيء
-      background: "white",
-      padding: "8px 12px",
-      borderRadius: "10px",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-      border: "1px solid #e2e8f0"
+      position: "relative", 
+      display: "flex", 
+      alignItems: "center", 
+      color: "#475569",
+      cursor: "pointer",
+      pointerEvents: "auto" // تفعيل الضغط للأيقونة فقط
     }}>
-      <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Canvas Color:</span>
+      <Palette size={20} strokeWidth={1.5} />
       <input 
         type="color" 
         value={state.canvasStyles?.backgroundColor || "#ffffff"} 
         onChange={(e) => store.updateCanvasStyles({ backgroundColor: e.target.value })} 
-        style={{ 
-          width: "24px", 
-          height: "24px", 
-          border: "none", 
-          cursor: "pointer", 
-          borderRadius: "4px",
-          backgroundColor: "transparent" 
-        }}
+        style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer" }}
       />
-
-      
- {selectedIds.length > 1 && (
-  !hasGroup ? (
- <button
-  onMouseDown={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    store.groupSelectedItems();
-  }}
-  style={styles.groupBtn}
->
-      Group
-    </button>
-  ) : (
-   <button
-  onMouseDown={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    store.ungroupSelectedItems();
-  }}
-  style={styles.groupBtn}
->
-      Ungroup
-    </button>
-  )
-)}
     </div>
-  )}  
-          {state.pages?.length > 0 ? (
+
+    {/* خط فاصل */}
+    {selectedIds.length > 1 && (
+      <div style={{ width: "1px", height: "14px", backgroundColor: "#94a3b8" }} />
+    )}
+
+    {/* أيقونات التجميع */}
+    {selectedIds.length > 1 && (
+      <button
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          !hasGroup ? store.groupSelectedItems() : store.ungroupSelectedItems();
+        }}
+        style={{
+          background: "none",
+          border: "none",
+          color: "#4f46e5",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          padding: "0",
+          pointerEvents: "auto" // تفعيل الضغط للزر فقط
+        }}
+      >
+        {!hasGroup ? <Group size={22} strokeWidth={1.5} /> : <Ungroup size={22} strokeWidth={1.5} />}
+      </button>
+    )}
+  </div>
+)}
+
+ {state.pages?.length > 0 ? (
             <CanvasElement store={store} scale={scale}>
-              <div
-                id="main-canvas"
-                className="main-canvas-area"
-              style={{
-  width: width, 
-  minWidth: width === '100%' ? 'auto' : width,
-  backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff", 
-  minHeight: state.canvasHeight || "100vh", 
-  transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
-  position: "relative", 
-  margin: "0 auto",
-  overflow: "visible", 
-  display: "flex",
-  flexDirection: "column",
-  gap: "0px",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)" 
-}}
-              >
+             <div
+  id="canvas-content"
+  className="main-canvas-area"
+  style={{
+    width: width, 
+    minWidth: width === '100%' ? 'auto' : width,
+    /* عدنا للوضع الطبيعي البسيط */
+    backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff", 
+    minHeight: state.canvasHeight || "100vh", 
+    transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease", 
+    position: "relative", 
+    margin: "0 auto",
+    overflow: "visible", 
+    display: "flex",
+    flexDirection: "column",
+    gap: "0px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)" 
+  }}
+>
                 {activePage?.sections?.length > 0 ? (
                   activePage.sections?.map((section) => (
                     <SectionRenderer

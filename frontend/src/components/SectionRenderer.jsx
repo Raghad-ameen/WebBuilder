@@ -14,7 +14,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const [canvasColor, setCanvasColor] = useState('#ffffff');
-const [targets, setTargets] = useState([]); 
 const [interactionMode, setInteractionMode] = useState("select"); 
 
   const getShapePath = (shapeType) => {
@@ -55,30 +54,10 @@ const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
-useEffect(() => {
-  if (state.activeGroupId) {
-    const group = activePage?.groups?.find(
-      g => g.id === state.activeGroupId
-    );
+const targets = selectedElementIds
+  .map(id => itemRefs.current[id])
+  .filter(Boolean);
 
-    if (group) {
-      setTargets(
-        group.elementIds.map(id => itemRefs.current[id]).filter(Boolean)
-      );
-      return;
-    }
-  }
-
-  if (selectedElementIds.length > 0) {
-    const selectedItems = selectedElementIds
-      .map(id => itemRefs.current[id])
-      .filter(Boolean);
-
-    setTargets(selectedItems);
-  } else {
-    setTargets([]);
-  }
-}, [selectedElementIds, state.activeGroupId]);
   return (
     <div
       ref={sectionRef}
@@ -87,13 +66,14 @@ onMouseDown={(e) => {
   const clickedEmpty = e.target === e.currentTarget;
 
   if (clickedEmpty) {
-    store.selectItems([]);
-    store.setState(prev => ({
-      ...prev,
-      selectionGroupMode: false
-    }));
+    e.stopPropagation();
+
+    const childIds = section.data.items.map(item => item.id);
+
+    store.selectItems([section.id, ...childIds]);
   }
-}}onMouseUp={(e) => {
+}}
+onMouseUp={(e) => {
     if (!state.isDraggingNow) return;
     e.stopPropagation();
 
@@ -110,7 +90,12 @@ onMouseDown={(e) => {
         styles: state.draggingType === 'shape' ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
     });
     
-    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+  store.setState((state) => ({
+  ...state,
+  isDraggingNow: false,
+  draggingType: null
+}));
+
 }}
 
 style={{
@@ -550,18 +535,21 @@ portalContainer={sectionRef.current}
     isDisplaySnapDigit={false} 
     isDisplayInnerSnapDigit={false}
 
-    onDrag={({ target, left, top }) => {
-        target.style.left = `${left}px`;
-        target.style.top = `${top}px`;
-    }}
+   onDrag={({ target, left, top }) => {
+  target.dataset.left = left;
+  target.dataset.top = top;
+
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+}}
 
    onDragEnd={({ target }) => {
     if (Array.isArray(target)) return;
 
-    updateItem(activePageId, section.id, target.id, {
-        x: parseFloat(target.style.left),
-        y: parseFloat(target.style.top)
-    });
+   updateItem(activePageId, section.id, target.id, {
+  x: parseFloat(target.dataset.left || target.style.left),
+  y: parseFloat(target.dataset.top || target.style.top),
+});
 }}
 
     onResize={({ target, width, height, drag }) => {
@@ -633,10 +621,16 @@ onResizeGroupEnd={({ events }) => {
     renderDirections={["n", "nw", "ne", "s", "sw", "se", "w", "e"]}
     origin={false}
     zoom={1 / canvasScale}
-    onDrag={({ target, left, top }) => {
-        target.style.left = `${left}px`;
-        target.style.top = `${top}px`;
-    }}
+   onDrag={({ target, left, top }) => {
+  target.dataset.left = left;
+  target.dataset.top = top;
+
+ store.updateItem(activePageId, section.id, target.id, {
+  x: left,
+  y: top
+});
+  target.style.top = `${top}px`;
+}}
     onDragEnd={({ target }) => {
         updateSection(state.activePageId, section.id, { 
             styles: { 
@@ -680,7 +674,7 @@ onResizeGroupEnd={({ events }) => {
  container={document.body}
   dragContainer={sectionRef.current}
   rootContainer={document.body}
-  selectableTargets={
+ selectableTargets={
   interactionMode === "select"
     ? [".canvas-element"]
     : []

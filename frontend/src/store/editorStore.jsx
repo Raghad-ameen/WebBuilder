@@ -350,6 +350,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
 const newItem = {
   id: finalNewId,
   type,
+    parentSectionId: sectionId || null,
   x: finalX,
   y: finalY,
   width: finalWidth,
@@ -373,21 +374,27 @@ const newItem = {
 };    let updatedSections = [...activePage.sections];
 
 if (updatedSections?.length === 0) {
-    const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
+   const newAutoSectionId = `s-${Date.now()}`; // توليد ID للسكشن الجديد
+        const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
+
+        // ربط العنصر بالسكشن الذي سيتم إنشاؤه حالاً
+        newItem.parentSectionId = newAutoSectionId;
 
     updatedSections = [{
-        id: `s-${Date.now()}`,
+        id: newAutoSectionId,
         type: isLargeSection ? type : "blank",
         height: isLargeSection ? 600 : 100, 
         styles: { 
             backgroundColor: isLargeSection ? "#ffffff" : "transparent", 
             padding: "0px",
-            minHeight: isLargeSection ? "400px" : "50px" 
+            minHeight: isLargeSection ? "400px" : "50px" ,
+            zIndex: 1
         },
         data: { items: [newItem] }
     }];
 }    else {
       const targetId = sectionId || updatedSections[0].id;
+      newItem.parentSectionId = targetId;
       updatedSections = updatedSections.map(s => {
         if (s.id === targetId) {
           return {
@@ -651,6 +658,7 @@ const redo = useCallback(() => {
   });
 }, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
+  
   setState(prev => {
     saveToHistory(prev); 
 
