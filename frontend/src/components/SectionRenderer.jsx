@@ -14,6 +14,7 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const [canvasColor, setCanvasColor] = useState('#ffffff');
+const [targets, setTargets] = useState([]); 
 const [interactionMode, setInteractionMode] = useState("select"); 
 
   const getShapePath = (shapeType) => {
@@ -32,13 +33,13 @@ const sectionIndex =
 
 React.useEffect(() => {
   const lastItem = section.data.items?.[section.data.items.length - 1];
-  
-  if (lastItem && selectedElementIds.length === 0) {
-    const timer = setTimeout(() => {
-      onSelect(lastItem.id);
-    }, 50);
-    return () => clearTimeout(timer);
-  }
+  const isAnythingSelected = selectedElementIds.length > 0;
+  // if (lastItem && !isAnythingSelected) {
+  //   const timer = setTimeout(() => {
+  //     onSelect(lastItem.id);
+  //   }, 50);
+  //   return () => clearTimeout(timer);
+  // }
 }, [section.data.items, selectedElementIds, onSelect]);
 
 const handleDoubleClick = (e) => {
@@ -54,26 +55,35 @@ const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
-const targets = selectedElementIds
-  .map(id => itemRefs.current[id])
-  .filter(Boolean);
+useEffect(() => {
+    if (selectedElementIds.length > 0) {
+      const elements = selectedElementIds
+       .map(id => itemRefs.current[id])
+        .filter(el => el !== null);
+      
+     setTargets(selectedElementIds.map(id => document.getElementById(id)).filter(Boolean));
+    } else {
+      setTargets([]);
+    }
+  }, [selectedElementIds]);
 
   return (
     <div
       ref={sectionRef}
+      id={section.id}
 className={`section-container selecto-area section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
 onMouseDown={(e) => {
   const clickedEmpty = e.target === e.currentTarget;
-
   if (clickedEmpty) {
-    e.stopPropagation();
-
-    const childIds = section.data.items.map(item => item.id);
-
-    store.selectItems([section.id, ...childIds]);
+  e.stopPropagation();
+    
+    store.setState(prev => ({
+      ...prev,
+      selectedElementIds: [section.id], 
+      selectionGroupMode: false
+    }));
   }
-}}
-onMouseUp={(e) => {
+}}onMouseUp={(e) => {
     if (!state.isDraggingNow) return;
     e.stopPropagation();
 
@@ -90,12 +100,7 @@ onMouseUp={(e) => {
         styles: state.draggingType === 'shape' ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
     });
     
-  store.setState((state) => ({
-  ...state,
-  isDraggingNow: false,
-  draggingType: null
-}));
-
+    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
 }}
 
 style={{
@@ -138,16 +143,12 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
 )}
 
 {section.data.items?.map((item,index) => {
-const selectedIds = state.selectedElementIds || [];
-const activePage = state.pages?.find(p => p.id === state.activePageId);
-
-const isGroupedSelected =
-  activePage?.groups?.some(g =>
-    selectedIds.every(id => g.elementIds.includes(id)) &&
-    g.elementIds.includes(item.id)
-  );
-
-const isSelected = selectedIds.includes(item.id);
+const isSelected =
+  state.selectedElementIds.includes(item.id) &&
+  state.selectionGroupMode
+    ? true
+    : state.selectedElementIds.includes(item.id);
+const leftPercent = (item.x / BASE_WIDTH) * 100;
   const widthPercent = (item.width / BASE_WIDTH) * 100;
 const isMobileOrTablet =
   typeof window !== "undefined" && window.innerWidth < 1024;
@@ -160,6 +161,7 @@ const isMobileOrTablet =
         ref={(el) => (itemRefs.current[item.id] = el)}
         id={item.id}
         className={`canvas-element ${isSelected ? 'selected' : ''}`}
+
 
 
 
@@ -232,35 +234,36 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 
 
 {isSelected && !item.isEditing && !state.isPreviewMode && (
-      <div
-      onMouseDown={(e) => {
- 
-        e.stopPropagation();
-        e.preventDefault();
-        deleteElement(item.id);
-      }}
-      style={{
-        position: "absolute",
-        top: "-35px",
-        right: "-10px",
-        width: "28px",
-        height: "28px",
-        backgroundColor: "#ef4444",
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        zIndex: 9999999,
-        pointerEvents: "auto",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-        border: "2px solid white",
-      }}
-    >
-      <Trash2 size={14} color="white" strokeWidth={3} />
-    </div>
-  )}
-
+  <div
+    onPointerDown={(e) => {
+      e.stopPropagation(); // يمنع الموفيبل من بدء السحب
+      e.preventDefault();
+    }}
+    onClick={(e) => {
+      e.stopPropagation();
+      deleteElement(item.id); // تنفيذ الحذف عند الكليك الفعلي
+    }}
+    style={{
+      position: "absolute",
+      top: "-40px", // رفعته قليلاً لتجنب التداخل مع مقابض التحكم
+      right: "0px",
+      width: "28px",
+      height: "28px",
+      backgroundColor: "#ef4444",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      zIndex: 2147483647, // أعلى قيمة ممكنة لضمان ظهوره فوق كل شيء
+      pointerEvents: "auto",
+      boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+      border: "2px solid white",
+    }}
+  >
+    <Trash2 size={14} color="white" strokeWidth={3} />
+  </div>
+)}
 {item.type === 'text' && (
   <div 
     className="text-element-wrapper"
@@ -501,7 +504,7 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 {targets.length > 0 && !state.isPreviewMode && (
                <>
 <Moveable
-target={targets.length === 1 ? targets[0] : targets}
+target={targets}
     draggable={true}
     resizable={true}
     origin={false}
@@ -535,21 +538,18 @@ portalContainer={sectionRef.current}
     isDisplaySnapDigit={false} 
     isDisplayInnerSnapDigit={false}
 
-   onDrag={({ target, left, top }) => {
-  target.dataset.left = left;
-  target.dataset.top = top;
-
-  target.style.left = `${left}px`;
-  target.style.top = `${top}px`;
-}}
+    onDrag={({ target, left, top }) => {
+        target.style.left = `${left}px`;
+        target.style.top = `${top}px`;
+    }}
 
    onDragEnd={({ target }) => {
     if (Array.isArray(target)) return;
 
-   updateItem(activePageId, section.id, target.id, {
-  x: parseFloat(target.dataset.left || target.style.left),
-  y: parseFloat(target.dataset.top || target.style.top),
-});
+    updateItem(activePageId, section.id, target.id, {
+        x: parseFloat(target.style.left),
+        y: parseFloat(target.style.top)
+    });
 }}
 
     onResize={({ target, width, height, drag }) => {
@@ -621,16 +621,10 @@ onResizeGroupEnd={({ events }) => {
     renderDirections={["n", "nw", "ne", "s", "sw", "se", "w", "e"]}
     origin={false}
     zoom={1 / canvasScale}
-   onDrag={({ target, left, top }) => {
-  target.dataset.left = left;
-  target.dataset.top = top;
-
- store.updateItem(activePageId, section.id, target.id, {
-  x: left,
-  y: top
-});
-  target.style.top = `${top}px`;
-}}
+    onDrag={({ target, left, top }) => {
+        target.style.left = `${left}px`;
+        target.style.top = `${top}px`;
+    }}
     onDragEnd={({ target }) => {
         updateSection(state.activePageId, section.id, { 
             styles: { 
@@ -674,7 +668,7 @@ onResizeGroupEnd={({ events }) => {
  container={document.body}
   dragContainer={sectionRef.current}
   rootContainer={document.body}
- selectableTargets={
+  selectableTargets={
   interactionMode === "select"
     ? [".canvas-element"]
     : []
@@ -702,11 +696,26 @@ onDragStart={e => {
 onDrag={(e) => {
     const box = document.querySelector(".selecto-selection");
 
-    
+    if (box) {
+      console.log("selectionBox:", {
+        left: box.style.left,
+        top: box.style.top,
+        transform: box.style.transform,
+        width: box.style.width,
+        height: box.style.height,
+      });
+    }
   }}
   
   onSelect={e => {
     const ids = e.selected.map(el => String(el.id));
+    if (ids.length === 0) {
+    // تحقق هل التحديد الحالي في الـ Store هو سكشن؟
+    const currentId = state.selectedElementIds?.[0] || "";
+    if (currentId.startsWith('s-')) {
+      return; // توقف هنا ولا تمسح تحديد السكشن
+    }
+  }
     store.selectItems(ids);
   }}
 />

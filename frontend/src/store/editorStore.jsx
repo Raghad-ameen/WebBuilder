@@ -607,6 +607,9 @@ const deleteSection = useCallback((sectionId) => {
 const deleteElement = useCallback((itemId) => {
   saveToHistory(state);
   
+  // ✅ الحل: استدعاء selectItems لتفريغ التحديد بدلاً من onSelect
+  selectItems([]); 
+  
   setState(prev => {
     const newState = {
       ...prev,
@@ -621,11 +624,10 @@ const deleteElement = useCallback((itemId) => {
         }))
       }))
     };
-        localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
+    localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
-}, [state, saveToHistory]);
-
+}, [state, saveToHistory, selectItems]); // لا تنسي إضافة selectItems لمصفوفة التبعيات
 const undo = useCallback(() => {
   setHistory((prevHistory) => {
     if (prevHistory?.length === 0) return prevHistory;

@@ -246,6 +246,7 @@ useEffect(() => {
           Are you sure you want to remove all elements from this page? 
         </p>
       </CustomModal>
+      
     </>
   );
 }

@@ -22,8 +22,23 @@ export default function RightPanel({ store }) {
   const activePage = state.pages.find((p) => p.id === state.activePageId);
   const selectedId = state.selectedElementIds?.[0] || state.activeElementId;
   
-  let selectedItem = null;
-  if (selectedId && activePage) {
+// استبدلي جزء البحث القديم بهذا المنطق المطور
+let selectedItem = null;
+let isSectionSelection = false;
+
+if (selectedId && activePage) {
+  // 1. تحقق أولاً إذا كان المختار هو أحد السكاشن
+  const sectionAsItem = activePage.sections.find((s) => s.id === selectedId);
+  
+  if (sectionAsItem) {
+    selectedItem = { 
+      ...sectionAsItem, 
+      type: 'section', // نعطيه نوع 'section' لكي نتمكن من عرض خصائصه
+      sectionId: sectionAsItem.id 
+    };
+    isSectionSelection = true;
+  } else {
+    // 2. إذا لم يكن سكشن، ابحث داخل العناصر (المنطق القديم)
     activePage.sections.forEach((section) => {
       const item = section.data.items?.find((it) => it.id === selectedId);
       if (item) {
@@ -31,7 +46,7 @@ export default function RightPanel({ store }) {
       }
     });
   }
-
+}
   const debouncedUpdate = useMemo(
     () => debounce((data) => {
       updateItem(state.activePageId, selectedItem.sectionId, selectedId, data);
@@ -64,9 +79,14 @@ export default function RightPanel({ store }) {
     } else {
       updatePayload = { [config.field]: value };
     }
-
+if (isSectionSelection) {
+    // إذا كان المختار سكشن، استخدمي دالة تحديث السكشن
+    store.updateSection(state.activePageId, selectedId, updatePayload);
+  } else {
+    // المنطق القديم للعناصر
     previewUpdateItem(state.activePageId, selectedItem.sectionId, selectedId, updatePayload);
     debouncedUpdate(updatePayload);
+  }
   };
 
 const renderControl = (config) => {
@@ -144,7 +164,7 @@ const renderControl = (config) => {
 
       {selectedItem ? (
         <div style={styles.controls}>
-          <div style={styles.itemBadge}>{selectedItem.type.toUpperCase()}</div>
+          <div style={styles.itemBadge}>{(selectedItem?.type || "").toUpperCase()}</div>
           
           {Object.entries(groupedControls).map(([sectionName, controls]) => (
             <div key={sectionName} style={styles.group}>

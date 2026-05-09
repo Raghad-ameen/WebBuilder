@@ -39,5 +39,10 @@ export const PROPERTY_CONTROLS = {
     { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
     { section: "Typography", label: "Color", field: "color", type: "color" },
     { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none"] },
-  ]
+  ],
+  section: [
+    { field: 'backgroundColor', label: 'Background Color', type: 'color', section: 'Appearance' },
+    { field: 'minHeight', label: 'Min Height', type: 'number', unit: 'px', section: 'Layout' },
+    // أضيفي ما تحتاجه السكاشن هنا
+  ],
 };
