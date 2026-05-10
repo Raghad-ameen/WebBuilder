@@ -40,6 +40,8 @@ React.useEffect(() => {
   //   }, 50);
   //   return () => clearTimeout(timer);
   // }
+    console.log("SECTION ITEMS:", section.data.items);
+
 }, [section.data.items, selectedElementIds, onSelect]);
 
 const handleDoubleClick = (e) => {
@@ -73,6 +75,11 @@ useEffect(() => {
       id={section.id}
 className={`section-container selecto-area section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
 onMouseDown={(e) => {
+    console.log("SECTION UP", {
+      dragging: state.isDraggingNow,
+      draggingType: state.draggingType,
+      target: e.target
+   });
   const clickedEmpty = e.target === e.currentTarget;
   if (clickedEmpty) {
   e.stopPropagation();
@@ -83,28 +90,44 @@ onMouseDown={(e) => {
       selectionGroupMode: false
     }));
   }
-}}onMouseUp={(e) => {
-    if (!state.isDraggingNow) return;
-    e.stopPropagation();
-
-    const rect = sectionRef.current.getBoundingClientRect(); 
-    const x = (e.clientX - rect.left) / canvasScale;
-    const y = (e.clientY - rect.top) / canvasScale;
-
-    const defaultWidth = 150;
-    const defaultHeight = 150;
-
-    store.addItemAtPosition(state.draggingType, x, y, section.id, {
-        width: defaultWidth,
-        height: defaultHeight,
-        styles: state.draggingType === 'shape' ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
-    });
-    
-    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
 }}
+onMouseUp={(e) => {
+  if (!state.isDraggingNow || !state.draggingType) return;
 
-style={{
-  position: section.styles?.position || "relative", 
+  // إذا كان الإفلات فوق عنصر موجود، لا تضيف عنصر جديد
+  if (e.target.closest(".canvas-element")) return;
+
+  e.stopPropagation();
+
+  const rect = sectionRef.current.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / canvasScale;
+  const y = (e.clientY - rect.top) / canvasScale;
+
+  const defaultWidth = 150;
+  const defaultHeight = 150;
+
+  store.addItemAtPosition(
+    state.draggingType,
+    x,
+    y,
+    section.id,
+    {
+      width: defaultWidth,
+      height: defaultHeight,
+      styles:
+        state.draggingType === "shape"
+          ? { clipPath: "inset(0% 0% 0% 0%)" }
+          : {}
+    }
+  );
+
+  store.setState(prev => ({
+    ...prev,
+    isDraggingNow: false,
+    draggingType: null
+  }));
+}}style={{
+position: section.styles?.position ?? "relative",
   left: section.styles?.left || 0,
   top: section.styles?.top || 0,
   width: section.styles?.width || "100%",
@@ -143,6 +166,7 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
 )}
 
 {section.data.items?.map((item,index) => {
+     console.log("RENDER ITEM:", item.id, item.type);
 const isSelected =
   state.selectedElementIds.includes(item.id) &&
   state.selectionGroupMode
@@ -167,6 +191,8 @@ const isMobileOrTablet =
 
 
 onMouseDown={(e) => {
+     console.log("MOUSEDOWN ON:", item.id);
+
   setInteractionMode("move");
     const isCtrl = e.ctrlKey || e.metaKey;
     if (item.isEditing) return;
@@ -236,16 +262,16 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 {isSelected && !item.isEditing && !state.isPreviewMode && (
   <div
     onPointerDown={(e) => {
-      e.stopPropagation(); // يمنع الموفيبل من بدء السحب
+      e.stopPropagation();
       e.preventDefault();
     }}
     onClick={(e) => {
       e.stopPropagation();
-      deleteElement(item.id); // تنفيذ الحذف عند الكليك الفعلي
+      deleteElement(item.id); 
     }}
     style={{
       position: "absolute",
-      top: "-40px", // رفعته قليلاً لتجنب التداخل مع مقابض التحكم
+      top: "-40px", 
       right: "0px",
       width: "28px",
       height: "28px",
@@ -255,7 +281,7 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      zIndex: 2147483647, // أعلى قيمة ممكنة لضمان ظهوره فوق كل شيء
+      zIndex: 2147483647, 
       pointerEvents: "auto",
       boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
       border: "2px solid white",
@@ -538,18 +564,17 @@ portalContainer={sectionRef.current}
     isDisplaySnapDigit={false} 
     isDisplayInnerSnapDigit={false}
 
-    onDrag={({ target, left, top }) => {
-        target.style.left = `${left}px`;
-        target.style.top = `${top}px`;
-    }}
+onDrag={({ target, left, top }) => {
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+}}
+  onDragEnd={({ target, lastEvent }) => {
+  if (!lastEvent) return;
 
-   onDragEnd={({ target }) => {
-    if (Array.isArray(target)) return;
-
-    updateItem(activePageId, section.id, target.id, {
-        x: parseFloat(target.style.left),
-        y: parseFloat(target.style.top)
-    });
+  updateItem(activePageId, section.id, target.id, {
+    x: lastEvent.left,
+    y: lastEvent.top
+  });
 }}
 
     onResize={({ target, width, height, drag }) => {
@@ -559,14 +584,16 @@ portalContainer={sectionRef.current}
         target.style.top = `${drag.top}px`;
     }}
 
-    onResizeEnd={({ target }) => {
-        updateItem(activePageId, section.id, target.id, {
-            width: parseFloat(target.style.width),
-            height: parseFloat(target.style.height),
-            x: parseFloat(target.style.left),
-            y: parseFloat(target.style.top)
-        });
-    }}
+onResizeEnd={({ target, lastEvent }) => {
+  if (!lastEvent) return;
+
+  updateItem(activePageId, section.id, target.id, {
+    width: lastEvent.width,
+    height: lastEvent.height,
+    x: lastEvent.drag.left,
+    y: lastEvent.drag.top
+  });
+}}
     onDragGroup={({ events }) => {
             events.forEach(({ target, left, top }) => {
                 target.style.left = `${left}px`;
@@ -625,12 +652,12 @@ onResizeGroupEnd={({ events }) => {
         target.style.left = `${left}px`;
         target.style.top = `${top}px`;
     }}
-    onDragEnd={({ target }) => {
+ onDragEnd={({ target, lastEvent }) => {
         updateSection(state.activePageId, section.id, { 
             styles: { 
                 ...section.styles, 
-                left: parseFloat(target.style.left), 
-                top: parseFloat(target.style.top), 
+                left: (section.styles?.left || 0) + lastEvent.beforeTranslate[0],
+top: (section.styles?.top || 0) + lastEvent.beforeTranslate[1],
                 position: 'absolute' 
             } 
         });
@@ -665,61 +692,61 @@ onResizeGroupEnd={({ events }) => {
 )}
 
 <Selecto
- container={document.body}
+  container={sectionRef.current}
   dragContainer={sectionRef.current}
-  rootContainer={document.body}
+  portalContainer={sectionRef.current}
+  rootContainer={sectionRef.current}
+  
   selectableTargets={
-  interactionMode === "select"
-    ? [".canvas-element"]
-    : []
-}
+    interactionMode === "select"
+      ? [`.section-${section.id} .canvas-element`] 
+      : []
+  }
+  
   hitRate={0}
   selectByClick={false}
   selectFromInside={false}
   preventDragFromInside={true}
   
-onDragStart={e => {
-  if (e.inputEvent.target.closest(".moveable-control-box")) {
-    e.stop();
-    return;
-  }
+  onDragStart={e => {
+    if (e.inputEvent.target.closest(".moveable-control-box") || 
+        e.inputEvent.target.closest(".section-toolbar")) { 
+      e.stop();
+      return;
+    }
 
-  if (e.inputEvent.target.closest(".canvas-element")) {
-    e.stop(); // مهم: يمنع اللاسو عند تحريك عنصر
-    return;
-  }
+    if (e.inputEvent.target.closest(".canvas-element")) {
+      e.stop(); 
+      return;
+    }
 
-  const rect = sectionRef.current.getBoundingClientRect();
-  e.datas.offset = [rect.left, rect.top];
-}}
+    const rect = sectionRef.current.getBoundingClientRect();
+    e.datas.offset = [
+      rect.left + window.scrollX,
+      rect.top + window.scrollY
+    ];
+  }}
 
-onDrag={(e) => {
-    const box = document.querySelector(".selecto-selection");
-
+  onDrag={(e) => {
+    const box = sectionRef.current.querySelector(".selecto-selection");
     if (box) {
-      console.log("selectionBox:", {
-        left: box.style.left,
-        top: box.style.top,
-        transform: box.style.transform,
-        width: box.style.width,
-        height: box.style.height,
-      });
+      console.log("Selection Rect:", e.rect);
     }
   }}
   
   onSelect={e => {
     const ids = e.selected.map(el => String(el.id));
+    
     if (ids.length === 0) {
-    // تحقق هل التحديد الحالي في الـ Store هو سكشن؟
-    const currentId = state.selectedElementIds?.[0] || "";
-    if (currentId.startsWith('s-')) {
-      return; // توقف هنا ولا تمسح تحديد السكشن
+      const currentId = state.selectedElementIds?.[0] || "";
+      if (currentId === section.id) {
+        return; 
+      }
     }
-  }
+    
     store.selectItems(ids);
   }}
 />
-
 <style>{`
     #main-canvas {
         position: relative;
@@ -734,7 +761,6 @@ onDrag={(e) => {
 
 
 .section-container {
-    position: relative !important; /* ضروري جداً ليعمل المربع داخله بدقة */
     pointer-events: auto !important;
     overflow: visible !important; /* للسماح للمربع بالتحرك بحرية */
 }
@@ -751,7 +777,22 @@ onDrag={(e) => {
     .section-container[style*="position: absolute"] {
         cursor: move !important;
     }
+/* أضيفي هذا الجزء لضبط مربع التحديد الأزرق */
+.section-container .selecto-selection {
+    position: absolute !important; /* ليتحرك المربع بناءً على إحداثيات السكشن */
+    background: rgba(79, 70, 229, 0.15) !important;
+    border: 1px solid #4f46e5 !important;
+    z-index: 9999 !important;
+    pointer-events: none !important; /* لكي لا يمنع الماوس من الوصول للعناصر */
+    top: 0;
+    left: 0;
+    display: none; /* مخفي افتراضياً */
+}
 
+/* إظهار المربع فقط عندما يبدأ السحب فعلياً (تظهر قيمة width) */
+.section-container .selecto-selection[style*="width"] {
+    display: block;
+}
     .is-blank-layer { 
         pointer-events: auto !important; 
     }

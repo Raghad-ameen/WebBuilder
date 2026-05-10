@@ -76,8 +76,10 @@ const pasteElements = useCallback(() => {
 
     saveToHistory(prev);
 
-    const targetSection = activePage.sections?.find(s => s.id === prev.activeSectionId) || activePage.sections[activePage.sections?.length - 1];
-    
+const targetSection =
+  activePage.sections?.find(s => s.id === sectionId)
+  || activePage.sections?.[0];
+
     if (!targetSection) return prev;
 
     const newItems = prev.clipboard.map(item => ({
@@ -302,6 +304,12 @@ const updateSection = useCallback((pageId, sectionId, newData) => {
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
+  console.log("ADDING ITEM:", {
+  type,
+  sectionId,
+  x,
+  y
+});
 
   const elementDefaults = {
     button: {
@@ -340,9 +348,15 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
 
   const finalWidth = extraData.width || config.width;
   const finalHeight = extraData.height || config.height;
-  const finalX = (typeof x === 'number' ? x : 100) - (finalWidth / 2);
-  const finalY = (typeof y === 'number' ? y : 100) - (finalHeight / 2);
+const finalX = Math.max(
+  20,
+  (typeof x === "number" ? x : 100) - finalWidth / 2
+);
 
+const finalY = Math.max(
+  20,
+  (typeof y === "number" ? y : 100) - finalHeight / 2
+);
   setState(prev => {
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
@@ -371,32 +385,39 @@ const newItem = {
       )
     ),
   }
-};    let updatedSections = [...activePage.sections];
+};    
+console.log("NEW ITEM:", newItem);
+let updatedSections = [...activePage.sections];
+console.log("BEFORE UPDATE sections:", updatedSections);
 
 if (updatedSections?.length === 0) {
-   const newAutoSectionId = `s-${Date.now()}`; // توليد ID للسكشن الجديد
-        const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
+  const newAutoSectionId = `s-${Date.now()}`;
 
-        // ربط العنصر بالسكشن الذي سيتم إنشاؤه حالاً
-        newItem.parentSectionId = newAutoSectionId;
+  const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
 
-    updatedSections = [{
-        id: newAutoSectionId,
-        type: isLargeSection ? type : "blank",
-        height: isLargeSection ? 600 : 100, 
-        styles: { 
-            backgroundColor: isLargeSection ? "#ffffff" : "transparent", 
-            padding: "0px",
-            minHeight: isLargeSection ? "400px" : "50px" ,
-            zIndex: 1
-        },
-        data: { items: [newItem] }
-    }];
-}    else {
+  newItem.parentSectionId = newAutoSectionId;
+
+  updatedSections = [{
+    id: newAutoSectionId,
+    type: isLargeSection ? type : "blank",
+    height: isLargeSection ? 600 : 100,
+    styles: {
+      backgroundColor: isLargeSection ? "#ffffff" : "transparent",
+      padding: "0px",
+      minHeight: isLargeSection ? "400px" : "50px",
+      zIndex: 1
+    },
+    data: {
+      items: [newItem]
+    }
+  }];
+}else {
+  console.log("ADDING TO EXISTING SECTION:", sectionId);
       const targetId = sectionId || updatedSections[0].id;
       newItem.parentSectionId = targetId;
       updatedSections = updatedSections.map(s => {
         if (s.id === targetId) {
+            console.log("FOUND TARGET SECTION:", s.id);
           return {
             ...s,
             data: {
@@ -408,7 +429,7 @@ if (updatedSections?.length === 0) {
         return s;
       });
     }
-
+console.log("AFTER UPDATE sections:", updatedSections);
     return {
       ...prev,
       pages: prev.pages.map(p => 
@@ -420,6 +441,7 @@ if (updatedSections?.length === 0) {
   });
 
   setTimeout(() => {
+    console.log("AUTO SELECTING:", finalNewId);
     setState(current => ({
       ...current,
       selectedElementIds: [finalNewId],
@@ -430,6 +452,7 @@ if (updatedSections?.length === 0) {
 }, [setState]);
 
 const selectItems = useCallback((ids) => {
+  console.log("SELECT IDS:", ids);
   setState(prev => {
     // 1. العثور على الصفحة الحالية للحصول على المجموعات (Groups) المعرفة فيها
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
@@ -455,6 +478,8 @@ const groups = activePage?.groups || [];
 
     // 4. تنظيف المصفوفة من التكرار (Unique IDs)
     finalIds = [...new Set(finalIds)];
+     console.log("FINAL SELECTED:", finalIds);
+
 
     // 5. التحقق من التغيير لمنع إعادة الرندرة (Optimization)
     if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(finalIds)) {
@@ -660,7 +685,10 @@ const redo = useCallback(() => {
   });
 }, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
-  
+  console.log("UPDATE ITEM CALLED:", {
+  itemId,
+  data
+});
   setState(prev => {
     saveToHistory(prev); 
 
@@ -678,6 +706,13 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
                 ...s.data,
                 items: s.data.items.map(it => {
                   if (it.id === itemId) {
+                     console.log("UPDATING OLD ITEM:", it);
+
+                    console.log("NEW VALUES:", {
+                      ...it,
+                      ...data
+                    });
+
                     return {
                       ...it,
                       ...data,

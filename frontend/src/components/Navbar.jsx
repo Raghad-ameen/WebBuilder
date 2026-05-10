@@ -29,6 +29,11 @@ export const Navbar = () => {
         <div className="hidden md:block text-white/70 hover:text-white font-medium transition text-sm cursor-pointer">
           Templates
         </div>
+         <div
+         onClick={() => navigate('/guide')}
+         className="hidden md:block text-white/70 hover:text-white font-medium transition text-sm cursor-pointer">
+          Guide
+        </div>
 
        <div 
         onClick={() => navigate('/login')} 

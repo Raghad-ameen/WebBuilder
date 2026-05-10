@@ -10,6 +10,7 @@ import { AboutPage } from './pages/AboutPage';
 import { FeaturesPage } from './pages/FeaturesPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import AdminDashboard from './pages/AdminDashboard';
+import GuidePage from './pages/GuidePage.jsx';
 
 
 const ProtectedAdminRoute = ({ children }) => {
@@ -35,8 +36,11 @@ function App() {
         <Route path="/register" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/editor/:siteId" element={<Editor />} />
+          <Route path="/guide" element={<GuidePage/>} />
         <Route path="*" element={<Navigate to="/" />} />
         <Route path="/admin" element={<ProtectedAdminRoute>
+         
+        
     <AdminDashboard />
   </ProtectedAdminRoute>} />
       </Routes>

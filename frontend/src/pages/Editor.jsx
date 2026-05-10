@@ -96,7 +96,6 @@ const handleSave = async () => {
     }, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    alert("تم الحفظ بنجاح مع المواقع الجديدة! ✅");
   } catch (err) {
     console.error("Save Error:", err.response?.data);
     alert("فشل الحفظ");

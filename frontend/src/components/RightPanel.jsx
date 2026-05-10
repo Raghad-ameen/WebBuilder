@@ -48,10 +48,10 @@ if (selectedId && activePage) {
   }
 }
   const debouncedUpdate = useMemo(
-    () => debounce((data) => {
+    () => debounce((pageId, sectionId, itemId, data) => {
       updateItem(state.activePageId, selectedItem.sectionId, selectedId, data);
     }, 400),
-    [state.activePageId, selectedItem?.sectionId, selectedId]
+    [updateItem]
   );
 
  const handlePropertyChange = (config, value) => {
