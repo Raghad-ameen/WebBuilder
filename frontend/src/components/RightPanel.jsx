@@ -26,7 +26,7 @@ const FIELD_ICONS = {
   borderWidth: <span style={{ fontWeight: 'bold', fontSize: '11px' }}>B⇆</span>,
   borderRadius: <CornerUpLeft size={16} style={{ transform: 'rotate(-90deg)' }} />,
   borderColor: <Palette size={15} style={{ opacity: 0.8 }} />,
-  borderStyle: <span style={{ letterSpacing: '1px', fontWeight: 'bold' }}>---</span>,
+  borderStyle: <span style={{ letterSpacing: '1px', fontWeight: 'bold' }}></span>,
   shadowColor: <span style={{ filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.3))', display: 'inline-block' }}><Paintbrush size={14} /></span>,
   filterBlur: <Focus size={16} />,
   filterBrightness: <Sun size={16} />,
@@ -321,7 +321,6 @@ export default function RightPanel({ store }) {
   const currentSections = activePage?.sections || [];
   const selectedId = state.selectedElementIds?.[0] || state.activeElementId;
 
-  // 1. حساب الـ selectedItem بالاعتماد على الـ ID الحالي والـ state
   let selectedItem = null;
   let isSectionSelection = false;
 
@@ -340,14 +339,12 @@ export default function RightPanel({ store }) {
     }
   }
 
-  // 💡 الإصلاح الأول: نعتمد على نوع العنصر فقط لضمان ثبات المرجع ومنع الـ Infinite Loop
   const itemType = selectedItem?.type;
   const allControls = useMemo(() => {
     if (!itemType) return [];
     return [...(PROPERTY_CONTROLS[itemType] || []), ...PROPERTY_CONTROLS.common];
   }, [itemType]);
 
-  // 💡 الإصلاح الثاني: جعل الـ useEffect يعتمد على الـ ID فقط، ليعمل مرة واحدة عند تغيير العنصر المختار
   useEffect(() => {
     if (!selectedId || !selectedItem || allControls.length === 0) {
       return;
@@ -364,8 +361,6 @@ export default function RightPanel({ store }) {
     setShowMore(false);
     setOpenPropertyField(null);
 
-    // نستخدم الـ eslint-disable لتجنب الدخول في دوامات الـ References للأجسام المعقدة
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]); 
 
   const handleCloseToolbar = useCallback(() => {
@@ -511,14 +506,13 @@ export default function RightPanel({ store }) {
   const visibleControls = useMemo(() => allControls.slice(0, 4), [allControls]);
   const hiddenControls = useMemo(() => allControls.slice(4), [allControls]);
 
-  // الحماية الكبرى من إظهار أي واجهة رسومية إذا لم يتم جلب العنصر بنجاح
   if (!selectedItem) return null;
 
   return (
     <div ref={toolbarRef} style={styles.floatingToolbar} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
       <div style={styles.itemBadge}>{selectedItem.type}</div>
       
-      <button onClick={(e) => { e.stopPropagation(); handleCloseToolbar(); }} style={styles.closeBtn} title="إغلاق اللوحة">
+      <button onClick={(e) => { e.stopPropagation(); handleCloseToolbar(); }} style={styles.closeBtn} title="Close Panel">
         <X size={15} />
       </button>
 
@@ -569,7 +563,7 @@ export default function RightPanel({ store }) {
               backgroundColor: showMore ? "#f1f5f9" : "transparent",
               borderColor: showMore ? "#2563eb" : "#cbd5e1"
             }}
-            title="المزيد من الخصائص"
+            title="More Properties"
           >
             <MoreHorizontal size={15} />
           </button>
@@ -599,17 +593,17 @@ export default function RightPanel({ store }) {
               value={selectedItem.action?.type || "none"}
               onChange={(e) => handleActionChange(e.target.value, "")}
             >
-              <option value="none">بدون إجراء</option>
-              <option value="page">الانتقال لصفحة</option>
-              <option value="url">رابط خارجي</option>
-              <option value="scroll">التمرير لسكشن</option>
-              <option value="email">بريد إلكتروني</option>
-              <option value="submit_form">إرسال النموذج</option>
+              <option value="none">None</option>
+              <option value="page">Navigate to page</option>
+              <option value="url">URL</option>
+              <option value="scroll">Move to section</option>
+              <option value="email">Email</option>
+              <option value="submit_form">Sumbit Form</option>
             </select>
 
             {selectedItem.action?.type === 'page' && (
               <select style={{ ...styles.input, width: "85px" }} value={selectedItem.action?.payload || ""} onChange={(e) => handleActionChange('page', e.target.value)}>
-                <option value="">اختر..</option>
+                <option value="">choose..</option>
                 {state.pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             )}
@@ -620,7 +614,7 @@ export default function RightPanel({ store }) {
 
             {selectedItem.action?.type === 'scroll' && (
               <select style={{ ...styles.input, width: "85px" }} value={selectedItem.action?.payload || ""} onChange={(e) => handleActionChange('scroll', e.target.value)}>
-                <option value="">السكشن..</option>
+                <option value="">Section..</option>
                 {currentSections.map((sec, idx) => (
                   <option key={sec.id} value={sec.id}>{idx + 1}. {sec.type}</option>
                 ))}

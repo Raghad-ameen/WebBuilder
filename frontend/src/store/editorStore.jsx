@@ -77,10 +77,7 @@ const pasteElements = useCallback(() => {
 
     saveToHistory(prev);
 
-const targetSection =
-  activePage.sections?.find(s => s.id === sectionId)
-  || activePage.sections?.[0];
-
+const targetSection = activePage.sections?.[0];
     if (!targetSection) return prev;
 
     const newItems = prev.clipboard.map(item => ({
@@ -517,17 +514,17 @@ const loadProject = useCallback(() => {
     saveToHistory(state); 
     
 const templates = {
-  blank: {
-    id: `s-${Date.now()}`,
-    type: "blank",
-    height: 150,
-    styles: { 
-        backgroundColor: "transparent", 
-        padding: "0px",
-        minHeight: "50px"
-    },
-    data: { items: [] }
-},
+//   blank: {
+//     id: `s-${Date.now()}`,
+//     type: "blank",
+//     height: 150,
+//     styles: { 
+//         backgroundColor: "transparent", 
+//         padding: "0px",
+//         minHeight: "50px"
+//     },
+//     data: { items: [] }
+// },
     hero: {
       id: `s-${Date.now()}`,
       type: "section",
@@ -573,10 +570,39 @@ const templates = {
           }
         ]
       }
+    },
+    'feature-grid': {
+    id: `s-${Date.now()}`,
+    type: "feature-grid",
+    height: 400,
+    styles: { backgroundColor: "#f1f5f9", padding: "40px 20px" },
+    data: {
+      items: [
+        { id: `feat-t-${Date.now()}`, type: 'text', text: 'Feature Grid', x: 400, y: 30, width: 200, height: 40, styles: { fontSize: '24px', fontWeight: 'bold', textAlign: 'center' } },
+        { id: `feat-d1-${Date.now()}`, type: 'text', text: 'feature 1', x: 100, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
+        { id: `feat-d2-${Date.now()}`, type: 'text', text: 'feature 2', x: 400, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
+        {id : `feat-d3-${Date.now()}` , type: 'text',text :'feature 3',x: 700, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
+      ]
     }
+  },
+  footer: {
+    id: `s-${Date.now()}`,
+    type: "footer",
+    height: 120,
+    styles: { backgroundColor: "#1e293b", padding: "20px" },
+    data: {
+      items: [
+        { id: `foot-copy-${Date.now()}`, type: 'text', text: '© 2026 All Rights Reserved', x: 450, y: 45, width: 300, height: 30, styles: { fontSize: '14px', textAlign: 'center', color: '#94a3b8' } }
+      ]
+    }},
   };
-    const newSection = templates[type] || templates.blank;
-
+// 🟢 استبدل السطر 598 القديم بهذا الكود:
+const baseTemplate = templates[type] || templates.blank;
+const newSection = {
+  ...baseTemplate,
+  id: `s-${Date.now()}`, // توليد معرف فريد جديد دائماً عند الضغط أو السحب
+  type: type             // هنا نضمن الحفاظ على النوع الفعلي للسكشن
+};
     setState(prev => ({
       ...prev,
       pages: prev.pages.map(p => p.id === prev.activePageId 
@@ -808,7 +834,6 @@ const injectFormTemplate = useCallback((sectionId) => {
     const containerId = `e-${timestamp}-container`;
 
     const formElements = [
-      // 1. الحاوية (الخلفية)
       {
         id: containerId,
         type: "shape",
@@ -820,13 +845,11 @@ const injectFormTemplate = useCallback((sectionId) => {
           border: "1px solid #e2e8f0"
         }
       },
-      // 2. العنوان داخل الحاوية
       {
         id: `e-${timestamp}-t`, type: "text", text: "Contact Us",
         x: 425, y: 40, width: 350, height: 40,
         styles: { fontSize: "22px", fontWeight: "bold", color: "#1e293b", textAlign: "center" }
       },
-      // 3. حقول الإدخال
       {
         id: `e-${timestamp}-n`, type: "input", text: "Your Name",
         x: 425, y: 100, width: 350, height: 45,
@@ -837,7 +860,6 @@ const injectFormTemplate = useCallback((sectionId) => {
         x: 425, y: 160, width: 350, height: 45,
         styles: { borderRadius: "6px", border: "1px solid #cbd5e1", padding: "10px" }
       },
-      // 4. زر الإرسال
       {
         id: `e-${timestamp}-b`, type: "button", text: "Send Message",
         x: 425, y: 230, width: 350, height: 45,

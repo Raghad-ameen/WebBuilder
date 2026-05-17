@@ -36,7 +36,7 @@ const SHAPE_LIBRARY = [
 export default function LeftSidebar({ store }) {
   const { addItemAtPosition, addSection, state, addPage, deletePage, renamePage, setState } = store;
 
-  const [activeTab, setActiveTab] = useState("elements"); 
+  const [activeTab, useState_activeTab] = useState("elements"); 
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
 
   const basicElements = [
@@ -104,7 +104,6 @@ export default function LeftSidebar({ store }) {
     }
   };
 
-  // 💡 إصلاح دالة الـ Drag: عدم تصفير الـ selection بعنف وضبط بيانات العناصر
   const handleStartDrag = (e, type) => {
     setState((prev) => ({
       ...prev,
@@ -114,7 +113,6 @@ export default function LeftSidebar({ store }) {
     }));
   };
 
-  // 💡 إصلاح الـ useEffect الحاسم لإنقاذ الـ Lasso والـ Dragging ومنع المراجع الميتة
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (state.isDraggingNow) {
@@ -131,7 +129,12 @@ export default function LeftSidebar({ store }) {
     return () => {
       window.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [state.isDraggingNow, setState]); // تم ضبط الاعتماديات بدقة هنا
+  }, [state.isDraggingNow, setState]);
+
+  // دالة مساعدة لتغيير التبويب الحالي
+  const setActiveTab = (tab) => {
+    useState_activeTab(tab);
+  };
 
   return (
     <div style={styles.container}>
@@ -156,6 +159,7 @@ export default function LeftSidebar({ store }) {
       </div>
 
       {/* 2. لوحة المحتوى المنبثقة (Drawer Panel) */}
+      {/* 💡 تعديل ستايل الـ drawer: تمت إضافة علامة الـ overflow وتمرير الحجم ديناميكياً */}
       <div style={{ ...styles.drawer, width: isDrawerOpen ? "300px" : "0px", borderRight: isDrawerOpen ? "1px solid #e2e8f0" : "none" }}>
         {isDrawerOpen && (
           <div style={styles.drawerContent}>
@@ -242,7 +246,15 @@ export default function LeftSidebar({ store }) {
                           ...prev,
                           isDraggingNow: true,
                           draggingType: "shape",
-                          draggingShapeData: { styles: { clipPath: s.path, borderRadius: s.radius, backgroundColor: "#4f46e5" } }
+                          // التعديل المثبت لبيانات السحب الحركي
+                          draggingShapeData: { 
+                            shapeType: s.id, 
+                            styles: { 
+                              clipPath: s.path, 
+                              borderRadius: s.radius, 
+                              backgroundColor: "#4f46e5" 
+                            } 
+                          }
                         }));
                       }}
                     >
@@ -273,13 +285,10 @@ export default function LeftSidebar({ store }) {
           </div>
         )}
 
-        {/* زر التبديل العائم (Toggle Button) */}
+        {/* 💡 التعديل الجوهري: الزر أصبح بداخل حاوية الـ drawer وتم ربطه بالكامل بتموضع الحافة الخارجية المطلقة */}
         <button 
           onClick={() => setIsDrawerOpen(!isDrawerOpen)} 
-          style={{
-            ...styles.toggleBtn,
-            left: isDrawerOpen ? "371px" : "71px"
-          }}
+          style={styles.toggleBtnInside}
         >
           {isDrawerOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
@@ -318,18 +327,22 @@ const styles = {
     transition: "all 0.2s"
   },
   stripLabel: { fontSize: "10px", fontWeight: "600" },
+  // 💡 تم تعديل الـ drawer ليكون هو الارتكاز الأب النسبي
   drawer: {
     backgroundColor: "#ffffff",
     height: "100%",
-    overflow: "visible", 
+    overflow: "visible", // حاسم جداً لكي يظهر الزر المطلق في الخارج
     transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-    position: "relative",
+    position: "relative", // هنا نقطة ارتكاز الزر الذكي الجديد
     zIndex: 1
   },
-  toggleBtn: {
-    position: "fixed",
+  // 💡 الستايل الجديد البديل لـ toggleBtn القديم (تم تحويله من fixed ليكون مرتبطاً بالحافة مباشرة)
+  toggleBtnInside: {
+    position: "absolute",
     top: "50%",
     transform: "translateY(-50%)",
+    left: "100%", // ليلتصق خارج السايدبار مباشرة مهما كان عرضه (300px أو 0px)
+    marginLeft: "-1px", // ليتداخل مع الحدود الجانبية بشكل متناسق
     width: "24px",
     height: "48px",
     backgroundColor: "#ffffff",
@@ -342,7 +355,6 @@ const styles = {
     justifyContent: "center",
     cursor: "pointer",
     color: "#1e293b",
-    transition: "left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s",
     zIndex: 10,
     padding: 0,
     outline: "none"

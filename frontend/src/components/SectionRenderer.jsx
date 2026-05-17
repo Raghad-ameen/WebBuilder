@@ -25,12 +25,13 @@ const [targets, setTargets] = useState([]);
 const [interactionMode, setInteractionMode] = useState("select"); 
 
   const getShapePath = (shapeType) => {
-  const paths = {
-    'triangle': "M50 0 L100 100 L0 100 Z",
-    'circle': "M50,0 A50,50 0 1,1 50,100 A50,50 0 1,1 50,0",
-    'square': "M0 0 H100 V100 H0 Z",
-    'rhombus': "M50 0 L100 50 L50 100 L0 50 Z"
-  };
+ const paths = {
+  'triangle': "M50 0 L100 100 L0 100 Z",
+  'circle': "M50,0 A50,50 0 1,1 50,100 A50,50 0 1,1 50,0",
+  'square': "M0 0 H100 V100 H0 Z",
+  'rect': "M0 0 H100 V100 H0 Z",
+  'rhombus': "M50 0 L100 50 L50 100 L0 50 Z"
+};
   return paths[shapeType] || paths['square'];
 };
  const activePage = state.pages.find(p => p.id === activePageId);
@@ -181,16 +182,31 @@ onMouseUp={(e) => {
 
   const sectionTypes = ['hero', 'navbar', 'footer', 'feature-grid', 'blank'];
 
-  if (sectionTypes.includes(state.draggingType)) {
-    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-    return;
+if (sectionTypes.includes(state.draggingType)) {
+  // إذا كان السكشن يحتاج عناصر افتراضية داخله عند إنشائه
+  let initialItems = [];
+  
+  if (state.draggingType === 'feature-grid') {
+    // بناء شبكة الفيتشر الافتراضية المكونة من كتل نصية وأيقونات
+    initialItems = [
+      { id: `feat-title-${Date.now()}`, type: 'text', text: 'Our Features', x: 500, y: 30, width: 200, height: 40, styles: { fontSize: '24px', fontWeight: 'bold', textAlign: 'center' } },
+      { id: `feat-desc-${Date.now()}`, type: 'text', text: 'Feature description text goes here.', x: 450, y: 80, width: 300, height: 60, styles: { fontSize: '14px', textAlign: 'center', color: '#64748b' } }
+    ];
+  } else if (state.draggingType === 'footer') {
+    // بناء نصوص الفوتر وحقوق الملكية الافتراضية
+    initialItems = [
+      { id: `foot-copy-${Date.now()}`, type: 'text', text: '© 2026 Store Name. All rights reserved.', x: 450, y: 40, width: 300, height: 30, styles: { fontSize: '14px', textAlign: 'center', color: '#94a3b8' } }
+    ];
   }
 
-  if (e.target.closest(".canvas-element") || e.target.closest(".moveable-control-box")) {
-      store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
-      return;
+  // استدعاء ميثود إضافة السكشن المخصص في الـ Store لديك (مثال: addSection)
+  if (store.addSection) {
+    store.addSection(state.draggingType, initialItems);
   }
 
+  store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+  return;
+}
   e.stopPropagation();
 
   const rect = sectionRef.current.getBoundingClientRect();
@@ -200,18 +216,39 @@ onMouseUp={(e) => {
   const defaultWidth = 150;
   const defaultHeight = 150;
 
-  store.addItemAtPosition(
-    state.draggingType,
-    x,
-    y,
-    section.id,
-    {
-      width: defaultWidth,
-      height: defaultHeight,
-      styles: state.draggingType === "shape" ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
-    }
-  );
+let shapeStyles = {};
+let detectedShapeType = state.draggingType;
 
+if (state.draggingType === "shape") {
+  shapeStyles = {
+    backgroundColor: state.draggingShapeData?.styles?.backgroundColor || "#4f46e5",
+    clipPath: state.draggingShapeData?.styles?.clipPath || "none",
+    borderRadius: state.draggingShapeData?.styles?.borderRadius || "0px"
+  };
+  
+  if (state.draggingShapeData?.shapeType) {
+    detectedShapeType = state.draggingShapeData.shapeType;
+  } else {
+    const cleanClip = shapeStyles.clipPath.replace(/\s+/g, '').toLowerCase();
+    
+    if (cleanClip.includes("polygon(50%0%") || cleanClip.includes("50%0")) detectedShapeType = "triangle";
+    else if (shapeStyles.borderRadius === "50%") detectedShapeType = "circle";
+    else if (cleanClip.includes("50%100%")) detectedShapeType = "rhombus";
+    else detectedShapeType = "square";
+  }
+}
+store.addItemAtPosition(
+  state.draggingType,
+  x,
+  y,
+  section.id,
+  {
+    width: defaultWidth,
+    height: defaultHeight,
+    shapeType: detectedShapeType,
+    styles: shapeStyles
+  }
+);
   store.setState(prev => ({
     ...prev,
     isDraggingNow: false,
@@ -220,18 +257,16 @@ onMouseUp={(e) => {
 }}
 
 style={{
-  position: section.styles?.position ?? "relative",
+ position: section.styles?.position ?? "relative",
   left: section.styles?.left || 0,
   top: section.styles?.top || 0,
   width: section.styles?.width || "100%",
-  height: section.height ? `${section.height}px` : "auto",
-  minHeight: "100px",
+  height: section.height ? `${section.height}px` : (section.type === 'footer' ? "120px" : section.type === 'feature-grid' ? "400px" : "auto"),
+  minHeight: section.type === 'footer' ? "80px" : "100px",
   zIndex: allSections.length - sectionIndex,
   overflow: "visible",
-
   background: section.styles?.background || "transparent",
   backgroundColor: section.styles?.backgroundColor || "transparent",
-
   ...section.styles,
 
   boxShadow: section.styles?.boxShadow,
@@ -244,23 +279,16 @@ style={{
     <button 
       onPointerDown={(e) => { 
         e.stopPropagation(); 
-         deleteSection(section.id); 
+        deleteSection(section.id); 
       }} 
-      onClick={(e) => {
-    if (state.isPreviewMode) {
-      e.preventDefault();
-      handleAction(item.action); 
-    }
-  }}
       style={{...styles.toolBtn, color: '#ef4444'}}
     >
       <Trash2 size={16} />
     </button>
   </div>
 )}
-
-{section.data.items?.map((item, index) => {
-const isSelected =
+{(section.data?.items || []).map((item, index) => {
+  const isSelected =
   state.selectedElementIds.includes(item.id) &&
   state.selectionGroupMode
     ? true
@@ -272,7 +300,7 @@ const isMobileOrTablet =
   const { clipPath, ...otherStyles } = item.styles || {};
 const isPartOfForm = 
     ['input', 'shape'].includes(item.type) || 
-    (item.type === 'text' && index > 0) || // أو استخدمي شرط النص مثل item.text === "Contact Us"
+    (item.type === 'text' && index > 0) ||
     (item.type === 'button' && item.text === "Send Message");
 
  return (
@@ -344,18 +372,16 @@ position: "absolute",
   height: `${item.height}px`,
     zIndex: isSelected ? 100000 : (2000 + index),
     margin: isMobileOrTablet ? "15px auto" : "0", 
-    display: (() => {
-          if (state.isPreviewMode) {
-            // الزر الأساسي (Click Me) يبقى ظاهراً دائماً
-            if (item.type === 'button' && item.text !== "Send Message") return "flex";
-            
-            // أي شيء جزء من الفورم يتبع حالة isFormVisible
-            if (isPartOfForm) {
-              return isFormVisible ? "flex" : "none";
-            }
-          }
-          return isMobileOrTablet ? "block" : "initial";
-        })(),
+  // 🟢 الاستبدال الجديد لشرط الـ display:
+display: (() => {
+  if (state.isPreviewMode) {
+    if (item.type === 'button' && item.text !== "Send Message") return "flex";
+    if (isPartOfForm) {
+      return isFormVisible ? "flex" : "none";
+    }
+  }
+  return isMobileOrTablet ? "block" : "initial";
+})(),
     cursor: item.isEditing ? "text" : "move",
     overflow: "visible",
     pointerEvents: "auto",
@@ -522,33 +548,38 @@ position: "absolute",
   </div>
 )}
 
-{item.type === 'shape' && (
-  <div 
-    key={item.id}
-    style={{ 
-      width: `${item.width}px`, 
-      height: `${item.height}px`, 
-      overflow: "visible",
-      zIndex: item.styles?.zIndex || 100,
-    }}
-  >
-    <svg 
-      width="100%" 
-      height="100%" 
-      viewBox="0 0 100 100" 
-      preserveAspectRatio="none"
-      style={{ display: 'block' }}
-    >
-      <path 
-        d={getShapePath(item.shapeType)}
-        fill={item.styles?.backgroundColor || "#4f46e5"}
-        stroke={item.styles?.borderColor || "transparent"}
-        strokeWidth={item.styles?.borderWidth || 0}
-      />
-    </svg>
-  </div>
-)}
+{item.type === 'shape' && (() => {
+  const currentShape = item.shapeType || (item.styles?.clipPath?.includes("polygon") ? "triangle" : "square");
 
+  return (
+    <div 
+      key={item.id}
+      style={{ 
+        width: "100%",
+        height: "100%", 
+        overflow: "visible",
+        clipPath: item.styles?.clipPath || "none",
+        borderRadius: item.styles?.borderRadius || "0px",
+        zIndex: item.styles?.zIndex || 100,
+      }}
+    >
+      <svg 
+        width="100%" 
+        height="100%" 
+        viewBox="0 0 100 100" 
+        preserveAspectRatio="none"
+        style={{ display: 'block' }}
+      >
+        <path 
+          d={getShapePath(currentShape)} 
+          fill={item.styles?.backgroundColor || "#4f46e5"}
+          stroke={item.styles?.borderColor || "transparent"}
+          strokeWidth={item.styles?.borderWidth || 0}
+        />
+      </svg>
+    </div>
+  );
+})()}
 
 {item.type === 'button' && (
   <div
@@ -835,35 +866,45 @@ container={document.querySelector("#main-canvas") || undefined}
 const styles = {
   deleteSectionBtn: { position: "absolute", right: 10, top: 10, zIndex: 2000, background: "#fee2e2", border: "none", cursor: "pointer", padding: 4, borderRadius: 4 },
   deleteElementBtn: { 
-    position: "absolute", background: "#ef4444", borderRadius: "50%", 
-    width: 22, height: 22, zIndex: 9999, cursor: "pointer", 
-    display: "flex", alignItems: "center", justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)", pointerEvents: "auto"
-  },
+  position: "absolute", 
+  top: "-34px", 
+  right: "-4px",
+  width: "24px",
+  height: "24px",
+  backgroundColor: "#ef4444",
+  borderRadius: "50%", 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center",
+  boxShadow: "0 2px 6px rgba(0,0,0,0.2)", 
+  pointerEvents: "auto",
+  cursor: "pointer",
+  zIndex: 2147483647,
+  border: "2px solid white"
+},
 sectionToolbar: {
-    position: "absolute",
-    top: "-50px", 
-    left: "0",
-    display: "flex",
-    gap: "4px",
-    padding: "6px",
-    backgroundColor: "#ffffff",
-    borderRadius: "8px",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)",
-    zIndex: 1000000,
+  position: "absolute",
+  top: "-42px", 
+  left: "12px",
+  display: "flex",
+  gap: "4px",
+  padding: "4px",
+  backgroundColor: "#ffffff",
+  borderRadius: "6px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)",
+  zIndex: 1000000,
 },
 toolBtn: {
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    backgroundColor: "transparent",
-    borderRadius: "6px",
-    cursor: "pointer",
-    transition: "background 0.2s",
-    color: "#4b5563",
+  width: "28px",
+  height: "28px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "none",
+  backgroundColor: "transparent",
+  borderRadius: "4px",
+  cursor: "pointer",
+  transition: "background 0.2s",
+  color: "#4b5563",
 },
-
 };
