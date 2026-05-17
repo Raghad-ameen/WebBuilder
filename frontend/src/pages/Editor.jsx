@@ -1,4 +1,4 @@
-import React, { useEffect, useRef,useMemo } from "react";
+import React, { useEffect, useRef,useMemo} from "react";
 import EditorLayout from "../components/EditorLayout";
 import { useEditorStore } from "../store/editorStore";
 import CustomModal from "../components/CustomModal";
@@ -84,6 +84,7 @@ useEffect(() => {
       localStorage.setItem(`project_id_${siteId}`, JSON.stringify(store.state));
     }
   }, [store.state, siteId]);
+
 
 const handleSave = async () => {
   try {

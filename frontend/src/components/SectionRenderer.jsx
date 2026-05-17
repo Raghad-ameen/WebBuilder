@@ -4,6 +4,7 @@ import Moveable from "react-moveable";
 import SectionWrapper from "./SectionWrapper";
 import CanvasElement from "./CanvasElement";
 import Selecto from "react-selecto";
+import "./SectionRenderer.css"; 
 
 export default function SectionRenderer({ section, selectedElementIds = [], onSelect, store, canvasScale = 1 }) {
   const { deleteSection, deleteElement, state, updateSection, previewUpdateItem, updateItem,moveSectionUp, moveSectionDown } = store;
@@ -11,10 +12,16 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const allSections = state.pages.find(p => p.id === activePageId)?.sections || [];
   const itemRefs = useRef({});
   const BASE_WIDTH = 1200;
+const isSelected = state.selectedSectionId === section.id;
+const [isFormOpen, setIsFormOpen] = useState(false);
+const isActive = state.activeSectionId === section.id;
+const [isFormVisible, setIsFormVisible] = useState(false);
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const [canvasColor, setCanvasColor] = useState('#ffffff');
 const [targets, setTargets] = useState([]); 
+  const validTargets = targets.filter(Boolean);
+
 const [interactionMode, setInteractionMode] = useState("select"); 
 
   const getShapePath = (shapeType) => {
@@ -34,13 +41,6 @@ const sectionIndex =
 React.useEffect(() => {
   const lastItem = section.data.items?.[section.data.items.length - 1];
   const isAnythingSelected = selectedElementIds.length > 0;
-  // if (lastItem && !isAnythingSelected) {
-  //   const timer = setTimeout(() => {
-  //     onSelect(lastItem.id);
-  //   }, 50);
-  //   return () => clearTimeout(timer);
-  // }
-    console.log("SECTION ITEMS:", section.data.items);
 
 }, [section.data.items, selectedElementIds, onSelect]);
 
@@ -52,8 +52,94 @@ const handleDoubleClick = (e) => {
   sel.removeAllRanges();
   sel.addRange(range);
 };
-  const isBlank = section.type === "blank";
-const isSectionSelected = (state.selectedElementIds || []).includes(section.id);
+
+
+const handleSubmitForm = (sectionId, action) => {
+  if (!state.isPreviewMode) return;
+
+  const formFields = section.data.items.filter(item => item.type === 'input');
+  
+  const formData = {};
+  formFields.forEach(field => {
+    const inputEl = document.getElementById(`input-${field.id}`);
+    if (inputEl) {
+      const label = field.placeholder || field.name || field.id;
+      formData[label] = inputEl.value;
+    }
+  });
+
+  if (Object.keys(formData).length === 0) {
+    alert("No fields to submit!");
+    return;
+  }
+
+  console.log("Submit to:", action.payload); 
+  console.log("Data:", formData);
+};
+
+
+
+const handleItemAction = (item) => {
+  if (!state.isPreviewMode) return;
+  const { action } = item;
+  if (!action || !action.type) return;
+
+
+  if (action?.type === 'submit_form') {
+    setIsFormVisible(true);
+    return; 
+  }
+
+  switch (action.type) {
+    case 'page':
+      if (action.payload) {
+        store.setState(prev => ({
+          ...prev,
+          activePageId: action.payload,
+          selectedElementIds: [],
+        }));
+      }
+      break;
+
+    case 'url':
+      if (action.payload) {
+        window.open(action.payload, action.target || '_blank');
+      }
+      break;
+
+    case 'scroll':
+      if (action.payload) {
+        const targetSection = document.getElementById(action.payload);
+        targetSection?.scrollIntoView({ behavior: 'smooth' });
+      }
+      break;
+
+    case 'popup': 
+       store.setState(prev => ({ ...prev, activePopupId: action.payload }));
+      break;
+
+    case 'email': 
+      if (action.payload) {
+        window.location.href = `mailto:${action.payload}`;
+      }
+      break;
+
+      case 'submit_form': 
+  handleSubmitForm(section.id, item.action);
+  break;
+
+    default:
+      console.log("Unknown action type:", action.type);
+  }
+};
+
+
+
+
+
+
+const isBlank = section.type === "blank";
+const isSectionSelected = state.selectedSectionId === section.id;
 const hasSelectedChild = section.data.items.some(it => selectedElementIds.includes(it.id));
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
@@ -68,34 +154,42 @@ useEffect(() => {
       setTargets([]);
     }
   }, [selectedElementIds]);
-
+const { border, borderBottom, ...safeStyles } = section.styles || {};
   return (
     <div
-      ref={sectionRef}
-      id={section.id}
-className={`section-container selecto-area section-${section.id} ${isBlank ? "is-blank-layer" : ""}`}
-onMouseDown={(e) => {
-    console.log("SECTION UP", {
-      dragging: state.isDraggingNow,
-      draggingType: state.draggingType,
-      target: e.target
-   });
-  const clickedEmpty = e.target === e.currentTarget;
-  if (clickedEmpty) {
-  e.stopPropagation();
-    
+     ref={sectionRef}
+  id={section.id}
+  className={`section-container section-${section.id}`}
+  
+ onMouseDown={(e) => {
+  const clickedSectionBackground = e.target === e.currentTarget;
+
+  if (clickedSectionBackground) {
+    e.stopPropagation();
+
     store.setState(prev => ({
       ...prev,
-      selectedElementIds: [section.id], 
+      selectedSectionId: section.id,
+      selectedElementIds: [],
       selectionGroupMode: false
     }));
   }
 }}
+
 onMouseUp={(e) => {
   if (!state.isDraggingNow || !state.draggingType) return;
 
-  // إذا كان الإفلات فوق عنصر موجود، لا تضيف عنصر جديد
-  if (e.target.closest(".canvas-element")) return;
+  const sectionTypes = ['hero', 'navbar', 'footer', 'feature-grid', 'blank'];
+
+  if (sectionTypes.includes(state.draggingType)) {
+    store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+    return;
+  }
+
+  if (e.target.closest(".canvas-element") || e.target.closest(".moveable-control-box")) {
+      store.setState(prev => ({ ...prev, isDraggingNow: false, draggingType: null }));
+      return;
+  }
 
   e.stopPropagation();
 
@@ -114,10 +208,7 @@ onMouseUp={(e) => {
     {
       width: defaultWidth,
       height: defaultHeight,
-      styles:
-        state.draggingType === "shape"
-          ? { clipPath: "inset(0% 0% 0% 0%)" }
-          : {}
+      styles: state.draggingType === "shape" ? { clipPath: "inset(0% 0% 0% 0%)" } : {}
     }
   );
 
@@ -126,30 +217,27 @@ onMouseUp={(e) => {
     isDraggingNow: false,
     draggingType: null
   }));
-}}style={{
-position: section.styles?.position ?? "relative",
+}}
+
+style={{
+  position: section.styles?.position ?? "relative",
   left: section.styles?.left || 0,
   top: section.styles?.top || 0,
   width: section.styles?.width || "100%",
-
-  height: isMobile ? "auto" : (section.height ? `${section.height}px` : "auto"),
-  minHeight: section.height ? `${section.height}px` : "50px",  
-  
-backgroundColor: section.styles?.backgroundColor || "transparent",  
+  height: section.height ? `${section.height}px` : "auto",
+  minHeight: "100px",
   zIndex: allSections.length - sectionIndex,
-  overflow: "visible", 
-  display: isMobile ? "flex" : "block",
-  flexDirection: "column",
-  
-  backgroundImage: section.styles?.backgroundImage ? `url(${section.styles.backgroundImage})` : "none",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  
-  borderBottom: isSectionSelected ? "2px solid #4f46e5" : "1px solid rgba(204, 204, 204, 0.3)",
-  pointerEvents: "auto",
+  overflow: "visible",
+
+  background: section.styles?.background || "transparent",
+  backgroundColor: section.styles?.backgroundColor || "transparent",
+
   ...section.styles,
+
+  boxShadow: section.styles?.boxShadow,
+  filter: section.styles?.filter,      
 }}
-    > 
+> 
     
 {isSectionSelected && !state.isPreviewMode && (
   <div style={styles.sectionToolbar}>
@@ -158,6 +246,12 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
         e.stopPropagation(); 
          deleteSection(section.id); 
       }} 
+      onClick={(e) => {
+    if (state.isPreviewMode) {
+      e.preventDefault();
+      handleAction(item.action); 
+    }
+  }}
       style={{...styles.toolBtn, color: '#ef4444'}}
     >
       <Trash2 size={16} />
@@ -165,8 +259,7 @@ backgroundColor: section.styles?.backgroundColor || "transparent",
   </div>
 )}
 
-{section.data.items?.map((item,index) => {
-     console.log("RENDER ITEM:", item.id, item.type);
+{section.data.items?.map((item, index) => {
 const isSelected =
   state.selectedElementIds.includes(item.id) &&
   state.selectionGroupMode
@@ -177,7 +270,10 @@ const leftPercent = (item.x / BASE_WIDTH) * 100;
 const isMobileOrTablet =
   typeof window !== "undefined" && window.innerWidth < 1024;
   const { clipPath, ...otherStyles } = item.styles || {};
-
+const isPartOfForm = 
+    ['input', 'shape'].includes(item.type) || 
+    (item.type === 'text' && index > 0) || // أو استخدمي شرط النص مثل item.text === "Contact Us"
+    (item.type === 'button' && item.text === "Send Message");
 
  return (
     <React.Fragment key={item.id}>
@@ -191,7 +287,6 @@ const isMobileOrTablet =
 
 
 onMouseDown={(e) => {
-     console.log("MOUSEDOWN ON:", item.id);
 
   setInteractionMode("move");
     const isCtrl = e.ctrlKey || e.metaKey;
@@ -223,12 +318,17 @@ store.setState(prev => ({
         return;
     }
 
-    if (!e.ctrlKey && !e.metaKey) {
-    e.stopPropagation();
+ if (!e.ctrlKey && !e.metaKey) {
+  e.stopPropagation();
 }
 
-    onSelect(item.id);
-    store.selectItems([String(item.id)]);
+
+store.setState(prev => ({
+  ...prev,
+  selectedSectionId: null
+}));
+
+store.selectItems([String(item.id)]);
 }}
 
 
@@ -237,19 +337,29 @@ onMouseUp={() => {
 }}
 
 style={{
-position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolute",
-    left: (section.type === 'navbar' || isMobileOrTablet) ? "auto" : `${item.x}px`, 
-    top: (section.type === 'navbar' || isMobileOrTablet) ? "auto" : `${item.y}px`,
-    width: isMobileOrTablet ? "90%" : `${item.width}px`,
-    height: isMobileOrTablet ? "auto" : `${item.height}px`,
+position: "absolute", 
+  left: `${item.x}px`, 
+  top: `${item.y}px`,
+  width: `${item.width}px`,
+  height: `${item.height}px`,
     zIndex: isSelected ? 100000 : (2000 + index),
     margin: isMobileOrTablet ? "15px auto" : "0", 
-    display: isMobileOrTablet ? "block" : "initial",
+    display: (() => {
+          if (state.isPreviewMode) {
+            // الزر الأساسي (Click Me) يبقى ظاهراً دائماً
+            if (item.type === 'button' && item.text !== "Send Message") return "flex";
+            
+            // أي شيء جزء من الفورم يتبع حالة isFormVisible
+            if (isPartOfForm) {
+              return isFormVisible ? "flex" : "none";
+            }
+          }
+          return isMobileOrTablet ? "block" : "initial";
+        })(),
     cursor: item.isEditing ? "text" : "move",
     overflow: "visible",
     pointerEvents: "auto",
     willChange: "left, top, width, height",
-    transform: 'translate(0, 0)', 
     backfaceVisibility: 'hidden',
     perspective: 1000,
     WebkitFontSmoothing: 'antialiased',
@@ -261,6 +371,7 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 
 {isSelected && !item.isEditing && !state.isPreviewMode && (
   <div
+  className="trash-button-class"
     onPointerDown={(e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -440,51 +551,59 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
 
 
 {item.type === 'button' && (
-          <div
-            className="button-container-wrapper"
-            style={{
-              width: "100%", height: "100%",
+  <div
+    className="button-container-wrapper"
+    style={{
+      width: "100%", 
+      height: "100%",
       display: "flex",          
       alignItems: "center",
       justifyContent: "center",
-              backgroundColor: item.styles?.backgroundColor || "#4f46e5",
-              borderRadius: item.styles?.borderRadius || "6px",
-              transition: "background-color 0.2s",
-              cursor: isSelected ? "move" : "pointer",
-            }}
-            onMouseEnter={(e) => {
-              if (!isSelected && item.hoverStyles?.backgroundColor) {
-                e.currentTarget.style.backgroundColor = item.hoverStyles.backgroundColor;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = item.styles?.backgroundColor || "#4f46e5";
-            }}
-            onClick={() => {
-              if (!isSelected && item.action?.url) window.open(item.action.url, '_blank');
-            }}
-          >
-            <span
-             contentEditable={item.isEditing}
-              onDoubleClick={handleDoubleClick} 
-              suppressContentEditableWarning
-              onBlur={(e) => updateItem(activePageId, section.id, item.id, { text: e.target.innerText })}
-              style={{
-                color: item.styles?.color || "white",
-                fontSize: item.styles?.fontSize || "16px",
-                fontFamily: item.styles?.fontFamily || "inherit", 
-                pointerEvents: "auto",
-                userSelect: isSelected ? "text" : "none", 
-                cursor: isSelected ? "text" : "move",
-                lineHeight: "1",
-                outline: "none" 
-              }}
-            >
-              {item.text || "Button"}
-            </span>
-          </div>
-        )}
+      backgroundColor: item.styles?.backgroundColor || "#4f46e5",
+      borderRadius: item.styles?.borderRadius || "6px",
+      transition: "background-color 0.2s",
+      cursor: state.isPreviewMode ? (item.action?.payload ? "pointer" : "default") : (isSelected ? "move" : "pointer"),
+      pointerEvents: "auto",
+    }}
+    onMouseEnter={(e) => {
+      if (!isSelected && item.hoverStyles?.backgroundColor) {
+        e.currentTarget.style.backgroundColor = item.hoverStyles.backgroundColor;
+      }
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = item.styles?.backgroundColor || "#4f46e5";
+    }}
 
+
+onClick={(e) => {
+  e.stopPropagation();
+  if (state.isPreviewMode) {
+    if (item.action?.type === 'submit_form') {
+      if (!isFormVisible) {
+        setIsFormVisible(true);
+      } else {
+        handleSubmitForm(section.id, item.action);
+      }
+    } else {
+      handleItemAction(item);
+    }
+  }
+}}  >
+    <span
+      style={{
+        color: item.styles?.color || "white",
+        fontSize: item.styles?.fontSize || "16px",
+        fontFamily: item.styles?.fontFamily || "inherit", 
+        pointerEvents: "none",
+        userSelect: "none", 
+        lineHeight: "1",
+        outline: "none" 
+      }}
+    >
+      {item.text || "Button"}
+    </span>
+  </div>
+)}
 {item.type === 'link' && (
   <a
     href={item.action?.url || "#"} 
@@ -520,17 +639,42 @@ position: (section.type === 'navbar' || isMobileOrTablet) ? "relative" : "absolu
   >
     {item.text || "Link Text"}
   </a>
-)}            
+)} 
+
+{item.type === 'input' && (
+  <div style={{ width: '100%', height: '100%' }}>
+    <input
+    id={`input-${item.id}`}
+      type="text"
+      placeholder={item.placeholder || "Enter text..."}
+      disabled={!state.isPreviewMode}
+      style={{
+        ...item.styles,
+        width: "100%",
+        height: "100%",
+        outline: isSelected ? "2px solid #4f46e5" : "none",
+        pointerEvents: state.isPreviewMode ? "auto" : "none",
+      }}
+    />
+    {!state.isPreviewMode && (
+       <div style={{position: 'absolute', top: '-18px', fontSize: '10px', color: '#64748b'}}>
+         Input Field ({item.name || 'no-name'})
+       </div>
+    )}
+  </div>
+)}
+
       </div>
 
     </React.Fragment>
   );
 })}
 
-{targets.length > 0 && !state.isPreviewMode && (
+{validTargets.length > 0 && !state.isPreviewMode && (
                <>
+               
 <Moveable
-target={targets}
+target={validTargets.length === 1 ? validTargets[0] : validTargets}
     draggable={true}
     resizable={true}
     origin={false}
@@ -635,82 +779,33 @@ onResizeGroupEnd={({ events }) => {
       )}
 
 
-      {!state.isDraggingNow && isSectionSelected && (
-<Moveable
-    target={sectionRef} 
-    resizable={true}
-    draggable={true} 
-    edgeDraggable={false} 
-    edge={false} 
-    stopPropagation={true}
-    keepRatio={false}
-    throttleResize={1}
-    renderDirections={["n", "nw", "ne", "s", "sw", "se", "w", "e"]}
-    origin={false}
-    zoom={1 / canvasScale}
-    onDrag={({ target, left, top }) => {
-        target.style.left = `${left}px`;
-        target.style.top = `${top}px`;
-    }}
- onDragEnd={({ target, lastEvent }) => {
-        updateSection(state.activePageId, section.id, { 
-            styles: { 
-                ...section.styles, 
-                left: (section.styles?.left || 0) + lastEvent.beforeTranslate[0],
-top: (section.styles?.top || 0) + lastEvent.beforeTranslate[1],
-                position: 'absolute' 
-            } 
-        });
-    }}
-
-    onResizeStart={({ setOrigin, dragStart }) => {
-        setOrigin(["%", "%"]);
-        dragStart && dragStart.set(
-            parseFloat(sectionRef.current.style.left || 0), 
-            parseFloat(sectionRef.current.style.top || 0)
-        );
-    }}
-    onResize={({ target, width, height, drag }) => {
-        target.style.width = `${width}px`;
-        target.style.height = `${height}px`;
-        target.style.transform = `translate(${drag.beforeTranslate[0]}px, ${drag.beforeTranslate[1]}px)`;
-    }}
-    onResizeEnd={({ target, lastEvent }) => {
-        updateSection(state.activePageId, section.id, {
-            styles: { 
-                ...section.styles, 
-                width: parseFloat(target.style.width),
-                height: parseFloat(target.style.height),
-                left: (section.styles.left || 0) + (lastEvent?.drag.beforeTranslate[0] || 0),
-                top: (section.styles.top || 0) + (lastEvent?.drag.beforeTranslate[1] || 0),
-            }
-        });
-        target.style.transform = "none"; 
-    }}
-/>
-
-)}
 
 <Selecto
-  container={sectionRef.current}
   dragContainer={sectionRef.current}
-  portalContainer={sectionRef.current}
+  portalContainer={document.body}
   rootContainer={sectionRef.current}
   
   selectableTargets={
-    interactionMode === "select"
+    interactionMode === "select"&& !state.isPreviewMode
       ? [`.section-${section.id} .canvas-element`] 
       : []
   }
   
-  hitRate={0}
-  selectByClick={false}
-  selectFromInside={false}
-  preventDragFromInside={true}
-  
+  hitRate={20}
+  selectByClick={true}
+  selectFromInside={true}
+  toggleContinueSelect={["shift"]}
+container={document.querySelector("#main-canvas") || undefined}  
+  scrollOptions={{
+    container: sectionRef.current,
+    threshold: 30,
+    throttleTime: 30,
+  }}
+
   onDragStart={e => {
     if (e.inputEvent.target.closest(".moveable-control-box") || 
-        e.inputEvent.target.closest(".section-toolbar")) { 
+        e.inputEvent.target.closest(".section-toolbar") ||
+        e.inputEvent.target.closest(".trash-button-class")) { 
       e.stop();
       return;
     }
@@ -721,212 +816,21 @@ top: (section.styles?.top || 0) + lastEvent.beforeTranslate[1],
     }
 
     const rect = sectionRef.current.getBoundingClientRect();
-    e.datas.offset = [
-      rect.left + window.scrollX,
-      rect.top + window.scrollY
-    ];
+    e.datas.offset = [rect.left, rect.top];
   }}
 
-  onDrag={(e) => {
-    const box = sectionRef.current.querySelector(".selecto-selection");
-    if (box) {
-      console.log("Selection Rect:", e.rect);
-    }
-  }}
-  
   onSelect={e => {
     const ids = e.selected.map(el => String(el.id));
-    
-    if (ids.length === 0) {
-      const currentId = state.selectedElementIds?.[0] || "";
-      if (currentId === section.id) {
-        return; 
-      }
-    }
-    
+    if (ids.length === 0 && state.selectedElementIds?.[0] === section.id) return;
     store.selectItems(ids);
   }}
 />
-<style>{`
-    #main-canvas {
-        position: relative;
-        overflow: hidden;
-        transition: background-color 0.3s ease, transform 0.3s ease !important;
-    }
 
-    .main-canvas-area.snapping {
-        cursor: crosshair;
-    }
-
-
-
-.section-container {
-    pointer-events: auto !important;
-    overflow: visible !important; /* للسماح للمربع بالتحرك بحرية */
-}
-    
-
-.section-container.selected, 
-    .section-container > *, 
-    .text-element-wrapper, 
-    .button-container-wrapper {
-        pointer-events: auto !important;
-       
-    }
-
-    .section-container[style*="position: absolute"] {
-        cursor: move !important;
-    }
-/* أضيفي هذا الجزء لضبط مربع التحديد الأزرق */
-.section-container .selecto-selection {
-    position: absolute !important; /* ليتحرك المربع بناءً على إحداثيات السكشن */
-    background: rgba(79, 70, 229, 0.15) !important;
-    border: 1px solid #4f46e5 !important;
-    z-index: 9999 !important;
-    pointer-events: none !important; /* لكي لا يمنع الماوس من الوصول للعناصر */
-    top: 0;
-    left: 0;
-    display: none; /* مخفي افتراضياً */
-}
-
-/* إظهار المربع فقط عندما يبدأ السحب فعلياً (تظهر قيمة width) */
-.section-container .selecto-selection[style*="width"] {
-    display: block;
-}
-    .is-blank-layer { 
-        pointer-events: auto !important; 
-    }
-
-    .moveable-target {
-        will-change: transform, width, height;
-        transition: none !important; 
-    }
-
-    .section-container * {
-        backface-visibility: hidden;
-        perspective: 1000;
-    }
-
-    [style*="sectionToolbar"] {
-        pointer-events: auto !important;
-        z-index: 1000001 !important;
-    }
-
-    [style*="toolBtn"] {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-    }
-
-    .element-moveable-tool {
-        z-index: 1000000 !important;
-    }
-
-    .section-resizer-tool .moveable-control { 
-        background: #4f46e5 !important; 
-        opacity: 0.8; 
-        height: 6px !important; 
-        width: 50px !important; 
-        border-radius: 10px !important;
-        border: none !important;
-    }
-
-    .button-container-wrapper {
-        width: 100% !important;
-        height: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-sizing: border-box !important;
-        overflow: hidden;
-    }
-
-    .text-element-wrapper > div, 
-    .button-container-wrapper > span, 
-    img {
-        pointer-events: auto !important;
-    }
-
-    .moveable-control {
-        background: #ffffff !important;
-        border: 2px solid #4f46e5 !important;
-        width: 12px !important;
-        height: 12px !important;
-        border-radius: 50% !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-    }
-
-    .moveable-control-box {
-        z-index: 2147483647 !important;
-    }
-
-    .moveable-snap-digit, 
-    .moveable-snappable-dimension {
-        display: none !important;
-        opacity: 0 !important;
-    }
-
-    .moveable-control-box .moveable-line.moveable-guideline {
-        background: transparent !important;
-        display: block !important;
-        opacity: 1 !important;
-    }
-
-    .moveable-control-box .moveable-line.moveable-guideline.moveable-vertical {
-        border-left: 1px dashed #4f46e5 !important;
-        width: 1px !important;
-    }
-
-    .moveable-control-box .moveable-line.moveable-guideline.moveable-horizontal {
-        border-top: 1px dashed #4f46e5 !important;
-        height: 1px !important;
-    }
-
-    .moveable-control-box .moveable-line.moveable-guideline.moveable-vertical.moveable-center {
-        border-left: 1px dashed #ff0000 !important;
-        height: 10000px !important;
-        top: -5000px !important;
-        z-index: 9999999 !important;
-        background: transparent !important;
-    }
-
-    .moveable-control-box .moveable-line.moveable-guideline.moveable-horizontal.moveable-middle {
-        border-top: 1px dashed #ff0000 !important;
-        width: 10000px !important;
-        left: -5000px !important;
-        z-index: 9999999 !important;
-        background: transparent !important;
-    }
-
-    .moveable-line.moveable-snap-line {
-        background: transparent !important;
-        border-top: 1px dashed #4f46e5 !important;
-    }
-
-    .moveable-line.moveable-direction {
-        background: transparent !important;
-        border-top: 1px dashed #4f46e5 !important;
-    }
-
-
-.selecto-selection {
-    background: rgba(66,133,244,.25) !important;
-    border: 1px solid #4285f4 !important;
-    z-index: 2147483647 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    pointer-events: none !important;
-    will-change: transform;
-}
-/* لمنع ظهور النقطة المزعجة في الزاوية قبل السحب */
-.selecto-selection:not([style*="width"]) {
-    display: none !important;
-}
-
-`}</style>
 
 </div>
   );
 }
+
 
 const styles = {
   deleteSectionBtn: { position: "absolute", right: 10, top: 10, zIndex: 2000, background: "#fee2e2", border: "none", cursor: "pointer", padding: 4, borderRadius: 4 },

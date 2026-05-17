@@ -167,10 +167,8 @@ const SaveProcessPreview = () => {
 };
 
 export default function GuidePage() {
-  // دالة التعامل مع التوجيه الذكي
   const handleStartAction = () => {
-    // يمكنك استبدال هذه بـ Context أو Auth Hook الخاص بك
-    const isLoggedIn = false; // افتراضياً لم يسجل الدخول
+    const isLoggedIn = false;
     
     if (isLoggedIn) {
       window.location.href = '/dashboard';

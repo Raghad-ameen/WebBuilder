@@ -22,6 +22,7 @@ export function useEditorStore(initialState) {
     isDraggingNow: false,  
   draggingType: null,
   isPreviewMode: false,
+  isFormOpen: false,
     ...initialState
 });
 const togglePreview = useCallback(() => {
@@ -147,7 +148,6 @@ const deletePage = useCallback((pageId) => {
       pages: prev.pages.map(p => p.id === pageId ? { ...p, name: newName } : p)
     }));
   }, [state, saveToHistory]);
-  // 1. دالة التجميع
 const groupSelectedItems = useCallback(() => {
   setState(prev => {
     const selectedIds = prev.selectedElementIds || [];
@@ -173,7 +173,6 @@ const groupSelectedItems = useCallback(() => {
   createdAt: Date.now()
 }
               ],
-              // مهم جداً: ربط العناصر بالـ group
               sections: p.sections.map(s => ({
                 ...s,
                 data: {
@@ -191,7 +190,6 @@ const groupSelectedItems = useCallback(() => {
     };
   });
 }, [setState]);
-// 2. دالة فك التجميع
 const ungroupSelectedItems = useCallback(() => {
   setState(prev => {
     const selectedIds = prev.selectedElementIds || [];
@@ -238,14 +236,13 @@ const ungroupSelectedItems = useCallback(() => {
 }, [setState]);
 const updateCanvasStyles = useCallback((newStyles) => {
   setState(prev => {
-    // حفظ الحالة قبل تغيير اللون لتمكين التراجع (Undo)
     saveToHistory(prev); 
     return {
       ...prev,
       canvasStyles: { ...prev.canvasStyles, ...newStyles }
     };
   });
-}, [saveToHistory]); // تأكدي من إضافة saveToHistory هنا
+}, [saveToHistory]);
 
 const openModal = useCallback((type, data = null) => {
   setState(prev => ({
@@ -304,12 +301,6 @@ const updateSection = useCallback((pageId, sectionId, newData) => {
 
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
-  console.log("ADDING ITEM:", {
-  type,
-  sectionId,
-  x,
-  y
-});
 
   const elementDefaults = {
     button: {
@@ -330,6 +321,18 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
       text: "",
       styles: { backgroundColor: "#4f46e5", borderRadius: "0px" }
     },
+    input: {
+    width: 250,
+    height: 45,
+    text: "",
+    styles: { 
+      backgroundColor: "#ffffff", 
+      color: "#000000", 
+      borderRadius: "6px",
+      border: "1px solid #cbd5e1",
+      padding: "10px"
+    }
+  },
     image: {
       width: 250,
       height: 180,
@@ -341,7 +344,7 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
       height: 50,
       text: "",
       styles: { backgroundColor: "transparent", color: "#000000" }
-    }
+    },
   };
 
   const config = elementDefaults[type] || elementDefaults.default;
@@ -370,6 +373,10 @@ const newItem = {
   width: finalWidth,
   height: finalHeight,
   text: extraData.text !== undefined ? extraData.text : config.text,
+  action: {
+    type: "none", 
+    payload: "" 
+  },
   styles: {
     ...config.styles, 
     zIndex: 100,
@@ -386,9 +393,7 @@ const newItem = {
     ),
   }
 };    
-console.log("NEW ITEM:", newItem);
 let updatedSections = [...activePage.sections];
-console.log("BEFORE UPDATE sections:", updatedSections);
 
 if (updatedSections?.length === 0) {
   const newAutoSectionId = `s-${Date.now()}`;
@@ -412,12 +417,10 @@ if (updatedSections?.length === 0) {
     }
   }];
 }else {
-  console.log("ADDING TO EXISTING SECTION:", sectionId);
       const targetId = sectionId || updatedSections[0].id;
       newItem.parentSectionId = targetId;
       updatedSections = updatedSections.map(s => {
         if (s.id === targetId) {
-            console.log("FOUND TARGET SECTION:", s.id);
           return {
             ...s,
             data: {
@@ -429,7 +432,6 @@ if (updatedSections?.length === 0) {
         return s;
       });
     }
-console.log("AFTER UPDATE sections:", updatedSections);
     return {
       ...prev,
       pages: prev.pages.map(p => 
@@ -441,7 +443,6 @@ console.log("AFTER UPDATE sections:", updatedSections);
   });
 
   setTimeout(() => {
-    console.log("AUTO SELECTING:", finalNewId);
     setState(current => ({
       ...current,
       selectedElementIds: [finalNewId],
@@ -451,18 +452,18 @@ console.log("AFTER UPDATE sections:", updatedSections);
 
 }, [setState]);
 
+
+
+
+
+
 const selectItems = useCallback((ids) => {
-  console.log("SELECT IDS:", ids);
   setState(prev => {
-    // 1. العثور على الصفحة الحالية للحصول على المجموعات (Groups) المعرفة فيها
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
 const groups = activePage?.groups || [];
     
-    // 2. مصفوفة لتخزين المعرفات النهائية (العناصر المختارة + أعضاء مجموعاتهم)
     let finalIds = [...ids];
 
-    // 3. منطق التحقق من المجموعات:
-    // لكل مجموعة، إذا كان أحد العناصر المختارة موجوداً داخلها، أضف كل المجموعة
     groups.forEach(group => {
       const hasSelectedMember = group.elementIds.some(memberId => ids.includes(memberId));
       if (hasSelectedMember) {
@@ -476,12 +477,9 @@ const groups = activePage?.groups || [];
   ids.some(id => group.elementIds.includes(id))
 );
 
-    // 4. تنظيف المصفوفة من التكرار (Unique IDs)
     finalIds = [...new Set(finalIds)];
-     console.log("FINAL SELECTED:", finalIds);
 
 
-    // 5. التحقق من التغيير لمنع إعادة الرندرة (Optimization)
     if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(finalIds)) {
       return prev;
     }
@@ -616,9 +614,8 @@ selectedElementIds: [],
 }, [saveToHistory]);
 
 const deleteSection = useCallback((sectionId) => {
-  // لا تستخدمي state هنا مباشرة، استخدمي prev
   setState(prev => {
-    saveToHistory(prev); // حفظ النسخة السابقة قبل الحذف
+    saveToHistory(prev);
     const newState = {
       ...prev,
       pages: prev.pages.map(p => ({
@@ -628,11 +625,10 @@ const deleteSection = useCallback((sectionId) => {
     };
     return newState;
   });
-}, [saveToHistory]); // احذفي state من هنا
+}, [saveToHistory]);
 const deleteElement = useCallback((itemId) => {
   saveToHistory(state);
   
-  // ✅ الحل: استدعاء selectItems لتفريغ التحديد بدلاً من onSelect
   selectItems([]); 
   
   setState(prev => {
@@ -652,7 +648,7 @@ const deleteElement = useCallback((itemId) => {
     localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
-}, [state, saveToHistory, selectItems]); // لا تنسي إضافة selectItems لمصفوفة التبعيات
+}, [state, saveToHistory, selectItems]);
 const undo = useCallback(() => {
   setHistory((prevHistory) => {
     if (prevHistory?.length === 0) return prevHistory;
@@ -685,10 +681,6 @@ const redo = useCallback(() => {
   });
 }, []);
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
-  console.log("UPDATE ITEM CALLED:", {
-  itemId,
-  data
-});
   setState(prev => {
     saveToHistory(prev); 
 
@@ -706,19 +698,13 @@ const updateItem = useCallback((pageId, sectionId, itemId, data) => {
                 ...s.data,
                 items: s.data.items.map(it => {
                   if (it.id === itemId) {
-                     console.log("UPDATING OLD ITEM:", it);
-
-                    console.log("NEW VALUES:", {
-                      ...it,
-                      ...data
-                    });
 
                     return {
                       ...it,
                       ...data,
                       styles: { 
                         ...(it.styles || {}), 
-                        ...(data.styles || {}) 
+                        ...(data?.styles || {})
                       }
                     };
                   }
@@ -811,6 +797,89 @@ const moveSection = useCallback((sectionId, direction) => {
   });
 }, [saveToHistory]);
 
+
+const injectFormTemplate = useCallback((sectionId) => {
+  setState(prev => {
+    const activePage = prev.pages?.find(p => p.id === prev.activePageId);
+    if (!activePage || !sectionId) return prev;
+
+    saveToHistory(prev);
+    const timestamp = Date.now();
+    const containerId = `e-${timestamp}-container`;
+
+    const formElements = [
+      // 1. الحاوية (الخلفية)
+      {
+        id: containerId,
+        type: "shape",
+        x: 400, y: 20, width: 400, height: 350,
+        styles: { 
+          backgroundColor: "#ffffff", 
+          borderRadius: "12px", 
+          boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+          border: "1px solid #e2e8f0"
+        }
+      },
+      // 2. العنوان داخل الحاوية
+      {
+        id: `e-${timestamp}-t`, type: "text", text: "Contact Us",
+        x: 425, y: 40, width: 350, height: 40,
+        styles: { fontSize: "22px", fontWeight: "bold", color: "#1e293b", textAlign: "center" }
+      },
+      // 3. حقول الإدخال
+      {
+        id: `e-${timestamp}-n`, type: "input", text: "Your Name",
+        x: 425, y: 100, width: 350, height: 45,
+        styles: { borderRadius: "6px", border: "1px solid #cbd5e1", padding: "10px" }
+      },
+      {
+        id: `e-${timestamp}-e`, type: "input", text: "Email Address",
+        x: 425, y: 160, width: 350, height: 45,
+        styles: { borderRadius: "6px", border: "1px solid #cbd5e1", padding: "10px" }
+      },
+      // 4. زر الإرسال
+      {
+        id: `e-${timestamp}-b`, type: "button", text: "Send Message",
+        x: 425, y: 230, width: 350, height: 45,
+        action: { type: "submit_form", payload: "" },
+        styles: { backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: "6px", fontWeight: "600" }
+      }
+    ];
+
+    return {
+      ...prev,
+      pages: prev.pages.map(p => p.id === prev.activePageId ? {
+        ...p,
+        sections: p.sections.map(s => s.id === sectionId ? {
+          ...s,
+          data: { ...s.data, items: [...(s.data.items || []), ...formElements] }
+        } : s)
+      } : p)
+    };
+  });
+}, [saveToHistory]);
+const handleAction = useCallback((action) => {
+  if (!action || action.type === "none") return;
+
+  switch (action.type) {
+    case "url":
+      const url = action.payload.startsWith("http") ? action.payload : `https://${action.payload}`;
+      window.open(url, "_blank");
+      break;
+
+    case "page":
+      setState(prev => ({ ...prev, activePageId: action.payload }));
+      break;
+
+    case "scroll":
+      const element = document.getElementById(action.payload);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+      break;
+  }
+}, []);
+
   return { 
     state, 
     setState,
@@ -825,6 +894,8 @@ const moveSection = useCallback((sectionId, direction) => {
     copyElements,  
     pasteElements, 
     cutElements,
+    injectFormTemplate, 
+    handleAction,
 setViewMode: (mode) => {
   const sizes = {
     desktop: { width: '100%', height: '800px' },

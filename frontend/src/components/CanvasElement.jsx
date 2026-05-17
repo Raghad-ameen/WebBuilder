@@ -1,58 +1,36 @@
 import React from 'react';
 
-export default function CanvasElement({ store, children }) {
-  const { state, setState, addItemAtPosition } = store;
-const canvasBgColor = state.canvasStyles?.backgroundColor || state.canvasBg || "#ffffff";
-  const getCanvasConfig = () => {
-    switch (state.viewMode) {
-      case 'mobile': return { width: '375px', scale: 0.8 };
-      case 'tablet': return { width: '768px', scale: 0.7 };
-      default: return { width: '100%', scale: 1 };
-    }
+export default function CanvasElement({ store, children, width, scale }) {
+  const { state, addItemAtPosition } = store;
+
+  const handleMouseUp = (e) => {
+    if (!state.isDraggingNow) return;
+
+    const canvas = document.getElementById('main-canvas');
+    if (!canvas) return;
+
+    let canvasWidth = state.viewMode === 'mobile' ? 375 : (state.viewMode === 'tablet' ? 640 : 1024);
+    const centerX = (canvasWidth / 2) - 75;
+    const centerY = 100; 
+
+    addItemAtPosition(state.draggingType, centerX, centerY);
   };
 
-  const { width, scale } = getCanvasConfig();
+  const numericWidth = parseInt(width) || 1024;
+  const estimatedHeight = parseInt(state.canvasHeight) || 750;
 
-
-const handleMouseUp = (e) => {
-  if (!state.isDraggingNow) return;
-
-  const canvas = document.getElementById('main-canvas');
-  if (!canvas) return;
-
-  let canvasWidth;
-  if (state.viewMode === 'mobile') canvasWidth = 375;
-  else if (state.viewMode === 'tablet') canvasWidth = 768;
-  else canvasWidth = canvas.offsetWidth; 
-
-  const centerX = (canvasWidth / 2) - 75;
-  
-  const centerY = 100; 
-
-
-  addItemAtPosition(state.draggingType, centerX, centerY);
-  
-  setState(prev => ({ 
-    ...prev, 
-    isDraggingNow: false, 
-    draggingType: null 
-  }));
-};
-
-return (
+  return (
     <div 
       id="canvas-wrapper"
       key={state.viewMode}
       style={{
-        flex: 1,
-        backgroundColor: 'transparent' ,
+        width: '100%',
         display: 'flex',
         justifyContent: 'center', 
         alignItems: 'flex-start',
-        minHeight: '100vh', 
         position: 'relative',
-        overflow: 'auto',
-        padding: state.viewMode === 'desktop' ? '0' : '40px 0',
+        height: `${estimatedHeight * scale}px`,
+        overflow: 'visible'
       }}
     >
       {state.isDraggingNow && (
@@ -68,28 +46,35 @@ return (
         />
       )}
 
-      <div 
-        id="main-canvas" 
-        onMouseUp={handleMouseUp}
-        className="main-canvas-area"
-        style={{ 
-            width: width, 
-            minHeight: "100vh", 
-          backgroundColor: canvasBgColor, // استخدام المتغير الصحيح
-            boxShadow: state.viewMode === 'desktop' ? "none" : "0 10px 50px rgba(0,0,0,0.1)", 
-            position: "relative", 
+      <div style={{
+        width: `${numericWidth * scale}px`,
+        height: `${estimatedHeight * scale}px`,
+        position: 'relative',
+        display: 'flex',
+        justifyContent: 'center',
+        overflow: 'visible',
+        transition: "width 0.2s ease, height 0.2s ease"
+      }}>
+        <div 
+          id="main-canvas" 
+          onMouseUp={handleMouseUp}
+          className="main-canvas-area"
+          style={{ 
+            width: width,
+            position: "absolute", 
+            top: 0,
+            left: '50%',
             zIndex: 1,
             overflow: "visible", 
-            transform: `scale(${scale})`,
+            transform: `translateX(-50%) scale(${scale})`,
             transformOrigin: "top center",
-            transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
-            margin: '0 auto',
+            transition: "transform 0.2s ease-out, width 0.2s ease",
             display: 'flex',
             flexDirection: 'column',
-        }}
-      >
-        {children}
-        
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
