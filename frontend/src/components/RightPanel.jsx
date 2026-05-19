@@ -18,8 +18,38 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ArrowUpDown,
   Palette,
-  Layers
+  Layers,
+  FrameIcon,
+  RotateCcw
 } from "lucide-react"; 
+
+const DEFAULT_VALUES = {
+  opacity: 1,
+  zIndex: 0,
+  borderWidth: 0,
+  borderRadius: 0,
+  borderColor: "#cbd5e1",
+  borderStyle: "solid",
+  shadowColor: "transparent",
+  filterBlur: 0,
+  filterBrightness: 100,
+  filterContrast: 100,
+  filterGrayscale: 0,
+  text: "Type something...",
+  fontSize: 16,
+  fontWeight: "normal",
+  color: "#000000",
+  textAlign: "left",
+  letterSpacing: 0,
+  lineHeight: 1.2,
+  textDecoration: "none",
+  textTransform: "none",
+  src: "",
+  objectFit: "cover",
+  backgroundColor: "#ffffff",
+  minHeight: 100,
+  linkUrl: ""
+};
 
 const FIELD_ICONS = {
   opacity: <Eye size={16} />,
@@ -27,7 +57,7 @@ const FIELD_ICONS = {
   borderWidth: <span style={{ fontWeight: 'bold', fontSize: '11px' }}>B⇆</span>,
   borderRadius: <CornerUpLeft size={16} style={{ transform: 'rotate(-90deg)' }} />,
   borderColor: <Palette size={15} style={{ opacity: 0.8 }} />,
-  borderStyle: <span style={{ letterSpacing: '1px', fontWeight: 'bold' }}></span>,
+  borderStyle: <span style={{ letterSpacing: '1px', fontWeight: 'bold' }}><FrameIcon size={14}/></span>,
   shadowColor: <span style={{ filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.3))', display: 'inline-block' }}><Paintbrush size={14} /></span>,
   filterBlur: <Focus size={16} />,
   filterBrightness: <Sun size={16} />,
@@ -64,7 +94,7 @@ export const PROPERTY_CONTROLS = {
     { section: "Border", label: "Border Width", field: "borderWidth", type: "number", unit: "px" },
     { section: "Border", label: "Radius", field: "borderRadius", type: "number", unit: "px" },
     { section: "Border", label: "Border Color", field: "borderColor", type: "color" },
-    { section: "Border", label: "Style", field: "borderStyle", type: "select", options: ["none", "solid", "dashed", "dotted", "double"] },
+    { section: "Border", label: "Border Style", field: "borderStyle", type: "select", options: ["none", "solid", "dashed", "dotted", "double"] },
     { section: "Shadow", label: "Shadow Color", field: "shadowColor", type: "color" },
     { section: "Filters", label: "Blur", field: "filterBlur", type: "range", min: 0, max: 20 },
     { section: "Filters", label: "Brightness", field: "filterBrightness", type: "range", min: 0, max: 200 },
@@ -82,6 +112,17 @@ export const PROPERTY_CONTROLS = {
     { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["none", "underline", "line-through", "overline", "underline wavy", "underline dotted", "underline dashed"] },
     { section: "Typography", label: "Transform", field: "textTransform", type: "select", options: ["none", "uppercase", "lowercase", "capitalize"] },
   ],
+  // (التعديل رقم 1 من الإجابة السابقة) خصائص الزر المحدثة لحل مشكلة التداخل
+  button: [
+    { section: "Typography", label: "Button Text", field: "text", type: "text" },
+    { section: "Style", label: "Background Color", field: "backgroundColor", type: "advanced-color" },
+    { section: "Border", label: "Border Width", field: "borderWidth", type: "number", unit: "px" },
+    { section: "Border", label: "Radius", field: "borderRadius", type: "number", unit: "px" },
+    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px", isTextStyle: true },
+    { section: "Typography", label: "Font Color", field: "color", type: "advanced-color", isTextStyle: true },
+    { section: "Typography", label: "Font Weight", field: "fontWeight", type: "select", options: ["normal", "bold", "500", "700"], isTextStyle: true },
+    { section: "Typography", label: "Align", field: "textAlign", type: "alignment-toggle", isTextStyle: true },
+  ],
   image: [
     { section: "Image Settings", label: "Image URL", field: "src", type: "text" },
     { section: "Image Settings", label: "Object Fit", field: "objectFit", type: "select", options: ["cover", "contain", "fill"] },
@@ -92,9 +133,9 @@ export const PROPERTY_CONTROLS = {
   link: [
     { section: "Action", label: "Link URL", field: "linkUrl", type: "text", placeholder: "https://google.com" },
     { section: "Typography", label: "Link Text", field: "text", type: "text" },
-    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
-    { section: "Typography", label: "Color", field: "color", type: "advanced-color" },
-    { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none"] },
+    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px", isTextStyle: true },
+    { section: "Typography", label: "Color", field: "color", type: "advanced-color", isTextStyle: true },
+    { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none"], isTextStyle: true },
   ],
   section: [
     { field: 'backgroundColor', label: 'Background Color', type: 'advanced-color', section: 'Appearance' },
@@ -227,13 +268,9 @@ const AdvancedColorPicker = ({ value, config, onPropertyChange }) => {
               <option value="180">180°</option>
             </select>
           </div>
-          {/* تدرجات جاهزة سريعة للاختيار المباشر الاحترافي */}
           <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
-            {/* بنفسجي سحري */}
             <div onClick={() => { setGradColor1("#4f46e5"); setGradColor2("#06b6d4"); updateGradient("#4f46e5", "#06b6d4", gradAngle); }} style={{ ...styles.gradPreset, background: "linear-gradient(135deg, #4f46e5, #06b6d4)" }} />
-            {/* غروب الشمس */}
             <div onClick={() => { setGradColor1("#f59e0b"); setGradColor2("#ef4444"); updateGradient("#f59e0b", "#ef4444", gradAngle); }} style={{ ...styles.gradPreset, background: "linear-gradient(135deg, #f59e0b, #ef4444)" }} />
-            {/* غابة ليلية */}
             <div onClick={() => { setGradColor1("#10b981"); setGradColor2("#059669"); updateGradient("#10b981", "#059669", gradAngle); }} style={{ ...styles.gradPreset, background: "linear-gradient(135deg, #10b981, #059669)" }} />
           </div>
         </div>
@@ -273,26 +310,40 @@ export default function RightPanel({ store }) {
     }
   }
 
-  const itemType = selectedItem?.type;
+  const itemType = selectedItem?.type?.toLowerCase();
+
   const allControls = useMemo(() => {
     if (!itemType) return [];
     return [...(PROPERTY_CONTROLS[itemType] || []), ...PROPERTY_CONTROLS.common];
   }, [itemType]);
 
+  // ==========================================
+  // [تعديل رقم 2]: تحديث الـ useEffect المسؤول عن قراءة القيم الافتراضية بشكل صحيح
+  // ==========================================
   useEffect(() => {
     if (!selectedId || !selectedItem || allControls.length === 0) return;
 
     const initialLocals = {};
     allControls.forEach(ctrl => {
-      let rawValue = ctrl.field === 'linkUrl' ? selectedItem.action?.url : selectedItem.styles?.[ctrl.field];
-      if (rawValue === undefined) rawValue = selectedItem[ctrl.field];
+      let rawValue;
+      if (ctrl.field === 'linkUrl') {
+        rawValue = selectedItem.action?.url;
+      } else if (ctrl.isTextStyle) {
+        rawValue = selectedItem.textStyles?.[ctrl.field];
+      } else {
+        rawValue = selectedItem.styles?.[ctrl.field];
+      }
+      
+      if (rawValue === undefined) {
+        rawValue = selectedItem[ctrl.field] !== undefined ? selectedItem[ctrl.field] : DEFAULT_VALUES[ctrl.field];
+      }
       initialLocals[ctrl.field] = rawValue;
     });
 
     setLocalValues(initialLocals);
     setShowMore(false);
     setOpenPropertyField(null);
-  }, [selectedId]); 
+  }, [selectedId, allControls]); 
 
   const handleCloseToolbar = useCallback(() => {
     setState((prev) => ({ ...prev, selectedElementIds: [], activeElementId: null }));
@@ -339,19 +390,27 @@ export default function RightPanel({ store }) {
     updateItem(state.activePageId, selectedItem.sectionId, selectedId, { action: { type, payload } });
   };
 
-const handlePropertyChange = (config, incomingValue) => {
+  const handlePropertyChange = (config, incomingValue) => {
     if (!selectedItem) return;
 
     setLocalValues(prev => ({ ...prev, [config.field]: incomingValue }));
     
-    const isStyle = !['text', 'src', 'linkUrl'].includes(config.field);
     let updatePayload = {};
 
     if (config.field === 'linkUrl') {
       updatePayload = { action: { ...selectedItem.action, url: incomingValue } };
-    } else if (isStyle) {
-      const currentStyles = { ...selectedItem.styles };
+    } 
+    else if (config.isTextStyle) {
+      const currentTextStyles = { ...selectedItem.textStyles };
+      currentTextStyles[config.field] = incomingValue;
 
+      if (config.unit) {
+        currentTextStyles[config.field] = `${incomingValue}${config.unit}`;
+      }
+      updatePayload = { textStyles: currentTextStyles };
+    } 
+    else if (!['text', 'src'].includes(config.field)) {
+      const currentStyles = { ...selectedItem.styles };
       currentStyles[config.field] = incomingValue;
 
       if (config.field === 'backgroundColor') {
@@ -372,15 +431,15 @@ const handlePropertyChange = (config, incomingValue) => {
         currentStyles['textAlign'] = incomingValue;
       }
 
-      const blurVal = config.field === 'filterBlur' ? incomingValue : (parseFloat(currentStyles['filterBlur']) || 0);
-      const brightVal = config.field === 'filterBrightness' ? incomingValue : (parseFloat(currentStyles['filterBrightness']) !== undefined ? parseFloat(currentStyles['filterBrightness']) : 100);
-      const contrastVal = config.field === 'filterContrast' ? incomingValue : (parseFloat(currentStyles['filterContrast']) !== undefined ? parseFloat(currentStyles['filterContrast']) : 100);
-      const grayVal = config.field === 'filterGrayscale' ? incomingValue : (parseFloat(currentStyles['filterGrayscale']) || 0);
+      const blurVal = currentStyles['filterBlur'] !== undefined ? parseFloat(currentStyles['filterBlur']) : 0;
+      const brightVal = currentStyles['filterBrightness'] !== undefined ? parseFloat(currentStyles['filterBrightness']) : 100;
+      const contrastVal = currentStyles['filterContrast'] !== undefined ? parseFloat(currentStyles['filterContrast']) : 100;
+      const grayVal = currentStyles['filterGrayscale'] !== undefined ? parseFloat(currentStyles['filterGrayscale']) : 0;
 
       currentStyles['filter'] = `blur(${blurVal}px) brightness(${brightVal}%) contrast(${contrastVal}%) grayscale(${grayVal}%)`;
 
-      const shadowColor = config.field === 'shadowColor' ? incomingValue : (currentStyles['shadowColor'] || 'transparent');
-      if (shadowColor && shadowColor !== 'transparent') {
+      const shadowColor = currentStyles['shadowColor'] || 'transparent';
+      if (shadowColor && shadowColor !== 'transparent' && shadowColor !== 'none') {
         currentStyles['boxShadow'] = `0px 4px 12px ${shadowColor}`;
       } else {
         currentStyles['boxShadow'] = 'none';
@@ -402,6 +461,13 @@ const handlePropertyChange = (config, incomingValue) => {
       debouncedUpdate(state.activePageId, selectedItem.sectionId, selectedId, updatePayload);
     }
   };
+
+  const handleResetProperty = (config, e) => {
+    e.stopPropagation();
+    const fallbackVal = DEFAULT_VALUES[config.field] !== undefined ? DEFAULT_VALUES[config.field] : "";
+    handlePropertyChange(config, fallbackVal);
+  };
+
   const renderControl = (config, isDense = false) => {
     const rawValue = localValues[config.field];
     let value;
@@ -449,33 +515,36 @@ const handlePropertyChange = (config, incomingValue) => {
             placeholder={config.placeholder || config.label}
           />
         );
-      case "color":
-        return (
-          <input
-            type="color"
-            value={value || "#000000"}
-            onChange={(e) => handlePropertyChange(config, e.target.value)}
-            style={styles.colorPicker}
-          />
-        );
-      case "advanced-color":
-        return (
-          <AdvancedColorPicker 
-            value={value} 
-            config={config} 
-            onPropertyChange={handlePropertyChange} 
-          />
-        );
+     // ابحث عن الـ case "color" والـ case "advanced-color" داخل دالة renderControl واستبدلهما بهذا:
+
+case "color":
+  // تأمين ألا يمرر "transparent" إلى input color العادي
+  const safeColor = (value === "transparent" || !value) ? "#000000" : value;
+  return (
+    <input
+      type="color"
+      value={safeColor}
+      onChange={(e) => handlePropertyChange(config, e.target.value)}
+      style={styles.colorPicker}
+    />
+  );
+
+case "advanced-color":
+  // تأمين ألا يمرر "transparent" إلى لوحة الألوان المتقدمة
+  const safeAdvancedColor = (value === "transparent" || !value) ? "#ffffff" : value;
+  return (
+    <AdvancedColorPicker 
+      value={safeAdvancedColor} 
+      config={config} 
+      onPropertyChange={handlePropertyChange} 
+    />
+  );
       case "alignment-toggle":
         return (
           <div style={styles.alignToggleGroup}>
-            {/* زر محاذاة لليسار */}
             <button style={{ ...styles.alignBtn, backgroundColor: value === 'left' ? '#e2e8f0' : 'transparent' }} onClick={() => handlePropertyChange(config, 'left')}><AlignLeft size={14} /></button>
-            {/* زر محاذاة للوسط */}
             <button style={{ ...styles.alignBtn, backgroundColor: value === 'center' ? '#e2e8f0' : 'transparent' }} onClick={() => handlePropertyChange(config, 'center')}><AlignCenter size={14} /></button>
-            {/* زر محاذاة لليمين */}
             <button style={{ ...styles.alignBtn, backgroundColor: value === 'right' ? '#e2e8f0' : 'transparent' }} onClick={() => handlePropertyChange(config, 'right')}><AlignRight size={14} /></button>
-            {/* زر توزيع النص عادل */}
             <button style={{ ...styles.alignBtn, backgroundColor: value === 'justify' ? '#e2e8f0' : 'transparent' }} onClick={() => handlePropertyChange(config, 'justify')}><AlignJustify size={14} /></button>
           </div>
         );
@@ -490,14 +559,16 @@ const handlePropertyChange = (config, incomingValue) => {
     }
   };
 
-  const visibleControls = useMemo(() => allControls.slice(0, 4), [allControls]);
-  const hiddenControls = useMemo(() => allControls.slice(4), [allControls]);
+  // ==========================================
+  // [تعديل رقم 3]: توسيع نطاق العناصر الظاهرة إلى 6 لضمان بقاء الشفافية والحدود في الشريط السريع
+  // ==========================================
+  const visibleControls = useMemo(() => allControls.slice(0, 6), [allControls]);
+  const hiddenControls = useMemo(() => allControls.slice(6), [allControls]);
 
   if (!selectedItem) return null;
 
   return (
     <div ref={toolbarRef} style={styles.floatingToolbar} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-      {/* حقن عائلة الخطوط الأساسية المتكاملة لضمان عمل أوزان النصوص 100, 200 بشكل فوري على الشاشة */}
       <style>{`
         body, input, select { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important; }
       `}</style>
@@ -533,7 +604,16 @@ const handlePropertyChange = (config, incomingValue) => {
 
             {isPopoverOpen && (
               <div style={styles.inlinePopover} onClick={(e) => e.stopPropagation()}>
-                <div style={styles.popoverHeader}>{ctrl.label}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "4px" }}>
+                  <div style={styles.popoverHeader}>{ctrl.label}</div>
+                  <button 
+                    onClick={(e) => handleResetProperty(ctrl, e)} 
+                    style={styles.resetBtn} 
+                    title="Reset to default"
+                  >
+                    <RotateCcw size={10} />
+                  </button>
+                </div>
                 {renderControl(ctrl, false)}
               </div>
             )}
@@ -568,7 +648,16 @@ const handlePropertyChange = (config, incomingValue) => {
                     {FIELD_ICONS[ctrl.field] || getFallbackIcon(ctrl.field)}
                     {ctrl.label}
                   </span>
-                  {renderControl(ctrl, true)}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {renderControl(ctrl, true)}
+                    <button 
+                      onClick={(e) => handleResetProperty(ctrl, e)} 
+                      style={styles.resetBtnInline} 
+                      title="Reset Property"
+                    >
+                      <RotateCcw size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -576,7 +665,7 @@ const handlePropertyChange = (config, incomingValue) => {
         </>
       )}
 
-      {['button', 'link', 'image', 'shape'].includes(selectedItem.type) && (
+      {['button', 'link'].includes(itemType) && (
         <>
           <div style={styles.divider} />
           <div style={styles.controlWrapper}>
@@ -623,15 +712,15 @@ const styles = {
   floatingToolbar: { display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", padding: "6px 12px", borderRadius: "30px", boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04)", border: "1px solid #cbd5e1", width: "fit-content", maxWidth: "95vw", overflow: "visible", pointerEvents: "auto", zIndex: 999, position: "relative", height: "46px" },
   itemBadge: { background: "#e2e8f0", color: "#334155", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", whiteSpace: "nowrap" },
   controlButtonTrigger: { display: "flex", alignItems: "center", justifyContent: "center", gap: "2px", background: "transparent", border: "none", width: "36px", height: "36px", borderRadius: "8px", cursor: "pointer", color: "#475569", position: "relative", transition: "all 0.15s ease" },
-  inlinePopover: { position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "10px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "6px", zIndex: 1002, whiteSpace: "nowrap" },
-  popoverHeader: { fontSize: "11px", fontWeight: "600", color: "#64748b", marginBottom: "2px", textAlign: "center" },
+  inlinePopover: { position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "10px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "4px", zIndex: 1002, whiteSpace: "nowrap" },
+  popoverHeader: { fontSize: "11px", fontWeight: "600", color: "#64748b", textAlign: "left" },
   input: { padding: "6px 8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", outline: "none", height: "32px", background: "#ffffff" },
   colorPicker: { width: "36px", height: "32px", padding: "2px", borderRadius: "6px", border: "1px solid #cbd5e1", cursor: "pointer", background: "transparent" },
   divider: { width: "1px", height: "20px", backgroundColor: "#cbd5e1", margin: "0 4px" },
   closeBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "50%" },
   moreBtn: { background: "transparent", border: "1px solid #cbd5e1", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", height: "32px", width: "32px", borderRadius: "6px" },
   
-  dropdownMenu: { position: "absolute", top: "calc(100% + 10px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "14px", display: "flex", flexDirection: "column", gap: "12px", minWidth: "310px", maxHeight: "320px", overflowY: "auto", zIndex: 1000 },
+  dropdownMenu: { position: "absolute", top: "calc(100% + 10px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "14px", display: "flex", flexDirection: "column", gap: "12px", minWidth: "350px", maxHeight: "320px", overflowY: "auto", zIndex: 1000 },
   dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px" },
   subLabel: { fontSize: "12px", color: "#334155", fontWeight: "500", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "8px" },
   controlWrapper: { display: "flex", alignItems: "center", gap: "6px" },
@@ -642,5 +731,8 @@ const styles = {
   advColorContainer: { display: "flex", flexDirection: "column", gap: "8px", padding: "4px 0" },
   tabHeader: { display: "flex", gap: "2px", background: "#f8fafc", padding: "2px", borderRadius: "6px", border: "1px solid #e2e8f0" },
   tabBtn: { flex: 1, border: "none", fontSize: "11px", padding: "4px 0", cursor: "pointer", borderRadius: "4px", color: "#334155", transition: "all 0.1s" },
-  gradPreset: { width: "24px", height: "24px", borderRadius: "50%", cursor: "pointer", border: "1px solid #cbd5e1", transition: "transform 0.1s" }
+  gradPreset: { width: "24px", height: "24px", borderRadius: "50%", cursor: "pointer", border: "1px solid #cbd5e1", transition: "transform 0.1s" },
+  
+  resetBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", padding: "2px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
+  resetBtnInline: { background: "#f1f5f9", border: "none", color: "#64748b", cursor: "pointer", width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }
 };

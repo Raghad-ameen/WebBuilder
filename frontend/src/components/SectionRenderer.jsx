@@ -309,6 +309,12 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
 
       const resolvedZIndex = isSelected ? 100000 : (item.styles?.zIndex !== undefined ? parseInt(item.styles.zIndex) : (2000 + index));
 
+      const getCleanFilter = () => {
+        if (!item.styles?.filter || item.styles.filter === "none") return "none";
+        return item.styles.filter.replace(/NaN%/g, "100%");
+      };
+      const cleanFilter = getCleanFilter();
+
       return (
         <React.Fragment key={item.id}>
           <div
@@ -362,13 +368,11 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
               zIndex: resolvedZIndex,
               
               margin: isMobileOrTablet ? "15px auto" : "0", 
-              display: (() => {
-                if (state.isPreviewMode) {
-                  if (item.type === 'button' && item.text !== "Send Message") return "flex";
-                  if (isPartOfForm) return isFormVisible ? "flex" : "none";
-                }
-                return isMobileOrTablet ? "block" : "initial";
-              })(),
+display: state.isPreviewMode 
+  ? (item.type === 'button' && item.text !== "Send Message" 
+      ? "flex" 
+      : (isPartOfForm ? (isFormVisible ? "flex" : "none") : (isMobileOrTablet ? "block" : "block")))
+  : "block", 
               cursor: item.isEditing ? "text" : "move",
               overflow: "visible",
               pointerEvents: "auto",
@@ -377,8 +381,7 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
               perspective: 1000,
               WebkitFontSmoothing: 'antialiased',
 
-              filter: item.styles?.filter || "none",
-              boxShadow: item.styles?.boxShadow || "none",
+              boxShadow: "none",
             }}
           >
 
@@ -412,6 +415,11 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
 {item.type === 'text' && (() => {
   const isColorGradient = item.styles?.color && item.styles.color.includes('gradient');
 
+  const shadowBlur = item.styles?.blur !== undefined ? `${item.styles.blur}px` : "2px";
+  const shadowColor = item.styles?.shadowColor || "rgba(0, 0, 0, 0.5)";
+  
+  const hasTextShadow = item.styles?.shadowColor || parseInt(item.styles?.blur) > 0;
+
   return (
     <div 
       className="text-element-wrapper"
@@ -425,6 +433,8 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
         justifyContent: item.styles?.textAlign === 'right' ? 'flex-end' : 
                         item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
         background: item.styles?.background || item.styles?.backgroundImage || "none",
+        boxShadow: "none",
+        filter: cleanFilter,
       }}
     >
       {!item.isEditing && (
@@ -455,8 +465,11 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
           wordBreak: "break-word", 
           overflowWrap: "anywhere",
           whiteSpace: "normal", 
+          
+          boxShadow: "none",
           filter: "none", 
-          textShadow: "none",
+
+          textShadow: hasTextShadow ? `2px 2px ${shadowBlur} ${shadowColor}` : "none",
 
           ...(isColorGradient ? {
             backgroundImage: item.styles.color,
@@ -472,38 +485,68 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       </div>
     </div>
   );
-})()}{item.type === 'image' && (
-              <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: item.src ? "transparent" : (item.styles?.backgroundColor || "#f8fafc"), border: item.src ? "none" : "1px dashed #cbd5e1", borderRadius: item.styles?.borderRadius || "8px", zIndex: isSelected ? 2000 : 100, ...item.styles }}>
-                {item.src ? (
-                  <img src={item.src} style={{ width: "100%", height: "100%", objectFit: "cover",maxWidth: "100%" }} alt="Uploaded content" />
-                ) : (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation(); 
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*'; 
-                      input.onchange = (event) => {
-                        const file = event.target.files[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => { updateItem(activePageId, section.id, item.id, { src: e.target.result }); };
-                          reader.readAsDataURL(file);
-                        }
-                      };
-                      input.click();
-                    }}
-                    style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: "8px", color: "#64748b", transition: "all 0.2s ease" }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                  >
-                    <div><span style={{ fontSize: "20px", fontWeight: "bold", lineHeight: 1 }}>+</span></div>
-                    <span style={{ fontSize: "12px", fontWeight: "500" }}>add image</span>
-                  </div>
-                )}
-              </div>
-            )}
+})()}
 
+
+{item.type === 'image' && (
+  <div 
+    style={{ 
+      ...item.styles, 
+      width: "100%", 
+      height: "100%", 
+      overflow: "hidden", 
+      position: "relative", 
+      display: "flex", 
+      alignItems: "center", 
+      justify: "center", 
+      backgroundColor: item.src ? "transparent" : (item.styles?.backgroundColor || "#f8fafc"), 
+      border: item.src ? "none" : "1px dashed #cbd5e1", 
+      borderRadius: item.styles?.borderRadius || "8px", 
+      zIndex: isSelected ? 2000 : 100, 
+      filter: cleanFilter, 
+      boxShadow: item.styles?.boxShadow || "none" 
+    }}
+  >
+    {item.src ? (
+      <img 
+        src={item.src} 
+        alt="Uploaded content" 
+        style={{ 
+          width: "100%", 
+          height: "100%", 
+          objectFit: (item.styles?.objectFit || "cover").toLowerCase(),
+          maxWidth: "100%",
+          pointerEvents: "none",
+          display: "block"
+        }} 
+      />
+    ) : (
+      <div
+        onClick={(e) => {
+          e.stopPropagation(); 
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*'; 
+          input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => { updateItem(activePageId, section.id, item.id, { src: e.target.result }); };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        }}
+        style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: "8px", color: "#64748b", transition: "all 0.2s ease" }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+      >
+        <div><span style={{ fontSize: "20px", fontWeight: "bold", lineHeight: 1 }}>+</span></div>
+        <span style={{ fontSize: "12px", fontWeight: "500" }}>add image</span>
+      </div>
+    )}
+  </div>
+)}
 {item.type === 'shape' && (() => {
   const currentShape = item.shapeType || (item.styles?.clipPath?.includes("polygon") ? "triangle" : "square");
   
@@ -516,7 +559,8 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       overflow: "visible", 
       clipPath: item.styles?.clipPath || "none", 
       borderRadius: item.styles?.borderRadius || "0px",
-      
+      filter: cleanFilter, 
+      boxShadow: item.styles?.boxShadow || "none", 
       background: hasGradient ? item.styles.background : "none",
       backgroundColor: hasGradient ? "transparent" : (item.styles?.backgroundColor || "#4f46e5")
     }}>
@@ -539,18 +583,41 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       height: "100%", 
       display: "flex", 
       alignItems: "center", 
-      justifyContent: "center", 
+      justifyContent: item.styles?.textAlign === 'right' ? 'flex-end' : 
+                       item.styles?.textAlign === 'left' ? 'flex-start' : 'center', 
+      filter: cleanFilter, 
+      boxShadow: item.styles?.boxShadow || "none", 
       
+      // 1. تمرير ستايلات الخلفية والألوان الأساسية
       background: item.styles?.background || "none",
       backgroundColor: item.styles?.background ? "transparent" : (item.styles?.backgroundColor || "#4f46e5"),
       
-      borderRadius: item.styles?.borderRadius || "6px", 
-      transition: "background-color 0.2s", 
+      // 2. معالجة وحقن لغز الحدود (Border Width & Style)
+      borderWidth: item.styles?.borderWidth !== undefined ? `${parseFloat(item.styles.borderWidth)}px` : '0px',
+      borderColor: item.styles?.borderColor || "transparent",
+      borderStyle: item.styles?.borderStyle && item.styles.borderStyle !== 'none'
+        ? item.styles.borderStyle
+        : (parseFloat(item.styles?.borderWidth) > 0 ? 'solid' : 'none'),
+        
+      // 3. معالجة وتأمين الـ borderRadius والـ Opacity
+      borderRadius: item.styles?.borderRadius !== undefined ? `${parseFloat(item.styles.borderRadius)}px` : "6px", 
+      opacity: item.styles?.opacity !== undefined ? parseFloat(item.styles.opacity) : 1,
+      
+      // 4. دمج باقي الستايلات لضمان عدم سقوط أي قيمة أخرى
+      ...item.styles,
+      
+      padding: item.styles?.padding || "0px", 
+      transition: "background-color 0.2s, opacity 0.1s", 
       cursor: state.isPreviewMode ? (item.action?.payload ? "pointer" : "default") : (isSelected ? "move" : "pointer"), 
-      pointerEvents: "auto" 
+      pointerEvents: "auto",
+      position: "relative"
     }}
-    onMouseEnter={(e) => { if (!isSelected && item.hoverStyles?.backgroundColor) e.currentTarget.style.backgroundColor = item.hoverStyles.backgroundColor; }}
-    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = item.styles?.backgroundColor || "#4f46e5"; }}
+    onMouseEnter={(e) => { 
+      if (!isSelected && item.hoverStyles?.backgroundColor) e.currentTarget.style.backgroundColor = item.hoverStyles.backgroundColor; 
+    }}
+    onMouseLeave={(e) => { 
+      e.currentTarget.style.backgroundColor = item.styles?.backgroundColor || "#4f46e5"; 
+    }}
     onClick={(e) => {
       e.stopPropagation();
       if (state.isPreviewMode) {
@@ -563,24 +630,99 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       }
     }}
   >
-    <span style={{ color: item.styles?.color || "white", fontSize: item.styles?.fontSize || "16px", fontFamily: item.styles?.fontFamily || "inherit", pointerEvents: "none", userSelect: "none", lineHeight: "1", outline: "none" }}>
+    {!item.isEditing && !state.isPreviewMode && (
+      <div 
+        style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'move' }} 
+        onDoubleClick={(e) => { 
+          e.stopPropagation(); 
+          store.updateItem(state.activePageId, section.id, item.id, { isEditing: true }); 
+        }} 
+      />
+    )}
+
+    <span 
+      id={`button-text-${item.id}`}
+      contentEditable={item.isEditing}
+      suppressContentEditableWarning
+      onBlur={(e) => { 
+        store.updateItem(state.activePageId, section.id, item.id, { text: e.target.innerText, isEditing: false }); 
+      }}
+      style={{ 
+        color: item.textStyles?.color || "white", 
+        fontSize: item.textStyles?.fontSize || "16px", 
+        fontFamily: item.textStyles?.fontFamily || "inherit", 
+        fontWeight: item.textStyles?.fontWeight || "normal",
+        fontStyle: item.textStyles?.fontStyle || "normal",
+        textDecoration: item.textStyles?.textDecoration || "none",
+        letterSpacing: item.textStyles?.letterSpacing || "normal",
+        textAlign: item.textStyles?.textAlign || "center",
+        
+        pointerEvents: item.isEditing ? "auto" : "none", 
+        userSelect: state.isPreviewMode ? "none" : "text", 
+        lineHeight: "1.2", 
+        outline: "none",
+        width: "100%",
+        zIndex: 5,
+        display: "inline-block",
+        wordBreak: "break-word",
+        ...(item.textStyles?.color && item.textStyles.color.includes('gradient') ? {
+    backgroundImage: item.textStyles.color,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    MozBackgroundClip: 'text',
+    MozTextFillColor: 'transparent',
+  } : {})
+      }}
+    >
       {item.text || "Button"}
     </span>
   </div>
-)}
-            {item.type === 'link' && (
-              <a
-                href={item.action?.url || "#"} target="_blank" rel="noopener noreferrer" contentEditable={isSelected && !state.isPreviewMode} suppressContentEditableWarning onDoubleClick={handleDoubleClick}
-                onBlur={(e) => { updateItem(activePageId, section.id, item.id, { text: e.target.innerText }); }}
-                onClick={(e) => { if (!state.isPreviewMode && !e.ctrlKey) e.preventDefault(); }}
-                style={{ ...item.styles, width: "100%", height: "100%", cursor: state.isPreviewMode ? "pointer" : "text", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "underline", color: item.styles?.color || "inherit", outline: "none", userSelect: state.isPreviewMode ? "none" : "text", pointerEvents: "auto" }}
-              >
-                {item.text || "Link Text"}
-              </a>
-            )} 
+)}           
+           
+{item.type === 'link' && (
+  <a
+    href={item.action?.url || "#"} 
+    target="_blank" 
+    rel="noopener noreferrer" 
+    contentEditable={isSelected && !state.isPreviewMode} 
+    suppressContentEditableWarning 
+    onDoubleClick={handleDoubleClick}
+    onBlur={(e) => { updateItem(activePageId, section.id, item.id, { text: e.target.innerText }); }}
+    onClick={(e) => { if (!state.isPreviewMode && !e.ctrlKey) e.preventDefault(); }}
+    style={{ 
+      // 1. تمرير الستايلات الافتراضية أولاً لضمان الأبعاد والمحاذاة
+      width: "100%", 
+      height: "100%", 
+      cursor: state.isPreviewMode ? "pointer" : "text", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      textDecoration: "underline", 
+      color: item.styles?.color || "inherit", 
+      outline: "none", 
+      userSelect: state.isPreviewMode ? "none" : "text", 
+      pointerEvents: "auto", 
+      filter: cleanFilter, 
+      boxShadow: "none",
 
+      // 2. حقن خصائص الحدود والشفافية والدوران الديناميكية التي يغيرها المستخدم
+      borderWidth: item.styles?.borderWidth !== undefined ? `${parseFloat(item.styles.borderWidth)}px` : '0px',
+      borderColor: item.styles?.borderColor || "transparent",
+      borderStyle: item.styles?.borderStyle && item.styles.borderStyle !== 'none'
+        ? item.styles.borderStyle
+        : (parseFloat(item.styles?.borderWidth) > 0 ? 'solid' : 'none'),
+      borderRadius: item.styles?.borderRadius !== undefined ? `${parseFloat(item.styles.borderRadius)}px` : "0px", 
+      opacity: item.styles?.opacity !== undefined ? parseFloat(item.styles.opacity) : 1,
+
+      // 3. نشر كائن الـ styles بالكامل في النهاية لتطبيق أي تعديلات أخرى مثل الخطوط والمساحات
+      ...item.styles
+    }}
+  >
+    {item.text || "Link Text"}
+  </a>
+)}
             {item.type === 'input' && (
-              <div style={{ width: '100%', height: '100%' }}>
+              <div style={{ width: '100%', height: '100%', filter: cleanFilter }}>
                 <input id={`input-${item.id}`} type="text" placeholder={item.placeholder || "Enter text..."} disabled={!state.isPreviewMode} style={{ ...item.styles, width: "100%", height: "100%", outline: isSelected ? "2px solid #4f46e5" : "none", pointerEvents: state.isPreviewMode ? "auto" : "none" }} />
                 {!state.isPreviewMode && ( <div style={{position: 'absolute', top: '-18px', fontSize: '10px', color: '#64748b'}}>Input Field ({item.name || 'no-name'})</div> )}
               </div>

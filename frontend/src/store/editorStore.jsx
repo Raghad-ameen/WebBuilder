@@ -102,10 +102,15 @@ const pasteElements = useCallback(() => {
       selectedElementIds: newItems.map(ni => ni.id)
     };
   });
-}, [saveToHistory]);const updateState = useCallback((newState) => {
-    saveToHistory(state);
-    setState(newState);
-  }, [state, saveToHistory]);
+}, [saveToHistory]);
+
+const updateState = useCallback((newState) => {
+    setState(prev => {
+        saveToHistory(prev); // نمرر الـ prev الآمن والحديث هنا
+        return typeof newState === 'function' ? newState(prev) : newState;
+    });
+}, [saveToHistory]);
+
   const setCanvasSize = useCallback((width, height) => {
   setState(prev => ({
     ...prev,
@@ -459,11 +464,15 @@ else {
 }, [setState]);
 
 
-
 const selectItems = useCallback((ids) => {
+  if (!ids || ids.length === 0) {
+    setState(prev => ({ ...prev, selectedElementIds: [], activeElementId: null, activeGroupId: null }));
+    return;
+  }
+
   setState(prev => {
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
-const groups = activePage?.groups || [];
+    const groups = activePage?.groups || [];
     
     let finalIds = [...ids];
 
@@ -471,32 +480,23 @@ const groups = activePage?.groups || [];
       const hasSelectedMember = group.elementIds.some(memberId => ids.includes(memberId));
       if (hasSelectedMember) {
         finalIds = [...finalIds, ...group.elementIds];
-        const activeGroup = groups.find(group =>
-  group.elementIds.includes(ids[0])
-);
       }
     });
-    const activeGroup = groups.find(group =>
-  ids.some(id => group.elementIds.includes(id))
-);
 
     finalIds = [...new Set(finalIds)];
 
-
-   const same =
-  prev.selectedElementIds.length === finalIds.length &&
-  prev.selectedElementIds.every((id, i) => id === finalIds[i]);
-
-if (same) return prev;
+    const activeGroup = groups.find(group => group.elementIds.includes(finalIds[0]));
 
     return {
       ...prev,
-selectedElementIds: finalIds,
-activeGroupId: activeGroup?.id || null,
-      activeElementId: finalIds?.length > 0 ? finalIds[0] : null
+      selectedElementIds: finalIds,
+      activeGroupId: activeGroup?.id || null,
+      activeElementId: finalIds[0] || null
     };
   });
-}, [setState]);
+}, []);
+
+
 const saveProject = useCallback(() => {
   try {
     localStorage.setItem(`project_${state.projectName}`, JSON.stringify(state));
@@ -853,7 +853,6 @@ const deleteSection = useCallback((sectionId) => {
 
     saveToHistory(prev);
 
-    // 1. حساب الـ State الجديد أولاً في متغير
     const newState = {
       ...prev,
       selectedElementIds: [],
@@ -865,7 +864,6 @@ const deleteSection = useCallback((sectionId) => {
       }))
     };
 
-    // 2. حفظ الـ State الجديد فوراً في الـ LocalStorage ليصبح الحذف دائماً
     localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
 
     return newState;
@@ -874,13 +872,11 @@ const deleteSection = useCallback((sectionId) => {
 
 
 const deleteElement = useCallback((itemId) => {
-  // ملاحظة مهمة: قمنا بنقل saveToHistory وتصفير العناصر المحددة داخل الـ setState
-  // لضمان الحصول على أحدث نسخة (prev) دون الاعتماد على الـ state الخارجي الذي قد يسبب تعليق أو عدم مزامنة
   
   selectItems([]); 
 
   setState(prev => {
-    saveToHistory(prev); // استخدام prev هنا أضمن وأدق لمنع الـ Race Conditions
+    saveToHistory(prev);
     
     const newState = {
       ...prev,
@@ -910,29 +906,26 @@ const deleteElement = useCallback((itemId) => {
       })
     };
 
-    // حفظ البيانات بعد حذف العنصر
     localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
-}, [saveToHistory, selectItems]); // قمنا بإزالة state من المصفوفة هنا لأننا أصبحنا نعتمد على prev وهو الأصح في React
+}, [saveToHistory, selectItems]);
 
 
 const undo = useCallback(() => {
-  setHistory((prevHistory) => {
-    if (prevHistory?.length === 0) return prevHistory;
-
-    const previousState = safeClone(prevHistory[prevHistory?.length - 1]);
-    const newHistory = prevHistory.slice(0, -1);
-
-    setState((currentState) => {
-      setRedoStack((prevRedo) => [safeClone(currentState), ...prevRedo]);
-      return previousState;
+    setHistory(prevHistory => {
+        if (prevHistory.length === 0) return prevHistory;
+        
+        const previousState = prevHistory[prevHistory.length - 1];
+        
+        setState(currentState => {
+            setRedoStack(prevRedo => [safeClone(currentState), ...prevRedo]);
+            return safeClone(previousState);
+        });
+        
+        return prevHistory.slice(0, -1);
     });
-
-    return newHistory;
-  });
 }, []);
-
 const redo = useCallback(() => {
   setRedoStack((prevRedo) => {
     if (prevRedo?.length === 0) return prevRedo;
