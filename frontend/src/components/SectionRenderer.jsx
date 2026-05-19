@@ -304,11 +304,9 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       const widthPercent = (item.width / BASE_WIDTH) * 100;
       const isMobileOrTablet = typeof window !== "undefined" && window.innerWidth < 1024;
       
-      // هنا نقوم باستخراج الفلاتر والتدرجات بشكل آمن لعزلها
       const { clipPath, background, backgroundColor, filter, boxShadow, zIndex, textAlign, ...otherStyles } = item.styles || {};
       const isPartOfForm = ['input', 'shape'].includes(item.type) || (item.type === 'text' && index > 0) || (item.type === 'button' && item.text === "Send Message");
 
-      // حساب الـ Z-Index هندسياً لمنع الاختفاء
       const resolvedZIndex = isSelected ? 100000 : (item.styles?.zIndex !== undefined ? parseInt(item.styles.zIndex) : (2000 + index));
 
       return (
@@ -361,7 +359,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
               width: `${item.width}px`, 
               height: `${item.height}px`,
               
-              // [تعديل 1] حقن وتمرير الـ Z-index الديناميكي المصلح
               zIndex: resolvedZIndex,
               
               margin: isMobileOrTablet ? "15px auto" : "0", 
@@ -380,7 +377,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
               perspective: 1000,
               WebkitFontSmoothing: 'antialiased',
 
-              // [تعديل 2] حقن الفلاتر والظلال مباشرة على حاوية العنصر الأساسي
               filter: item.styles?.filter || "none",
               boxShadow: item.styles?.boxShadow || "none",
             }}
@@ -413,77 +409,70 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
               </div>
             )}
 
-{item.type === 'text' && (
-  <div 
-    className="text-element-wrapper"
-    style={{ 
-      position: 'relative', 
-      width: "100%", 
-      height: "100%", 
-      top: isMobile ? `${index * 40}px` : `0px`, 
-      display: "flex",
-      alignItems: "center",
-      
-      // 1️⃣ هنا تعديل المحاذاة الأفقية للحاوية (تأكد هل اللوحة ترسل textAlign أم شيئاً آخر)
-      justifyContent: item.styles?.textAlign === 'right' ? 'flex-end' : 
-                      item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
-      
-      // 2️⃣ هنا تعديل الـ Gradient: إذا كان مستخدم كخلفية للنص بالكامل
-      background: item.styles?.background || item.styles?.backgroundImage || "none",
-    }}
-  >
-    {!item.isEditing && (
-      <div 
-        style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'move' }} 
-        onDoubleClick={(e) => { 
-          e.stopPropagation(); 
-          store.updateItem(state.activePageId, section.id, item.id, { isEditing: true }); 
-        }} 
-      />
-    )}
-    <div
-      id={`text-input-${item.id}`}
-      contentEditable={item.isEditing}
-      suppressContentEditableWarning
-      onBlur={(e) => { 
-        store.updateItem(state.activePageId, section.id, item.id, { text: e.target.innerText, isEditing: false }); 
-      }}
-      style={{
-        // نضع الستايلات العشوائية أولاً لكي لا تقوم بعمل Overwrite للخصائص الأساسية
-        ...item.styles, 
-        
-        // الخصائص الصارمة الممنوع كسرها نضعها بالأسفل هنا لضمان التنفيذ الفعلي:
-        width: "auto", // جعل العرض تلقائي ليتحرك النص يميناً ويساراً بحرية داخل الـ Flexbox
-        minWidth: "50px",
-        outline: "none",
-        zIndex: 5,
-        fontSize: isMobile ? `clamp(12px, 4vw, 18px)` : (item.styles?.fontSize || "16px"),
-        
-        // 3️⃣ إجبار محاذاة النص الداخلي نفسه لحالات الأسطر المتعددة
-        textAlign: item.styles?.textAlign || "left",
-        
-        lineHeight: "1.2", 
-        wordBreak: "break-word", 
-        overflowWrap: "anywhere",
-        whiteSpace: "normal", 
-        
-        // تنظيف الفلاتر تماماً لمنع المظهر البشع
-        filter: "none", 
-        textShadow: "none",
+{item.type === 'text' && (() => {
+  const isColorGradient = item.styles?.color && item.styles.color.includes('gradient');
 
-        // 4️⃣ إذا كان الـ Gradient مطلوباً على "حروف النص نفسه" (Text Gradient) وليس خلفيته:
-        ...(item.styles?.background?.includes('gradient') ? {
-          backgroundImage: item.styles.background,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          display: 'inline-block'
-        } : {})
+  return (
+    <div 
+      className="text-element-wrapper"
+      style={{ 
+        position: 'relative', 
+        width: "100%", 
+        height: "100%", 
+        top: isMobile ? `${index * 40}px` : `0px`, 
+        display: "flex",
+        alignItems: "center",
+        justifyContent: item.styles?.textAlign === 'right' ? 'flex-end' : 
+                        item.styles?.textAlign === 'center' ? 'center' : 'flex-start',
+        background: item.styles?.background || item.styles?.backgroundImage || "none",
       }}
     >
-      {item.text || "Type your text..."}
+      {!item.isEditing && (
+        <div 
+          style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'move' }} 
+          onDoubleClick={(e) => { 
+            e.stopPropagation(); 
+            store.updateItem(state.activePageId, section.id, item.id, { isEditing: true }); 
+          }} 
+        />
+      )}
+      <div
+        id={`text-input-${item.id}`}
+        contentEditable={item.isEditing}
+        suppressContentEditableWarning
+        onBlur={(e) => { 
+          store.updateItem(state.activePageId, section.id, item.id, { text: e.target.innerText, isEditing: false }); 
+        }}
+        style={{
+          ...item.styles, 
+          width: "auto",
+          minWidth: "50px",
+          outline: "none",
+          zIndex: 5,
+          fontSize: isMobile ? `clamp(12px, 4vw, 18px)` : (item.styles?.fontSize || "16px"),
+          textAlign: item.styles?.textAlign || "left",
+          lineHeight: "1.2", 
+          wordBreak: "break-word", 
+          overflowWrap: "anywhere",
+          whiteSpace: "normal", 
+          filter: "none", 
+          textShadow: "none",
+
+          ...(isColorGradient ? {
+            backgroundImage: item.styles.color,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            MozBackgroundClip: 'text',
+            MozTextFillColor: 'transparent',
+            display: 'inline-block'
+          } : {})
+        }}
+      >
+        {item.text || "Type your text..."}
+      </div>
     </div>
-  </div>
-)}            {item.type === 'image' && (
+  );
+})()}{item.type === 'image' && (
               <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: item.src ? "transparent" : (item.styles?.backgroundColor || "#f8fafc"), border: item.src ? "none" : "1px dashed #cbd5e1", borderRadius: item.styles?.borderRadius || "8px", zIndex: isSelected ? 2000 : 100, ...item.styles }}>
                 {item.src ? (
                   <img src={item.src} style={{ width: "100%", height: "100%", objectFit: "cover",maxWidth: "100%" }} alt="Uploaded content" />
@@ -518,7 +507,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
 {item.type === 'shape' && (() => {
   const currentShape = item.shapeType || (item.styles?.clipPath?.includes("polygon") ? "triangle" : "square");
   
-  // 🛠️ فحص ما إذا كان الستايل يحتوي على تدرج لوني
   const hasGradient = item.styles?.background && item.styles.background.includes('gradient');
 
   return (
@@ -529,14 +517,12 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       clipPath: item.styles?.clipPath || "none", 
       borderRadius: item.styles?.borderRadius || "0px",
       
-      // 🛠️ إذا وُجد تدرج نطبقه على الحاوية الخارجية مباشرة
       background: hasGradient ? item.styles.background : "none",
       backgroundColor: hasGradient ? "transparent" : (item.styles?.backgroundColor || "#4f46e5")
     }}>
       <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: 'block' }}>
         <path 
           d={getShapePath(currentShape)} 
-          // 🛠️ نجعل التعبئة شفافة إذا كان هناك تدرج ليظهر التدرج الخلفي للشكل
           fill={hasGradient ? "transparent" : (item.styles?.backgroundColor || "#4f46e5")} 
           stroke={item.styles?.borderColor || "transparent"} 
           strokeWidth={item.styles?.borderWidth || 0} 
@@ -555,7 +541,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       alignItems: "center", 
       justifyContent: "center", 
       
-      // 🛠️ التعديل هنا: قراءة الـ gradient (الخلفية الممتدة) أولاً، ثم التراجع للون العادي
       background: item.styles?.background || "none",
       backgroundColor: item.styles?.background ? "transparent" : (item.styles?.backgroundColor || "#4f46e5"),
       
@@ -605,7 +590,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
       );
     })}
 
-    {/* الـ Moveable والـ Selecto مكملين بدون أي تغيير سفلي */}
     {validTargets.length > 0 && !state.isPreviewMode && (
       <>
         <Moveable

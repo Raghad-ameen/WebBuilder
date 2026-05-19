@@ -159,7 +159,6 @@ const ControlledRangeInput = ({ initialValue, config, onPropertyChange, isDense 
   );
 };
 
-// مكون منتقي الألوان المتطور (يدعم التدرجات والـ Advanced Solid)
 const AdvancedColorPicker = ({ value, config, onPropertyChange }) => {
   const [colorType, setColorType] = useState(String(value).includes("gradient") ? "gradient" : "solid");
   const [solidColor, setSolidColor] = useState(colorType === "solid" ? value || "#000000" : "#4f46e5");
@@ -343,7 +342,6 @@ export default function RightPanel({ store }) {
 const handlePropertyChange = (config, incomingValue) => {
     if (!selectedItem) return;
 
-    // 1. تحديث القيم المحلية فوراً في الـ Input
     setLocalValues(prev => ({ ...prev, [config.field]: incomingValue }));
     
     const isStyle = !['text', 'src', 'linkUrl'].includes(config.field);
@@ -352,43 +350,35 @@ const handlePropertyChange = (config, incomingValue) => {
     if (config.field === 'linkUrl') {
       updatePayload = { action: { ...selectedItem.action, url: incomingValue } };
     } else if (isStyle) {
-      // نأخذ نسخة من الستايلات الحالية للعنصر
       const currentStyles = { ...selectedItem.styles };
 
-      // إرسال القيمة الأصلية النيئة لتظل محفوظة في حقل الإدخال بالبانل
       currentStyles[config.field] = incomingValue;
 
-      // [تطوير] معالجة التدرجات والخلفيات المتقدمة
       if (config.field === 'backgroundColor') {
         if (String(incomingValue).includes('gradient')) {
           currentStyles['background'] = incomingValue;
-          currentStyles['backgroundColor'] = 'transparent'; // تصفير الخلفية العادية ليظهر التدرج
+          currentStyles['backgroundColor'] = 'transparent';
         } else {
           currentStyles['backgroundColor'] = incomingValue;
           currentStyles['background'] = 'none';
         }
       }
 
-      // [تطوير] معالجة الـ Z-Index ليفهمها المتصفح كـ Number
       if (config.field === 'zIndex') {
         currentStyles['zIndex'] = parseInt(incomingValue) || 0;
       }
 
-      // [تطوير] معالجة المحاذاة للتأكد من حقنها بالاسم الصحيح للـ CSS
       if (config.field === 'textAlign') {
         currentStyles['textAlign'] = incomingValue;
       }
 
-      // [تطوير] بناء وتجميع فلاتر الـ CSS بشكل مدمج ليقرأها المتصفح دفعة واحدة
       const blurVal = config.field === 'filterBlur' ? incomingValue : (parseFloat(currentStyles['filterBlur']) || 0);
       const brightVal = config.field === 'filterBrightness' ? incomingValue : (parseFloat(currentStyles['filterBrightness']) !== undefined ? parseFloat(currentStyles['filterBrightness']) : 100);
       const contrastVal = config.field === 'filterContrast' ? incomingValue : (parseFloat(currentStyles['filterContrast']) !== undefined ? parseFloat(currentStyles['filterContrast']) : 100);
       const grayVal = config.field === 'filterGrayscale' ? incomingValue : (parseFloat(currentStyles['filterGrayscale']) || 0);
 
-      // حقن الفلتر المدمج القياسي للـ CSS
       currentStyles['filter'] = `blur(${blurVal}px) brightness(${brightVal}%) contrast(${contrastVal}%) grayscale(${grayVal}%)`;
 
-      // [تطوير] بناء خاصية الـ Shadow بالكامل عند تغيير اللون
       const shadowColor = config.field === 'shadowColor' ? incomingValue : (currentStyles['shadowColor'] || 'transparent');
       if (shadowColor && shadowColor !== 'transparent') {
         currentStyles['boxShadow'] = `0px 4px 12px ${shadowColor}`;
@@ -396,7 +386,6 @@ const handlePropertyChange = (config, incomingValue) => {
         currentStyles['boxShadow'] = 'none';
       }
 
-      // إضافة الـ Units القياسية لباقي الخصائص العادية (مثل fontSize: "16px")
       if (config.unit && !['filterBlur', 'filterBrightness', 'filterContrast', 'filterGrayscale'].includes(config.field)) {
         currentStyles[config.field] = `${incomingValue}${config.unit}`;
       }
@@ -406,7 +395,6 @@ const handlePropertyChange = (config, incomingValue) => {
       updatePayload = { [config.field]: incomingValue };
     }
 
-    // 2. ترحيل التحديثات للـ Canvas والـ Store
     if (isSectionSelection) {
       updateSection(state.activePageId, selectedId, updatePayload);
     } else {
@@ -573,7 +561,6 @@ const handlePropertyChange = (config, incomingValue) => {
           </button>
 
           {showMore && (
-            // تم إضافة حل السكرول (maxHeight مع overflowY) لحل مشكلة اختفاء القائمة الطويلة
             <div ref={dropdownRef} style={styles.dropdownMenu} className="property-popover-container">
               {hiddenControls.map((ctrl) => (
                 <div key={ctrl.field} style={styles.dropdownItem}>
@@ -633,7 +620,6 @@ const handlePropertyChange = (config, incomingValue) => {
 }
 
 const styles = {
-  // الستايلات السابقة مع التحسينات المضافة لحلول المشاكل
   floatingToolbar: { display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", padding: "6px 12px", borderRadius: "30px", boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04)", border: "1px solid #cbd5e1", width: "fit-content", maxWidth: "95vw", overflow: "visible", pointerEvents: "auto", zIndex: 999, position: "relative", height: "46px" },
   itemBadge: { background: "#e2e8f0", color: "#334155", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", whiteSpace: "nowrap" },
   controlButtonTrigger: { display: "flex", alignItems: "center", justifyContent: "center", gap: "2px", background: "transparent", border: "none", width: "36px", height: "36px", borderRadius: "8px", cursor: "pointer", color: "#475569", position: "relative", transition: "all 0.15s ease" },
@@ -645,17 +631,14 @@ const styles = {
   closeBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "50%" },
   moreBtn: { background: "transparent", border: "1px solid #cbd5e1", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", height: "32px", width: "32px", borderRadius: "6px" },
   
-  // حل مشكلة السكرول للقائمة الطويلة واختفائها أسفل الشاشة
   dropdownMenu: { position: "absolute", top: "calc(100% + 10px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "14px", display: "flex", flexDirection: "column", gap: "12px", minWidth: "310px", maxHeight: "320px", overflowY: "auto", zIndex: 1000 },
   dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px" },
   subLabel: { fontSize: "12px", color: "#334155", fontWeight: "500", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "8px" },
   controlWrapper: { display: "flex", alignItems: "center", gap: "6px" },
   
-  // أنماط مجموعة أزرار المحاذاة الجديدة والمطورة
   alignToggleGroup: { display: "flex", border: "1px solid #cbd5e1", borderRadius: "6px", overflow: "hidden", height: "32px" },
   alignBtn: { border: "none", background: "transparent", width: "30px", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#475569", transition: "all 0.1s" },
   
-  // أنماط منتقي الألوان المتطور والتدرجات الجاهزة
   advColorContainer: { display: "flex", flexDirection: "column", gap: "8px", padding: "4px 0" },
   tabHeader: { display: "flex", gap: "2px", background: "#f8fafc", padding: "2px", borderRadius: "6px", border: "1px solid #e2e8f0" },
   tabBtn: { flex: 1, border: "none", fontSize: "11px", padding: "4px 0", cursor: "pointer", borderRadius: "4px", color: "#334155", transition: "all 0.1s" },
