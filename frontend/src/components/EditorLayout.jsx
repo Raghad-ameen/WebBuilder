@@ -4,7 +4,7 @@ import LeftSidebar from "./LeftSidebar";
 import RightPanel from "./RightPanel"; 
 import SectionRenderer from "./SectionRenderer";
 import CustomModal from "./CustomModal";
-import { Plus, Group, Ungroup, Palette, ChevronDown } from "lucide-react"; 
+import { Plus, Palette } from "lucide-react"; 
 import CanvasElement from "./CanvasElement";
 
 export default function EditorLayout({ store, onSave }) {
@@ -25,7 +25,8 @@ export default function EditorLayout({ store, onSave }) {
       const mainArea = document.querySelector('main');
       if (!mainArea) return;
 
-      const paddingOffset = state.viewMode === 'desktop' ? 120 : 60;
+      // إعطاء مساحة أمان مريحة حول الكانفاس (60px يمين ويسار)
+      const paddingOffset = 120; 
       const availableWidth = mainArea.offsetWidth - paddingOffset; 
 
       if (state.viewMode === 'mobile') {
@@ -35,18 +36,30 @@ export default function EditorLayout({ store, onSave }) {
         setDynamicScale(availableWidth < 640 ? availableWidth / 640 : 1);
       } 
       else {
+        // ديسكتوب: نجعلها تصغر بحرية تامة دون التقيد بـ 0.70 لتتلاءم مع فتح السايد بار
         if (availableWidth < 1024) {
           const calculatedScale = availableWidth / 1024;
-          setDynamicScale(Math.max(calculatedScale, 0.70));
+          setDynamicScale(Math.max(calculatedScale, 0.40)); // تم تقليل الحد الأدنى ليتناسب مع الشاشات الصغيرة عند فتح السايدبار
         } else {
           setDynamicScale(1); 
         }
       }
     };
 
+    // نراقب تغيير حجم الحاوية والنافذة
     window.addEventListener('resize', updateScale);
+    
+    // رصد فتح وإغلاق السايد بار بدقة عبر الـ ResizeObserver على عنصر main
+    const resizeObserver = new ResizeObserver(() => updateScale());
+    const mainElement = document.querySelector('main');
+    if (mainElement) resizeObserver.observe(mainElement);
+
     updateScale();
-    return () => window.removeEventListener('resize', updateScale);
+    
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
   }, [state.viewMode, canvasWidth]);
 
   useEffect(() => {
@@ -80,24 +93,22 @@ export default function EditorLayout({ store, onSave }) {
       <TopBar store={store} onSave={onSave} />
       
       <div style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%", position: "relative" }}>
-        {/* شريط الأدوات المطور بستايل كانفا (تلقائياً يحوي شريط الأيقونات والدرج) */}
         <LeftSidebar store={store} />
 
-        {/* منطقة العمل الرئيسية المفتوحة والواسعة جداً */}
         <main style={{ 
           flex: 1, 
           backgroundColor: "#edeef0", 
-          padding: '16px 24px 120px 24px', 
+          padding: '24px 24px 120px 24px', 
           display: "flex", 
           flexDirection: "column", 
           alignItems: "center",
           justifyContent: "flex-start",
-          overflow: "auto",
+          overflow: "auto", // يسمح بظهور سكرول بار للمنطقة بأكملها إن خرجت عن السيطرة
           position: "relative",
-          gap: "16px"
+          gap: "16px",
+          transition: "all 0.2s ease-in-out" // حركة ناعمة عند تقلص المساحة
         }}>
           
-          {/* حاوية شريط الأدوات العائمة (RightPanel تظهر هنا أفقياً كشريط خصائص علوي) */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: "sticky", top: 0, zIndex: 100, gap: "10px", pointerEvents: "none" }}>
             <RightPanel store={store} />
 
@@ -167,7 +178,6 @@ export default function EditorLayout({ store, onSave }) {
                 </div>
               </CanvasElement>
 
-              {/* متحكم الصفحات السفلي المدمج */}
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
                 <div style={{ backgroundColor: "#ffffff", padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", color: "#1e293b", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" }}>
                   <span>Page {state.pages.findIndex(p => p.id === state.activePageId) + 1} of {state.pages.length}</span>
@@ -194,7 +204,6 @@ export default function EditorLayout({ store, onSave }) {
         </main>
       </div>
 
-      {/* المودالز الثابتة */}
       <CustomModal isOpen={state.modal?.isOpen && state.modal?.type === "deletePage"} title="Delete Page" confirmText="Delete" isDanger={true} onConfirm={() => { if (state.modal?.data?.pageId) deletePage(state.modal.data.pageId); closeModal(); }} onCancel={closeModal}>Are you sure you want to delete this page?</CustomModal>
       <CustomModal isOpen={state.modal?.isOpen && state.modal?.type === "saveSuccess"} title="Project Saved" confirmText="OK" onConfirm={closeModal} showCancel={false}><div style={{ textAlign: 'center' }}><div style={{ fontSize: '40px', color: '#10b981' }}>✓</div><p>{state.modal?.data?.message || "All changes are secured now."}</p></div></CustomModal>
       <CustomModal isOpen={state.modal?.isOpen && state.modal?.type === "renamePage"} title="Rename Page" confirmText="Save Name" onConfirm={() => { const newName = document.getElementById('rename-input').value; if (newName.trim()) { renamePage(state.modal.data.pageId, newName); closeModal(); } }} onCancel={closeModal}>

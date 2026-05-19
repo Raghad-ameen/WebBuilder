@@ -838,7 +838,6 @@ selectedElementIds: [],
 
 const deleteSection = useCallback((sectionId) => {
   setState(prev => {
-
     const targetSection = prev.pages
       .flatMap(p => p.sections)
       .find(s => s.id === sectionId);
@@ -854,27 +853,35 @@ const deleteSection = useCallback((sectionId) => {
 
     saveToHistory(prev);
 
-    return {
+    // 1. حساب الـ State الجديد أولاً في متغير
+    const newState = {
       ...prev,
       selectedElementIds: [],
       activeElementId: null,
       activeGroupId: null,
-
       pages: prev.pages.map(p => ({
         ...p,
         sections: p.sections.filter(s => s.id !== sectionId)
       }))
     };
+
+    // 2. حفظ الـ State الجديد فوراً في الـ LocalStorage ليصبح الحذف دائماً
+    localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
+
+    return newState;
   });
 }, [saveToHistory]);
 
 
 const deleteElement = useCallback((itemId) => {
-  saveToHistory(state);
+  // ملاحظة مهمة: قمنا بنقل saveToHistory وتصفير العناصر المحددة داخل الـ setState
+  // لضمان الحصول على أحدث نسخة (prev) دون الاعتماد على الـ state الخارجي الذي قد يسبب تعليق أو عدم مزامنة
   
   selectItems([]); 
-  
+
   setState(prev => {
+    saveToHistory(prev); // استخدام prev هنا أضمن وأدق لمنع الـ Race Conditions
+    
     const newState = {
       ...prev,
       pages: prev.pages.map(p => {
@@ -886,16 +893,15 @@ const deleteElement = useCallback((itemId) => {
           }
         }));
 
-       const cleanedSections = updatedSections.filter(s => {
-  const isGhostSection = s.isGhost;
-  const isSectionEmpty = !s.data?.items || s.data.items.length === 0;
+        const cleanedSections = updatedSections.filter(s => {
+          const isGhostSection = s.isGhost;
+          const isSectionEmpty = !s.data?.items || s.data.items.length === 0;
 
-  if (isGhostSection && isSectionEmpty) {
-    return false;
-  }
-
-  return true;
-});
+          if (isGhostSection && isSectionEmpty) {
+            return false;
+          }
+          return true;
+        });
 
         return {
           ...p,
@@ -904,10 +910,13 @@ const deleteElement = useCallback((itemId) => {
       })
     };
 
+    // حفظ البيانات بعد حذف العنصر
     localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
-}, [state, saveToHistory, selectItems]);
+}, [saveToHistory, selectItems]); // قمنا بإزالة state من المصفوفة هنا لأننا أصبحنا نعتمد على prev وهو الأصح في React
+
+
 const undo = useCallback(() => {
   setHistory((prevHistory) => {
     if (prevHistory?.length === 0) return prevHistory;
