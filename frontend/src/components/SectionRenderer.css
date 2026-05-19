@@ -36,9 +36,9 @@
     display: block;
 }
 
-.is-blank-layer { 
+/* .is-blank-layer { 
     pointer-events: auto !important; 
-}
+} */
 
 .moveable-target {
     will-change: transform, width, height;

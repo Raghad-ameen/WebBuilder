@@ -53,9 +53,8 @@ const copyElements = useCallback((elementIds) => {
             section.data.items.forEach(item => {
                 if (elementIds.includes(item.id)) {
                     const clonedItem = safeClone(item);
-                    
                     clonedItem.id = `e-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-                    
+                    clonedItem.parentSectionId = null; 
                     elementsToCopy.push(clonedItem);
                 }
             });
@@ -67,7 +66,6 @@ const copyElements = useCallback((elementIds) => {
         return prev;
     });
 }, []);
-
 const pasteElements = useCallback(() => {
   setState(prev => {
     if (!prev.clipboard || prev.clipboard?.length === 0) return prev;
@@ -77,15 +75,17 @@ const pasteElements = useCallback(() => {
 
     saveToHistory(prev);
 
-const targetSection = activePage.sections?.[0];
+    const targetSection = activePage.sections?.find(s => s.id === prev.activeSectionId) || activePage.sections?.[0];
     if (!targetSection) return prev;
 
     const newItems = prev.clipboard.map(item => ({
       ...item,
       id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      parentSectionId: targetSection.id,
       x: item.x + 40, 
       y: item.y + 40,
     }));
+
     setTimeout(() => {
       selectItems(newItems.map(i => i.id));
     }, 50);
@@ -102,8 +102,7 @@ const targetSection = activePage.sections?.[0];
       selectedElementIds: newItems.map(ni => ni.id)
     };
   });
-}, [saveToHistory]);
-const updateState = useCallback((newState) => {
+}, [saveToHistory]);const updateState = useCallback((newState) => {
     saveToHistory(state);
     setState(newState);
   }, [state, saveToHistory]);
@@ -392,43 +391,53 @@ const newItem = {
 };    
 let updatedSections = [...activePage.sections];
 
-if (updatedSections?.length === 0) {
-  const newAutoSectionId = `s-${Date.now()}`;
+if (updatedSections.length === 0) {
 
-  const isLargeSection = ['navbar', 'hero', 'footer'].includes(type);
+  const newAutoSectionId = `s-${Date.now()}`;
 
   newItem.parentSectionId = newAutoSectionId;
 
-  updatedSections = [{
-    id: newAutoSectionId,
-    type: isLargeSection ? type : "blank",
-    height: isLargeSection ? 600 : 100,
-    styles: {
-      backgroundColor: isLargeSection ? "#ffffff" : "transparent",
-      padding: "0px",
-      minHeight: isLargeSection ? "400px" : "50px",
-      zIndex: 1
-    },
-    data: {
-      items: [newItem]
-    }
-  }];
-}else {
-      const targetId = sectionId || updatedSections[0].id;
-      newItem.parentSectionId = targetId;
-      updatedSections = updatedSections.map(s => {
-        if (s.id === targetId) {
-          return {
-            ...s,
-            data: {
-              ...s.data,
-              items: [...(s.data.items || []), newItem]
-            }
-          };
+updatedSections = [{
+  id: newAutoSectionId,
+  type: "ghost-section",
+  isGhost: true,
+
+  height: 9999,
+
+  styles: {
+    backgroundColor: "transparent",
+    border: "none",
+    boxShadow: "none",
+    padding: "0px",
+    minHeight: "100%",
+    position: "relative",
+    pointerEvents: "none"
+  },
+
+  data: {
+    items: [newItem]
+  }
+}];}
+else {
+  const targetId = sectionId || updatedSections[0].id;
+  newItem.parentSectionId = targetId;
+  updatedSections = updatedSections.map(s => {
+    if (s.id === targetId) {
+      return {
+        ...s,
+        data: {
+          ...s.data,
+          items: [...(s.data.items || []), newItem]
         }
-        return s;
-      });
+      };
     }
+    return s;
+  });
+}
+
+
+
+
     return {
       ...prev,
       pages: prev.pages.map(p => 
@@ -448,9 +457,6 @@ if (updatedSections?.length === 0) {
   }, 50);
 
 }, [setState]);
-
-
-
 
 
 
@@ -477,9 +483,11 @@ const groups = activePage?.groups || [];
     finalIds = [...new Set(finalIds)];
 
 
-    if (JSON.stringify(prev.selectedElementIds) === JSON.stringify(finalIds)) {
-      return prev;
-    }
+   const same =
+  prev.selectedElementIds.length === finalIds.length &&
+  prev.selectedElementIds.every((id, i) => id === finalIds[i]);
+
+if (same) return prev;
 
     return {
       ...prev,
@@ -514,94 +522,283 @@ const loadProject = useCallback(() => {
     saveToHistory(state); 
     
 const templates = {
-//   blank: {
-//     id: `s-${Date.now()}`,
-//     type: "blank",
-//     height: 150,
-//     styles: { 
-//         backgroundColor: "transparent", 
-//         padding: "0px",
-//         minHeight: "50px"
-//     },
-//     data: { items: [] }
-// },
-    hero: {
-      id: `s-${Date.now()}`,
-      type: "section",
-      height: 600, 
-      styles: { 
-        backgroundColor: "#f8fafc", 
-        padding: "80px 40px" 
-      },
-      data: {
-        items: [
-          { 
-            id: `e-${Date.now()}-1`, 
-            type: "text", 
-            text: "Hero Title", 
-            x: 200, 
-            y: 50, 
-            width: 400, 
-            height: 60, 
-            styles: { fontSize: "42px", fontWeight: "bold", textAlign: "center" } 
-          }
-        ]
-      }
-    },
-    navbar: {
-      id: `s-${Date.now()}`,
-      type: "section",
-      height: 80, 
-      styles: { 
-        backgroundColor: "#ffffff", 
-        borderBottom: "1px solid #eee" 
-      },
-      data: {
-        items: [
-          { 
-            id: `e-${Date.now()}-logo`, 
-            type: "text", 
-            text: "LOGO", 
-            x: 20, 
-            y: 25, 
-            width: 100, 
-            height: 30, 
-            styles: { fontWeight: "bold" } 
-          }
-        ]
-      }
-    },
-    'feature-grid': {
+  
+  navbar: {
     id: `s-${Date.now()}`,
-    type: "feature-grid",
-    height: 400,
-    styles: { backgroundColor: "#f1f5f9", padding: "40px 20px" },
+    type: "navbar",
+    height: 80, 
+    styles: { 
+      backgroundColor: "#ffffff", 
+      borderBottom: "1px solid #e2e8f0",
+      boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)"
+    },
     data: {
       items: [
-        { id: `feat-t-${Date.now()}`, type: 'text', text: 'Feature Grid', x: 400, y: 30, width: 200, height: 40, styles: { fontSize: '24px', fontWeight: 'bold', textAlign: 'center' } },
-        { id: `feat-d1-${Date.now()}`, type: 'text', text: 'feature 1', x: 100, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
-        { id: `feat-d2-${Date.now()}`, type: 'text', text: 'feature 2', x: 400, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
-        {id : `feat-d3-${Date.now()}` , type: 'text',text :'feature 3',x: 700, y: 120, width: 300, height: 50, styles: { fontSize: '18px', textAlign: 'center' } },
+        { 
+          id: `e-${Date.now()}-logo`, 
+          type: "text", 
+          text: "COMPANY", 
+          x: 80, 
+          y: 25, 
+          width: 150, 
+          height: 30, 
+          styles: { fontSize: "20px", fontWeight: "800", color: "#1e293b", letterSpacing: "1.5px" } 
+        },
+        { 
+          id: `e-${Date.now()}-nav1`, 
+          type: "button", 
+          text: "Home", 
+          x: 450, 
+          y: 25, 
+          width: 40, 
+          height: 30, 
+          action: { type: "page", payload: "home" },
+          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+        },
+        { 
+          id: `e-${Date.now()}-nav2`, 
+          type: "button", 
+          text: "Services", 
+          x: 550, 
+          y: 25, 
+          width: 90, 
+          height: 30, 
+          action: { type: "page", payload: "services" },
+          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+        },
+        { 
+          id: `e-${Date.now()}-nav3`, 
+          type: "button", 
+          text: "Contact", 
+          x: 660, 
+          y: 25, 
+          width: 80, 
+          height: 30, 
+          action: { type: "scroll", payload: "contact-section" },
+          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+        },
+        { 
+          id: `e-${Date.now()}-nav-btn`, 
+          type: "button", 
+          text: "Get Started", 
+          x: 850, 
+          y: 18, 
+          width: 120, 
+          height: 44, 
+          action: { type: "url", payload: "dashboard" },
+          styles: { backgroundColor: "#0f172a", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "14px" } 
+        }
       ]
     }
   },
+
+hero: {
+  id: `s-${Date.now()}`,
+  type: "hero",
+  height: 580, 
+  styles: { 
+    backgroundColor: "#f8fafc", 
+    backgroundImage: "linear-gradient(to bottom right, #f8fafc, #f1f5f9)"
+  },
+  data: {
+    items: [
+      { 
+        id: `e-${Date.now()}-h-tag`, 
+        type: "text", 
+        text: "WELCOME TO OUR PLATFORM", 
+        x: 80, 
+        y: 140, 
+        width: 300, 
+        height: 25, 
+        styles: { fontSize: "12px", fontWeight: "700", color: "#2563eb", letterSpacing: "2px" } 
+      },
+      { 
+        id: `e-${Date.now()}-h-title`, 
+        type: "text", 
+        text: "Build Your Vision & Share It With The World",
+        x: 80, 
+        y: 180, 
+        width: 550, 
+        height: 120, 
+        styles: { fontSize: "30px", fontWeight: "800", color: "#0f172a", lineHeight: "1.2" } 
+      },
+      { 
+        id: `e-${Date.now()}-h-desc`, 
+        type: "text", 
+        text: "Discover creative tools, robust features, and custom layouts designed to bring your project online beautifully and effortlessly.",
+        x: 80, 
+        y: 310, 
+        width: 500, 
+        height: 60, 
+        styles: { fontSize: "16px", color: "#475569", lineHeight: "1.6" } 
+      },
+      { 
+        id: `e-${Date.now()}-h-btn1`, 
+        type: "button", 
+        text: "Get Started",
+        x: 80, 
+        y: 400, 
+        width: 160, 
+        height: 50, 
+        action: { type: "url", payload: "#" },
+        styles: { backgroundColor: "#2563eb", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "15px", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)" } 
+      },
+      { 
+        id: `e-${Date.now()}-h-btn2`, 
+        type: "button", 
+        text: "Learn More",
+        x: 260, 
+        y: 400, 
+        width: 140, 
+        height: 50, 
+        action: { type: "url", payload: "#" },
+        styles: { backgroundColor: "#ffffff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "6px", fontWeight: "600", fontSize: "15px" } 
+      },
+      {
+        id: `e-${Date.now()}-h-img-bg`,
+        type: "shape",
+        x: 600,
+        y: 150,
+        width: 340,
+        height: 300,
+        styles: { backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }
+      },
+      {
+        id: `e-${Date.now()}-h-img-placeholder`,
+        type: "text",
+        text: "Your Visual Asset Here",
+        x: 600,
+        y: 270,
+        width: 340,
+        height: 40,
+        styles: { fontSize: "16px", color: "#94a3b8", fontWeight: "500", textAlign: "center" }
+      }
+    ]
+  }
+},
+  'feature-grid': {
+    id: `s-${Date.now()}`,
+    type: "feature-grid",
+    height: 460,
+    styles: { backgroundColor: "#ffffff" },
+    data: {
+      items: [
+        { 
+          id: `feat-t-${Date.now()}`, 
+          type: 'text', 
+          text: 'Core Platform Functional', 
+          x: 350, 
+          y: 40, 
+          width: 400, 
+          height: 40, 
+          styles: { fontSize: '28px', fontWeight: '800', textAlign: 'center', color: '#0f172a' } 
+        },
+        { 
+          id: `feat-sub-${Date.now()}`, 
+          type: 'text', 
+          text: 'Engineered for scalability, standard layout patterns, and modern performance.', 
+          x: 300, 
+          y: 90, 
+          width: 500, 
+          height: 25, 
+          styles: { fontSize: '15px', textAlign: 'center', color: '#64748b' } 
+        },
+        
+{ id: `feat-sh1-${Date.now()}`, type: 'shape', x: 30, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+{ id: `feat-d1-${Date.now()}`, type: 'text', text: 'Fast & Secure', x: 60, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+{ id: `feat-p1-${Date.now()}`, type: 'text', text: 'Optimized performance guaranteeing high speed, modern secure frameworks, and lightweight elements.', x: 60, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
+
+{ id: `feat-sh2-${Date.now()}`, type: 'shape', x: 360, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+{ id: `feat-d2-${Date.now()}`, type: 'text', text: 'Easy Customization', x: 390, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+{ id: `feat-p2-${Date.now()}`, type: 'text', text: 'Full visual control over layouts, spacing, canvas elements, dynamic styles, and custom content templates.', x: 390, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
+
+{ id: `feat-sh3-${Date.now()}`, type: 'shape', x: 690, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+{ id: `feat-d3-${Date.now()}`, type: 'text', text: 'Fully Responsive', x: 720, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+{ id: `feat-p3-${Date.now()}`, type: 'text', text: 'Beautiful layout transitions adapted smoothly across all screen variants, devices, and modern viewpoints.', x: 720, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },      ]
+    }
+  },
+
   footer: {
     id: `s-${Date.now()}`,
     type: "footer",
-    height: 120,
-    styles: { backgroundColor: "#1e293b", padding: "20px" },
+    height: 180,
+    styles: { 
+      backgroundColor: "#ffffff", 
+      borderTop: "1px solid #e2e8f0"
+    },
     data: {
       items: [
-        { id: `foot-copy-${Date.now()}`, type: 'text', text: '© 2026 All Rights Reserved', x: 450, y: 45, width: 300, height: 30, styles: { fontSize: '14px', textAlign: 'center', color: '#94a3b8' } }
+        { 
+          id: `foot-brand-${Date.now()}`, 
+          type: 'text', 
+          text: 'COMPANY SYSTEM', 
+          x: 80, 
+          y: 40, 
+          width: 200, 
+          height: 30, 
+          styles: { fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '1px' } 
+        },
+        { 
+          id: `foot-sub-${Date.now()}`, 
+          type: 'text', 
+          text: 'Automated layouts and asset management platform tools.', 
+          x: 80, 
+          y: 80, 
+          width: 350, 
+          height: 40, 
+          styles: { fontSize: '13px', color: '#64748b', lineHeight: '1.4' } 
+        },
+        { 
+          id: `foot-link1-${Date.now()}`, 
+          type: 'button', 
+          text: 'Privacy Policy', 
+          x: 600, 
+          y: 40, 
+          width: 110, 
+          height: 30, 
+          action: { type: "page", payload: "privacy" },
+          styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } 
+        },
+        { 
+          id: `foot-link2-${Date.now()}`, 
+          type: 'button', 
+          text: 'Terms of Service', 
+          x: 750, 
+          y: 40, 
+          width: 130, 
+          height: 30, 
+          action: { type: "page", payload: "terms" },
+          styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } 
+        },
+        { 
+          id: `foot-line-${Date.now()}`, 
+          type: 'shape', 
+          x: 80, 
+          y: 130, 
+          width: 1080, 
+          height: 1, 
+          styles: { backgroundColor: '#e2e8f0' } 
+        },
+        { 
+          id: `foot-copy-${Date.now()}`, 
+          type: 'text', 
+          text: '© 2026 Platform Builder. All rights reserved.', 
+          x: 400, 
+          y: 145, 
+          width: 400, 
+          height: 25, 
+          styles: { fontSize: '12px', color: '#94a3b8' } 
+        }
       ]
-    }},
-  };
-// 🟢 استبدل السطر 598 القديم بهذا الكود:
-const baseTemplate = templates[type] || templates.blank;
+    }
+  }
+};
+
+const baseTemplate = templates[type] ;
 const newSection = {
   ...baseTemplate,
-  id: `s-${Date.now()}`, // توليد معرف فريد جديد دائماً عند الضغط أو السحب
-  type: type             // هنا نضمن الحفاظ على النوع الفعلي للسكشن
+  id: `s-${Date.now()}`, 
+  type: type            
 };
     setState(prev => ({
       ...prev,
@@ -641,17 +838,37 @@ selectedElementIds: [],
 
 const deleteSection = useCallback((sectionId) => {
   setState(prev => {
+
+    const targetSection = prev.pages
+      .flatMap(p => p.sections)
+      .find(s => s.id === sectionId);
+
+    if (targetSection?.isGhost) {
+      return {
+        ...prev,
+        selectedElementIds: [],
+        activeElementId: null,
+        activeGroupId: null
+      };
+    }
+
     saveToHistory(prev);
-    const newState = {
+
+    return {
       ...prev,
+      selectedElementIds: [],
+      activeElementId: null,
+      activeGroupId: null,
+
       pages: prev.pages.map(p => ({
         ...p,
         sections: p.sections.filter(s => s.id !== sectionId)
       }))
     };
-    return newState;
   });
 }, [saveToHistory]);
+
+
 const deleteElement = useCallback((itemId) => {
   saveToHistory(state);
   
@@ -660,17 +877,33 @@ const deleteElement = useCallback((itemId) => {
   setState(prev => {
     const newState = {
       ...prev,
-      pages: prev.pages.map(p => ({
-        ...p,
-        sections: p.sections.map(s => ({
+      pages: prev.pages.map(p => {
+        const updatedSections = p.sections.map(s => ({
           ...s,
           data: { 
             ...s.data, 
             items: (s.data.items || []).filter(it => it.id !== itemId) 
           }
-        }))
-      }))
+        }));
+
+       const cleanedSections = updatedSections.filter(s => {
+  const isGhostSection = s.isGhost;
+  const isSectionEmpty = !s.data?.items || s.data.items.length === 0;
+
+  if (isGhostSection && isSectionEmpty) {
+    return false;
+  }
+
+  return true;
+});
+
+        return {
+          ...p,
+          sections: cleanedSections
+        };
+      })
     };
+
     localStorage.setItem(`project_${newState.projectName}`, JSON.stringify(newState));
     return newState;
   });
@@ -706,6 +939,9 @@ const redo = useCallback(() => {
     return newRedo;
   });
 }, []);
+
+
+
 const updateItem = useCallback((pageId, sectionId, itemId, data) => {
   setState(prev => {
     saveToHistory(prev); 
