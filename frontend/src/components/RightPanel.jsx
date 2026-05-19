@@ -112,7 +112,6 @@ export const PROPERTY_CONTROLS = {
     { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["none", "underline", "line-through", "overline", "underline wavy", "underline dotted", "underline dashed"] },
     { section: "Typography", label: "Transform", field: "textTransform", type: "select", options: ["none", "uppercase", "lowercase", "capitalize"] },
   ],
-  // (التعديل رقم 1 من الإجابة السابقة) خصائص الزر المحدثة لحل مشكلة التداخل
   button: [
     { section: "Typography", label: "Button Text", field: "text", type: "text" },
     { section: "Style", label: "Background Color", field: "backgroundColor", type: "advanced-color" },
@@ -130,12 +129,13 @@ export const PROPERTY_CONTROLS = {
   shape: [
     { section: "Style", label: "Background Color", field: "backgroundColor", type: "advanced-color" },
   ],
+  // 🔥 [تم الإصلاح هنا]: إزالة الخيار isTextStyle لحفظ القيم مباشرة في كائن styles القياسي للرابط
   link: [
     { section: "Action", label: "Link URL", field: "linkUrl", type: "text", placeholder: "https://google.com" },
     { section: "Typography", label: "Link Text", field: "text", type: "text" },
-    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px", isTextStyle: true },
-    { section: "Typography", label: "Color", field: "color", type: "advanced-color", isTextStyle: true },
-    { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none"], isTextStyle: true },
+    { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
+    { section: "Typography", label: "Color", field: "color", type: "advanced-color" },
+    { section: "Typography", label: "Decoration", field: "textDecoration", type: "select", options: ["underline", "none", "line-through"] },
   ],
   section: [
     { field: 'backgroundColor', label: 'Background Color', type: 'advanced-color', section: 'Appearance' },
@@ -317,9 +317,6 @@ export default function RightPanel({ store }) {
     return [...(PROPERTY_CONTROLS[itemType] || []), ...PROPERTY_CONTROLS.common];
   }, [itemType]);
 
-  // ==========================================
-  // [تعديل رقم 2]: تحديث الـ useEffect المسؤول عن قراءة القيم الافتراضية بشكل صحيح
-  // ==========================================
   useEffect(() => {
     if (!selectedId || !selectedItem || allControls.length === 0) return;
 
@@ -515,30 +512,25 @@ export default function RightPanel({ store }) {
             placeholder={config.placeholder || config.label}
           />
         );
-     // ابحث عن الـ case "color" والـ case "advanced-color" داخل دالة renderControl واستبدلهما بهذا:
-
-case "color":
-  // تأمين ألا يمرر "transparent" إلى input color العادي
-  const safeColor = (value === "transparent" || !value) ? "#000000" : value;
-  return (
-    <input
-      type="color"
-      value={safeColor}
-      onChange={(e) => handlePropertyChange(config, e.target.value)}
-      style={styles.colorPicker}
-    />
-  );
-
-case "advanced-color":
-  // تأمين ألا يمرر "transparent" إلى لوحة الألوان المتقدمة
-  const safeAdvancedColor = (value === "transparent" || !value) ? "#ffffff" : value;
-  return (
-    <AdvancedColorPicker 
-      value={safeAdvancedColor} 
-      config={config} 
-      onPropertyChange={handlePropertyChange} 
-    />
-  );
+      case "color":
+        const safeColor = (value === "transparent" || !value) ? "#000000" : value;
+        return (
+          <input
+            type="color"
+            value={safeColor}
+            onChange={(e) => handlePropertyChange(config, e.target.value)}
+            style={styles.colorPicker}
+          />
+        );
+      case "advanced-color":
+        const safeAdvancedColor = (value === "transparent" || !value) ? "#ffffff" : value;
+        return (
+          <AdvancedColorPicker 
+            value={safeAdvancedColor} 
+            config={config} 
+            onPropertyChange={handlePropertyChange} 
+          />
+        );
       case "alignment-toggle":
         return (
           <div style={styles.alignToggleGroup}>
@@ -559,9 +551,6 @@ case "advanced-color":
     }
   };
 
-  // ==========================================
-  // [تعديل رقم 3]: توسيع نطاق العناصر الظاهرة إلى 6 لضمان بقاء الشفافية والحدود في الشريط السريع
-  // ==========================================
   const visibleControls = useMemo(() => allControls.slice(0, 6), [allControls]);
   const hiddenControls = useMemo(() => allControls.slice(6), [allControls]);
 
@@ -575,6 +564,7 @@ case "advanced-color":
 
       <div style={styles.itemBadge}>{selectedItem.type}</div>
       
+      {/* سطر الـ closeBtn المكتمل */}
       <button onClick={(e) => { e.stopPropagation(); handleCloseToolbar(); }} style={styles.closeBtn} title="Close Panel">
         <X size={15} />
       </button>
@@ -708,6 +698,7 @@ case "advanced-color":
   );
 }
 
+// كائن الستايل المرجعي لتشغيل الواجهة بكفاءة
 const styles = {
   floatingToolbar: { display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", padding: "6px 12px", borderRadius: "30px", boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04)", border: "1px solid #cbd5e1", width: "fit-content", maxWidth: "95vw", overflow: "visible", pointerEvents: "auto", zIndex: 999, position: "relative", height: "46px" },
   itemBadge: { background: "#e2e8f0", color: "#334155", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", whiteSpace: "nowrap" },
@@ -717,22 +708,18 @@ const styles = {
   input: { padding: "6px 8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", outline: "none", height: "32px", background: "#ffffff" },
   colorPicker: { width: "36px", height: "32px", padding: "2px", borderRadius: "6px", border: "1px solid #cbd5e1", cursor: "pointer", background: "transparent" },
   divider: { width: "1px", height: "20px", backgroundColor: "#cbd5e1", margin: "0 4px" },
-  closeBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "50%" },
-  moreBtn: { background: "transparent", border: "1px solid #cbd5e1", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", height: "32px", width: "32px", borderRadius: "6px" },
-  
-  dropdownMenu: { position: "absolute", top: "calc(100% + 10px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "14px", display: "flex", flexDirection: "column", gap: "12px", minWidth: "350px", maxHeight: "320px", overflowY: "auto", zIndex: 1000 },
-  dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px" },
-  subLabel: { fontSize: "12px", color: "#334155", fontWeight: "500", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "8px" },
+  closeBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center" },
+  moreBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #cbd5e1", cursor: "pointer", color: "#475569", transition: "all 0.15s ease" },
+  dropdownMenu: { position: "absolute", top: "calc(100% + 8px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", zIndex: 1001, minWidth: "240px" },
+  dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" },
+  subLabel: { fontSize: "12px", fontWeight: "500", color: "#475569", display: "flex", alignItems: "center", gap: "6px" },
+  resetBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center" },
+  resetBtnInline: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", padding: "4px" },
   controlWrapper: { display: "flex", alignItems: "center", gap: "6px" },
-  
-  alignToggleGroup: { display: "flex", border: "1px solid #cbd5e1", borderRadius: "6px", overflow: "hidden", height: "32px" },
-  alignBtn: { border: "none", background: "transparent", width: "30px", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#475569", transition: "all 0.1s" },
-  
-  advColorContainer: { display: "flex", flexDirection: "column", gap: "8px", padding: "4px 0" },
-  tabHeader: { display: "flex", gap: "2px", background: "#f8fafc", padding: "2px", borderRadius: "6px", border: "1px solid #e2e8f0" },
-  tabBtn: { flex: 1, border: "none", fontSize: "11px", padding: "4px 0", cursor: "pointer", borderRadius: "4px", color: "#334155", transition: "all 0.1s" },
-  gradPreset: { width: "24px", height: "24px", borderRadius: "50%", cursor: "pointer", border: "1px solid #cbd5e1", transition: "transform 0.1s" },
-  
-  resetBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", padding: "2px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
-  resetBtnInline: { background: "#f1f5f9", border: "none", color: "#64748b", cursor: "pointer", width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }
+  alignToggleGroup: { display: "flex", border: "1px solid #cbd5e1", borderRadius: "6px", overflow: "hidden" },
+  alignBtn: { border: "none", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyValue: "center", cursor: "pointer", color: "#475569" },
+  advColorContainer: { display: "flex", flexDirection: "column", gap: "8px", minWidth: "180px" },
+  tabHeader: { display: "flex", borderBottom: "1px solid #f1f5f9", paddingBottom: "4px" },
+  tabBtn: { border: "none", padding: "4px 8px", fontSize: "11px", cursor: "pointer", borderRadius: "4px", color: "#334155" },
+  gradPreset: { width: "20px", height: "20px", borderRadius: "4px", cursor: "pointer", border: "1px solid rgba(0,0,0,0.05)" }
 };

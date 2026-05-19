@@ -679,49 +679,102 @@ display: state.isPreviewMode
   </div>
 )}           
            
-{item.type === 'link' && (
-  <a
-    href={item.action?.url || "#"} 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    contentEditable={isSelected && !state.isPreviewMode} 
-    suppressContentEditableWarning 
-    onDoubleClick={handleDoubleClick}
-    onBlur={(e) => { updateItem(activePageId, section.id, item.id, { text: e.target.innerText }); }}
-    onClick={(e) => { if (!state.isPreviewMode && !e.ctrlKey) e.preventDefault(); }}
-    style={{ 
-      // 1. تمرير الستايلات الافتراضية أولاً لضمان الأبعاد والمحاذاة
-      width: "100%", 
-      height: "100%", 
-      cursor: state.isPreviewMode ? "pointer" : "text", 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center", 
-      textDecoration: "underline", 
-      color: item.styles?.color || "inherit", 
-      outline: "none", 
-      userSelect: state.isPreviewMode ? "none" : "text", 
-      pointerEvents: "auto", 
-      filter: cleanFilter, 
-      boxShadow: "none",
+{item.type === 'link' && (() => {
+  // 1. تجهيز منطق الجراديانت والظل للنص الداخلي للرابط
+  const isColorGradient = item.styles?.color && item.styles.color.includes('gradient');
+  const shadowBlur = item.styles?.blur !== undefined ? `${item.styles.blur}px` : "2px";
+  const shadowColor = item.styles?.shadowColor || "rgba(0, 0, 0, 0.5)";
+  const hasTextShadow = item.styles?.shadowColor || parseInt(item.styles?.blur) > 0;
 
-      // 2. حقن خصائص الحدود والشفافية والدوران الديناميكية التي يغيرها المستخدم
-      borderWidth: item.styles?.borderWidth !== undefined ? `${parseFloat(item.styles.borderWidth)}px` : '0px',
-      borderColor: item.styles?.borderColor || "transparent",
-      borderStyle: item.styles?.borderStyle && item.styles.borderStyle !== 'none'
-        ? item.styles.borderStyle
-        : (parseFloat(item.styles?.borderWidth) > 0 ? 'solid' : 'none'),
-      borderRadius: item.styles?.borderRadius !== undefined ? `${parseFloat(item.styles.borderRadius)}px` : "0px", 
-      opacity: item.styles?.opacity !== undefined ? parseFloat(item.styles.opacity) : 1,
+  // 2. تفكيك كائن الـ styles وعزل خصائص النصوص لمنع التضارب
+  const { 
+    color: itemColor, 
+    fontSize: itemFontSize, 
+    textDecoration: itemDecoration, 
+    fontFamily, fontWeight, fontStyle, letterSpacing, textAlign,
+    ...containerStyles 
+  } = item.styles || {};
 
-      // 3. نشر كائن الـ styles بالكامل في النهاية لتطبيق أي تعديلات أخرى مثل الخطوط والمساحات
-      ...item.styles
-    }}
-  >
-    {item.text || "Link Text"}
-  </a>
-)}
-            {item.type === 'input' && (
+  return (
+    <a
+      href={item.action?.url || "#"} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      contentEditable={isSelected && !state.isPreviewMode} 
+      suppressContentEditableWarning 
+      onDoubleClick={handleDoubleClick}
+      onBlur={(e) => { updateItem(activePageId, section.id, item.id, { text: e.target.innerText }); }}
+      onClick={(e) => { if (!state.isPreviewMode && !e.ctrlKey) e.preventDefault(); }}
+      
+      // الحاوية الخارجية: مسؤولة عن التموضع، الأبعاد، الحدود، والشفافية
+      style={{ 
+        width: "100%", 
+        height: "100%", 
+        cursor: state.isPreviewMode ? "pointer" : "text", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        outline: "none", 
+        userSelect: state.isPreviewMode ? "none" : "text", 
+        pointerEvents: "auto", 
+        filter: cleanFilter, 
+        
+        background: item.styles?.background || "none",
+        backgroundColor: item.styles?.background ? "transparent" : (item.styles?.backgroundColor || "transparent"),
+        opacity: item.styles?.opacity !== undefined ? parseFloat(item.styles.opacity) : 1,
+
+        // التحكم الكامل بالحدود والدوران
+        borderWidth: item.styles?.borderWidth !== undefined ? `${parseFloat(item.styles.borderWidth)}px` : '0px',
+        borderColor: item.styles?.borderColor || "transparent",
+        borderStyle: item.styles?.borderStyle && item.styles.borderStyle !== 'none'
+          ? item.styles.borderStyle
+          : (parseFloat(item.styles?.borderWidth) > 0 ? 'solid' : 'none'),
+        borderRadius: item.styles?.borderRadius !== undefined ? `${parseFloat(item.styles.borderRadius)}px` : "0px", 
+
+        // دمج باقي الستايلات الآمنة فقط (الأبعاد والمكان) بعد تصفيتها من الألوان
+        ...containerStyles, 
+        boxShadow: "none",
+      }}
+    >
+      {/* الوسم الداخلي: إجبار المتصفح على تطبيق اللون والحجم باستخدام تمييز النص الصريح */}
+      <span
+        style={{
+          width: "auto",
+          display: "inline-block",
+          lineHeight: "1.2",
+          wordBreak: "break-word",
+
+          // تطبيق خصائص الخط والـ Decoration واللون الأساسي (Solid) بدقة
+          fontSize: itemFontSize ? itemFontSize : "16px",
+          fontFamily: fontFamily || "inherit",
+          fontWeight: fontWeight || "normal",
+          fontStyle: fontStyle || "normal",
+          textDecoration: itemDecoration ? itemDecoration : "underline", 
+          letterSpacing: letterSpacing || "normal",
+          textAlign: textAlign || "center",
+          color: isColorGradient ? "transparent" : (itemColor || "inherit"),
+
+          // حل مشكلة الظل على الحروف
+          textShadow: hasTextShadow ? `2px 2px ${shadowBlur} ${shadowColor}` : "none",
+
+          // حل مشكلة الجراديانت للحروف
+          ...(isColorGradient ? {
+            backgroundImage: itemColor,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            MozBackgroundClip: 'text',
+            MozTextFillColor: 'transparent',
+          } : {})
+        }}
+      >
+        {item.text || "Link Text"}
+      </span>
+    </a>
+  );
+})()}
+
+
+      {item.type === 'input' && (
               <div style={{ width: '100%', height: '100%', filter: cleanFilter }}>
                 <input id={`input-${item.id}`} type="text" placeholder={item.placeholder || "Enter text..."} disabled={!state.isPreviewMode} style={{ ...item.styles, width: "100%", height: "100%", outline: isSelected ? "2px solid #4f46e5" : "none", pointerEvents: state.isPreviewMode ? "auto" : "none" }} />
                 {!state.isPreviewMode && ( <div style={{position: 'absolute', top: '-18px', fontSize: '10px', color: '#64748b'}}>Input Field ({item.name || 'no-name'})</div> )}
