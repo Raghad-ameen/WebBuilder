@@ -25,7 +25,6 @@ export default function EditorLayout({ store, onSave }) {
       const mainArea = document.querySelector('main');
       if (!mainArea) return;
 
-      // إعطاء مساحة أمان مريحة حول الكانفاس (60px يمين ويسار)
       const paddingOffset = 120; 
       const availableWidth = mainArea.offsetWidth - paddingOffset; 
 
@@ -36,20 +35,17 @@ export default function EditorLayout({ store, onSave }) {
         setDynamicScale(availableWidth < 640 ? availableWidth / 640 : 1);
       } 
       else {
-        // ديسكتوب: نجعلها تصغر بحرية تامة دون التقيد بـ 0.70 لتتلاءم مع فتح السايد بار
         if (availableWidth < 1024) {
           const calculatedScale = availableWidth / 1024;
-          setDynamicScale(Math.max(calculatedScale, 0.40)); // تم تقليل الحد الأدنى ليتناسب مع الشاشات الصغيرة عند فتح السايدبار
+          setDynamicScale(Math.max(calculatedScale, 0.40)); 
         } else {
           setDynamicScale(1); 
         }
       }
     };
 
-    // نراقب تغيير حجم الحاوية والنافذة
     window.addEventListener('resize', updateScale);
     
-    // رصد فتح وإغلاق السايد بار بدقة عبر الـ ResizeObserver على عنصر main
     const resizeObserver = new ResizeObserver(() => updateScale());
     const mainElement = document.querySelector('main');
     if (mainElement) resizeObserver.observe(mainElement);
@@ -95,52 +91,67 @@ export default function EditorLayout({ store, onSave }) {
       <div style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%", position: "relative" }}>
         <LeftSidebar store={store} />
 
+        {/* 🛠️ التعديل هنا: حاوية البانل وأدوات التلوين أصبحت عائمة وثابتة فوق المحتوى تماماً */}
+        <div style={{ 
+          position: "absolute", 
+          top: "16px", 
+          left: "50%", 
+          transform: "translateX(-50%)", 
+          zIndex: 100, 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center", 
+          gap: "10px", 
+          pointerEvents: "none" // لكي لا تحجب الضغطات عن العناصر خلفها إلا عند الضغط على الأزرار نفسها
+        }}>
+          <div style={{ pointerEvents: "auto" }}>
+            <RightPanel store={store} />
+          </div>
+
+          {state.pages?.length > 0 && (
+            <div style={{ 
+              display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "12px", padding: "8px 16px", 
+              height: "44px", minWidth: "120px", pointerEvents: "auto"
+            }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#475569", cursor: "pointer", border: "1px solid #cbd5e1" }}>
+                <Palette size={16} />
+                <input 
+                  type="color" 
+                  value={state.canvasStyles?.backgroundColor || "#ffffff"} 
+                  onChange={(e) => store.updateCanvasStyles({ backgroundColor: e.target.value })} 
+                  style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer", width: "100%", height: "100%" }}
+                />
+              </div>
+
+              {selectedIds.length > 1 && <div style={{ width: "1px", height: "20px", backgroundColor: "#cbd5e1" }} />}
+
+              {selectedIds.length > 1 && (
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); !hasGroup ? store.groupSelectedItems() : store.ungroupSelectedItems(); }}
+                  style={{ background: "#4f46e5", border: "none", color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: "5px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "500" }}
+                >
+                  <span>{!hasGroup ? "Group" : "Ungroup"}</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* منطقة المحتوى القابلة للتمرير (الكانفاس) */}
         <main style={{ 
           flex: 1, 
           backgroundColor: "#edeef0", 
-          padding: '24px 24px 120px 24px', 
+          padding: '80px 24px 120px 24px', // تم زيادة البادينج العلوي لكي لا يختفي الكانفاس تحت البانل الثابتة عند البداية
           display: "flex", 
           flexDirection: "column", 
           alignItems: "center",
-          justifyContent: "flex-start",
-          overflow: "auto", // يسمح بظهور سكرول بار للمنطقة بأكملها إن خرجت عن السيطرة
+          justify: "flex-start",
+          overflow: "auto", 
           position: "relative",
           gap: "16px",
-          transition: "all 0.2s ease-in-out" // حركة ناعمة عند تقلص المساحة
+          transition: "all 0.2s ease-in-out" 
         }}>
           
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: "sticky", top: 0, zIndex: 100, gap: "10px", pointerEvents: "none" }}>
-            <RightPanel store={store} />
-
-            {state.pages?.length > 0 && (
-              <div style={{ 
-                display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "12px", padding: "8px 16px", 
-                height: "44px", minWidth: "120px",  pointerEvents: "auto"
-              }}>
-                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#475569", cursor: "pointer", border: "1px solid #cbd5e1" }}>
-                  <Palette size={16} />
-                  <input 
-                    type="color" 
-                    value={state.canvasStyles?.backgroundColor || "#ffffff"} 
-                    onChange={(e) => store.updateCanvasStyles({ backgroundColor: e.target.value })} 
-                    style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer", width: "100%", height: "100%" }}
-                  />
-                </div>
-
-                {selectedIds.length > 1 && <div style={{ width: "1px", height: "20px", backgroundColor: "#cbd5e1" }} />}
-
-                {selectedIds.length > 1 && (
-                  <button
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); !hasGroup ? store.groupSelectedItems() : store.ungroupSelectedItems(); }}
-                    style={{ background: "#4f46e5", border: "none", color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: "5px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "500" }}
-                  >
-                    <span>{!hasGroup ? "Group" : "Ungroup"}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
           {state.pages?.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "24px", width: "100%" }}> 
               <CanvasElement store={store} width={`${canvasWidth}px`} scale={dynamicScale}>

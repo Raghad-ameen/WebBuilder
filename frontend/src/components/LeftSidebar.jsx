@@ -103,42 +103,39 @@ export default function LeftSidebar({ store }) {
       addItemAtPosition(type, 150, 150, targetSectionId, { forceAdd: true });
     }
   };
+const handleStartDrag = (e, type) => {
+  setState((prev) => ({
+    ...prev,
+    isDraggingNow: true,
+    draggingType: type,
+    draggingShapeData: null // تنظيف كائن الأشكال عند سحب نص أو زر
+  }));
+};
 
-  const handleStartDrag = (e, type) => {
-    setState((prev) => ({
-      ...prev,
-      isDraggingNow: true,
-      draggingType: type,
-      draggingShapeData: null 
-    }));
-  };
+  // useEffect(() => {
+  //   const handleGlobalMouseUp = () => {
+  //     if (state.isDraggingNow) {
+  //       setState(prev => ({
+  //         ...prev,
+  //         isDraggingNow: false,
+  //         draggingType: null,
+  //         draggingShapeData: null
+  //       }));
+  //     }
+  //   };
 
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (state.isDraggingNow) {
-        setState(prev => ({
-          ...prev,
-          isDraggingNow: false,
-          draggingType: null,
-          draggingShapeData: null
-        }));
-      }
-    };
+  //   window.addEventListener("mouseup", handleGlobalMouseUp);
+  //   return () => {
+  //     window.removeEventListener("mouseup", handleGlobalMouseUp);
+  //   };
+  // }, [state.isDraggingNow, setState]);
 
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [state.isDraggingNow, setState]);
-
-  // دالة مساعدة لتغيير التبويب الحالي
   const setActiveTab = (tab) => {
     useState_activeTab(tab);
   };
 
   return (
     <div style={styles.container}>
-      {/* 1. شريط الأيقونات النحيف والثابت العائم على اليسار */}
       <div style={styles.iconStrip}>
         <button style={{ ...styles.stripBtn, color: activeTab === 'pages' && isDrawerOpen ? '#4f46e5' : '#475569' }} onClick={() => handleTabClick('pages')}>
           <Layers size={20} />
@@ -158,8 +155,6 @@ export default function LeftSidebar({ store }) {
         </button>
       </div>
 
-      {/* 2. لوحة المحتوى المنبثقة (Drawer Panel) */}
-      {/* 💡 تعديل ستايل الـ drawer: تمت إضافة علامة الـ overflow وتمرير الحجم ديناميكياً */}
       <div style={{ ...styles.drawer, width: isDrawerOpen ? "300px" : "0px", borderRight: isDrawerOpen ? "1px solid #e2e8f0" : "none" }}>
         {isDrawerOpen && (
           <div style={styles.drawerContent}>
@@ -175,7 +170,6 @@ export default function LeftSidebar({ store }) {
               </button>
             </div>
 
-            {/* محتوى تبويب الصفحات */}
             {activeTab === 'pages' && (
               <section style={styles.section}>
                 <div style={styles.headerRow}>
@@ -212,7 +206,6 @@ export default function LeftSidebar({ store }) {
               </section>
             )}
 
-            {/* محتوى تبويب العناصر الأساسية */}
             {activeTab === 'elements' && (
               <section style={styles.section}>
                 <div style={styles.grid}>
@@ -231,7 +224,6 @@ export default function LeftSidebar({ store }) {
               </section>
             )}
 
-            {/* محتوى تبويب الأشكال الهندسية */}
             {activeTab === 'shapes' && (
               <section style={styles.section}>
                 <div style={styles.shapesGrid}>
@@ -246,7 +238,6 @@ export default function LeftSidebar({ store }) {
                           ...prev,
                           isDraggingNow: true,
                           draggingType: "shape",
-                          // التعديل المثبت لبيانات السحب الحركي
                           draggingShapeData: { 
                             shapeType: s.id, 
                             styles: { 
@@ -266,7 +257,6 @@ export default function LeftSidebar({ store }) {
               </section>
             )}
 
-            {/* محتوى تبويب الأقسام الذكية */}
             {activeTab === 'sections' && (
               <section style={styles.section}>
                 <div style={styles.list}>
@@ -285,7 +275,6 @@ export default function LeftSidebar({ store }) {
           </div>
         )}
 
-        {/* 💡 التعديل الجوهري: الزر أصبح بداخل حاوية الـ drawer وتم ربطه بالكامل بتموضع الحافة الخارجية المطلقة */}
         <button 
           onClick={() => setIsDrawerOpen(!isDrawerOpen)} 
           style={styles.toggleBtnInside}
@@ -327,22 +316,20 @@ const styles = {
     transition: "all 0.2s"
   },
   stripLabel: { fontSize: "10px", fontWeight: "600" },
-  // 💡 تم تعديل الـ drawer ليكون هو الارتكاز الأب النسبي
   drawer: {
     backgroundColor: "#ffffff",
     height: "100%",
-    overflow: "visible", // حاسم جداً لكي يظهر الزر المطلق في الخارج
+    overflow: "visible",
     transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-    position: "relative", // هنا نقطة ارتكاز الزر الذكي الجديد
+    position: "relative",
     zIndex: 1
   },
-  // 💡 الستايل الجديد البديل لـ toggleBtn القديم (تم تحويله من fixed ليكون مرتبطاً بالحافة مباشرة)
   toggleBtnInside: {
     position: "absolute",
     top: "50%",
     transform: "translateY(-50%)",
-    left: "100%", // ليلتصق خارج السايدبار مباشرة مهما كان عرضه (300px أو 0px)
-    marginLeft: "-1px", // ليتداخل مع الحدود الجانبية بشكل متناسق
+    left: "100%",
+    marginLeft: "-1px", 
     width: "24px",
     height: "48px",
     backgroundColor: "#ffffff",

@@ -12,9 +12,11 @@
 
 .section-container {
     pointer-events: auto !important;
-    overflow: visible !important; 
 }
 
+.section-container:not(.ghost-section) {
+    overflow: visible !important;
+}
 .section-container.selected, 
 .section-container > *, 
 .text-element-wrapper, 
@@ -60,7 +62,7 @@
     background: rgba(79, 70, 229, 0.05) !important; 
     border: 1px dashed #4f46e5 !important; 
     z-index: 999999 !important;
-    position: fixed !important; 
+        position: absolute !important;
 }
 /* تحويل خطوط إطار العنصر المختار إلى مقطعة */
 .moveable-line {
@@ -82,4 +84,9 @@
 .moveable-control-box .moveable-line.moveable-vertical {
     width: 1px !important;
     background-repeat: repeat-y !important;
+}
+
+.selecto-selection {
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid #4f46e5;
 }

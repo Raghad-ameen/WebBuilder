@@ -106,7 +106,7 @@ const pasteElements = useCallback(() => {
 
 const updateState = useCallback((newState) => {
     setState(prev => {
-        saveToHistory(prev); // نمرر الـ prev الآمن والحديث هنا
+        saveToHistory(prev); 
         return typeof newState === 'function' ? newState(prev) : newState;
     });
 }, [saveToHistory]);
@@ -260,26 +260,34 @@ const closeModal = useCallback(() => {
 }, []);
 
 const updateSection = useCallback((pageId, sectionId, newData) => {
-
   setState(prev => {
-    const activePage = prev.pages?.find(p => p.id === pageId);
+    const targetPageId = pageId || prev.activePageId;
+    const activePage = prev.pages?.find(p => p.id === targetPageId);
     
     if (!activePage) {
-      console.warn("⚠️ Page not found in store:", pageId);
+      // console.warn("⚠️ Page not found in store for ID:", pageId, "Fallback to activePageId:", prev.activePageId);
       return prev; 
     }
+
+    const hasSection = activePage.sections?.some(s => s.id === sectionId);
+    if (!hasSection) {
+      // console.warn("⚠️ Section not found in this page:", sectionId);
+      return prev;
+    }
+
+    if (typeof saveToHistory === 'function') saveToHistory(prev);
 
     return {
       ...prev,
       pages: prev.pages.map(p => {
-        if (p.id !== pageId) return p;
+        if (p.id !== targetPageId) return p;
 
         return {
           ...p,
           sections: p.sections.map(s => {
             if (s.id !== sectionId) return s;
 
-            const updatedSection = {
+            return {
               ...s,
               height: newData.height !== undefined ? newData.height : s.height,
               styles: { 
@@ -291,15 +299,12 @@ const updateSection = useCallback((pageId, sectionId, newData) => {
                 ...(newData.data || {}) 
               }
             };
-            
-            return updatedSection;
           })
         };
       })
     };
   });
 }, [setState]);
-
 const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData = {}) => {
   const finalNewId = `e-${Date.now()}`;
 
@@ -316,24 +321,27 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
       text: "New Text",
       styles: { backgroundColor: "transparent", color: "#000000" }
     },
+    // 💡 تم تعديل الـ shape لتستقبل ديناميكياً الخصائص القادمة من السايدبار وإلغاء الـ borderRadius القسري
     shape: {
       width: 100,
       height: 100,
       text: "",
-      styles: { backgroundColor: "#4f46e5", borderRadius: "0px" }
+      styles: { 
+        backgroundColor: "#4f46e5"
+      }
     },
     input: {
-    width: 250,
-    height: 45,
-    text: "",
-    styles: { 
-      backgroundColor: "#ffffff", 
-      color: "#000000", 
-      borderRadius: "6px",
-      border: "1px solid #cbd5e1",
-      padding: "10px"
-    }
-  },
+      width: 250,
+      height: 45,
+      text: "",
+      styles: { 
+        backgroundColor: "#ffffff", 
+        color: "#000000", 
+        borderRadius: "6px",
+        border: "1px solid #cbd5e1",
+        padding: "10px"
+      }
+    },
     image: {
       width: 250,
       height: 180,
@@ -352,96 +360,86 @@ const addItemAtPosition = useCallback((type, x, y, sectionId = null, extraData =
 
   const finalWidth = extraData.width || config.width;
   const finalHeight = extraData.height || config.height;
-const finalX = Math.max(
-  20,
-  (typeof x === "number" ? x : 100) - finalWidth / 2
-);
+  const finalX = Math.max(20, (typeof x === "number" ? x : 100) - finalWidth / 2);
+  const finalY = Math.max(20, (typeof y === "number" ? y : 100) - finalHeight / 2);
 
-const finalY = Math.max(
-  20,
-  (typeof y === "number" ? y : 100) - finalHeight / 2
-);
   setState(prev => {
     const activePage = prev.pages?.find(p => p.id === prev.activePageId);
     if (!activePage) return prev;
 
-const newItem = {
-  id: finalNewId,
-  type,
-    parentSectionId: sectionId || null,
-  x: finalX,
-  y: finalY,
-  width: finalWidth,
-  height: finalHeight,
-  text: extraData.text !== undefined ? extraData.text : config.text,
-  action: {
-    type: "none", 
-    payload: "" 
-  },
-  styles: {
-    ...config.styles, 
-    zIndex: 100,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'auto',
-    ...(extraData.styles || {}),
-    
-    ...Object.fromEntries(
-      Object.entries(extraData.styles || {}).filter(([key]) => 
-        !['position', 'top', 'left', 'transform'].includes(key)
-      )
-    ),
-  }
-};    
-let updatedSections = [...activePage.sections];
+    const newItem = {
+      id: finalNewId,
+      type,
+      // 💡 حفظ نوع الشكل (مثل: circle, star, triangle) للرجوع إليه في الـ Canvas إن لزم الأمر
+      shapeType: extraData.shapeType || null, 
+      parentSectionId: sectionId || null,
+      x: finalX,
+      y: finalY,
+      width: finalWidth,
+      height: finalHeight,
+      text: extraData.text !== undefined ? extraData.text : config.text,
+      action: {
+        type: "none", 
+        payload: "" 
+      },
+      styles: {
+        ...config.styles, 
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+        // 💡 دمج التنسيقات القادمة من السايدبار (شاملة clipPath و borderRadius المخصصة)
+        ...(extraData.styles || {}),
+        
+        ...Object.fromEntries(
+          Object.entries(extraData.styles || {}).filter(([key]) => 
+            !['position', 'top', 'left', 'transform'].includes(key)
+          )
+        ),
+      }
+    };    
 
-if (updatedSections.length === 0) {
+    let updatedSections = [...activePage.sections];
 
-  const newAutoSectionId = `s-${Date.now()}`;
+    if (updatedSections.length === 0) {
+      const newAutoSectionId = `s-${Date.now()}`;
+      newItem.parentSectionId = newAutoSectionId;
 
-  newItem.parentSectionId = newAutoSectionId;
-
-updatedSections = [{
-  id: newAutoSectionId,
-  type: "ghost-section",
-  isGhost: true,
-
-  height: 9999,
-
-  styles: {
-    backgroundColor: "transparent",
-    border: "none",
-    boxShadow: "none",
-    padding: "0px",
-    minHeight: "100%",
-    position: "relative",
-    pointerEvents: "none"
-  },
-
-  data: {
-    items: [newItem]
-  }
-}];}
-else {
-  const targetId = sectionId || updatedSections[0].id;
-  newItem.parentSectionId = targetId;
-  updatedSections = updatedSections.map(s => {
-    if (s.id === targetId) {
-      return {
-        ...s,
+      updatedSections = [{
+        id: newAutoSectionId,
+        type: "ghost-section",
+        isGhost: true,
+        height: 9999,
+        styles: {
+          backgroundColor: "transparent",
+          border: "none",
+          boxShadow: "none",
+          padding: "0px",
+          minHeight: "100%",
+          position: "relative",
+          pointerEvents: "none"
+        },
         data: {
-          ...s.data,
-          items: [...(s.data.items || []), newItem]
+          items: [newItem]
         }
-      };
+      }];
+    } else {
+      const targetId = sectionId || updatedSections[0].id;
+      newItem.parentSectionId = targetId;
+      updatedSections = updatedSections.map(s => {
+        if (s.id === targetId) {
+          return {
+            ...s,
+            data: {
+              ...s.data,
+              items: [...(s.data.items || []), newItem]
+            }
+          };
+        }
+        return s;
+      });
     }
-    return s;
-  });
-}
-
-
-
 
     return {
       ...prev,
@@ -462,7 +460,6 @@ else {
   }, 50);
 
 }, [setState]);
-
 
 const selectItems = useCallback((ids) => {
   if (!ids || ids.length === 0) {
@@ -518,296 +515,244 @@ const loadProject = useCallback(() => {
 }, [state.projectName]);
 
 
-  const addSection = useCallback((type) => {
-    saveToHistory(state); 
-    
-const templates = {
+const addSection = useCallback((type) => {
+  saveToHistory(state); 
   
-  navbar: {
-    id: `s-${Date.now()}`,
-    type: "navbar",
-    height: 80, 
-    styles: { 
-      backgroundColor: "#ffffff", 
-      borderBottom: "1px solid #e2e8f0",
-      boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)"
-    },
-    data: {
-      items: [
-        { 
-          id: `e-${Date.now()}-logo`, 
-          type: "text", 
-          text: "COMPANY", 
-          x: 80, 
-          y: 25, 
-          width: 150, 
-          height: 30, 
-          styles: { fontSize: "20px", fontWeight: "800", color: "#1e293b", letterSpacing: "1.5px" } 
-        },
-        { 
-          id: `e-${Date.now()}-nav1`, 
-          type: "button", 
-          text: "Home", 
-          x: 450, 
-          y: 25, 
-          width: 40, 
-          height: 30, 
-          action: { type: "page", payload: "home" },
-          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
-        },
-        { 
-          id: `e-${Date.now()}-nav2`, 
-          type: "button", 
-          text: "Services", 
-          x: 550, 
-          y: 25, 
-          width: 90, 
-          height: 30, 
-          action: { type: "page", payload: "services" },
-          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
-        },
-        { 
-          id: `e-${Date.now()}-nav3`, 
-          type: "button", 
-          text: "Contact", 
-          x: 660, 
-          y: 25, 
-          width: 80, 
-          height: 30, 
-          action: { type: "scroll", payload: "contact-section" },
-          styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
-        },
-        { 
-          id: `e-${Date.now()}-nav-btn`, 
-          type: "button", 
-          text: "Get Started", 
-          x: 850, 
-          y: 18, 
-          width: 120, 
-          height: 44, 
-          action: { type: "url", payload: "dashboard" },
-          styles: { backgroundColor: "#0f172a", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "14px" } 
-        }
-      ]
-    }
-  },
+  // دالة صغيرة لتوليد ID عشوائي فريد ومضمون لا يتكرر في نفس الميلي ثانية
+  const generateUniqueId = (prefix, index = 0) => {
+    const rand = Math.floor(Math.random() * 100000);
+    return `${prefix}-${Date.now()}-${index}-${rand}`;
+  };
 
-hero: {
-  id: `s-${Date.now()}`,
-  type: "hero",
-  height: 580, 
-  styles: { 
-    backgroundColor: "#f8fafc", 
-    backgroundImage: "linear-gradient(to bottom right, #f8fafc, #f1f5f9)"
-  },
-  data: {
-    items: [
-      { 
-        id: `e-${Date.now()}-h-tag`, 
-        type: "text", 
-        text: "WELCOME TO OUR PLATFORM", 
-        x: 80, 
-        y: 140, 
-        width: 300, 
-        height: 25, 
-        styles: { fontSize: "12px", fontWeight: "700", color: "#2563eb", letterSpacing: "2px" } 
+  const templates = {
+    navbar: {
+      id: generateUniqueId("s-nav"),
+      type: "navbar",
+      height: 80, 
+      styles: { 
+        backgroundColor: "#ffffff", 
+        borderBottom: "1px solid #e2e8f0",
+        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
+        position: "relative",
+        zIndex: 50 // رفع قيمة الـ zIndex للناف بار ككل
       },
-      { 
-        id: `e-${Date.now()}-h-title`, 
-        type: "text", 
-        text: "Build Your Vision & Share It With The World",
-        x: 80, 
-        y: 180, 
-        width: 550, 
-        height: 120, 
-        styles: { fontSize: "30px", fontWeight: "800", color: "#0f172a", lineHeight: "1.2" } 
-      },
-      { 
-        id: `e-${Date.now()}-h-desc`, 
-        type: "text", 
-        text: "Discover creative tools, robust features, and custom layouts designed to bring your project online beautifully and effortlessly.",
-        x: 80, 
-        y: 310, 
-        width: 500, 
-        height: 60, 
-        styles: { fontSize: "16px", color: "#475569", lineHeight: "1.6" } 
-      },
-      { 
-        id: `e-${Date.now()}-h-btn1`, 
-        type: "button", 
-        text: "Get Started",
-        x: 80, 
-        y: 400, 
-        width: 160, 
-        height: 50, 
-        action: { type: "url", payload: "#" },
-        styles: { backgroundColor: "#2563eb", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "15px", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)" } 
-      },
-      { 
-        id: `e-${Date.now()}-h-btn2`, 
-        type: "button", 
-        text: "Learn More",
-        x: 260, 
-        y: 400, 
-        width: 140, 
-        height: 50, 
-        action: { type: "url", payload: "#" },
-        styles: { backgroundColor: "#ffffff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "6px", fontWeight: "600", fontSize: "15px" } 
-      },
-      {
-        id: `e-${Date.now()}-h-img-bg`,
-        type: "shape",
-        x: 600,
-        y: 150,
-        width: 340,
-        height: 300,
-        styles: { backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }
-      },
-      {
-        id: `e-${Date.now()}-h-img-placeholder`,
-        type: "text",
-        text: "Your Visual Asset Here",
-        x: 600,
-        y: 270,
-        width: 340,
-        height: 40,
-        styles: { fontSize: "16px", color: "#94a3b8", fontWeight: "500", textAlign: "center" }
+      data: {
+        items: [
+          { 
+            id: "logo", // سيتم استبداله ديناميكياً بـ ID فريد بالأسفل
+            type: "text", 
+            text: "COMPANY", 
+            x: 80, 
+            y: 25, 
+            width: 150, 
+            height: 30, 
+            styles: { fontSize: "20px", fontWeight: "800", color: "#1e293b", letterSpacing: "1.5px" } 
+          },
+          { 
+            id: "nav1", 
+            type: "button", 
+            text: "Home", 
+            x: 450, 
+            y: 25, 
+            width: 60, 
+            height: 30, 
+            action: { type: "page", payload: "home" },
+            styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+          },
+          { 
+            id: "nav2", 
+            type: "button", 
+            text: "Services", 
+            x: 550, 
+            y: 25, 
+            width: 90, 
+            height: 30, 
+            action: { type: "page", payload: "services" },
+            styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+          },
+          { 
+            id: "nav3", 
+            type: "button", 
+            text: "Contact", 
+            x: 660, 
+            y: 25, 
+            width: 80, 
+            height: 30, 
+            action: { type: "scroll", payload: "contact-section" },
+            styles: { backgroundColor: "transparent", color: "#475569", fontSize: "14px", fontWeight: "500", cursor: "pointer" } 
+          },
+          { 
+            id: "nav-btn", 
+            type: "button", 
+            text: "Get Started", 
+            x: 850, 
+            y: 18, 
+            width: 120, 
+            height: 44, 
+            action: { type: "url", payload: "dashboard" },
+            styles: { backgroundColor: "#0f172a", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "14px" } 
+          }
+        ]
       }
-    ]
-  }
-},
-  'feature-grid': {
-    id: `s-${Date.now()}`,
-    type: "feature-grid",
-    height: 460,
-    styles: { backgroundColor: "#ffffff" },
-    data: {
-      items: [
-        { 
-          id: `feat-t-${Date.now()}`, 
-          type: 'text', 
-          text: 'Core Platform Functional', 
-          x: 350, 
-          y: 40, 
-          width: 400, 
-          height: 40, 
-          styles: { fontSize: '28px', fontWeight: '800', textAlign: 'center', color: '#0f172a' } 
-        },
-        { 
-          id: `feat-sub-${Date.now()}`, 
-          type: 'text', 
-          text: 'Engineered for scalability, standard layout patterns, and modern performance.', 
-          x: 300, 
-          y: 90, 
-          width: 500, 
-          height: 25, 
-          styles: { fontSize: '15px', textAlign: 'center', color: '#64748b' } 
-        },
-        
-{ id: `feat-sh1-${Date.now()}`, type: 'shape', x: 30, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
-{ id: `feat-d1-${Date.now()}`, type: 'text', text: 'Fast & Secure', x: 60, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
-{ id: `feat-p1-${Date.now()}`, type: 'text', text: 'Optimized performance guaranteeing high speed, modern secure frameworks, and lightweight elements.', x: 60, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
-
-{ id: `feat-sh2-${Date.now()}`, type: 'shape', x: 360, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
-{ id: `feat-d2-${Date.now()}`, type: 'text', text: 'Easy Customization', x: 390, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
-{ id: `feat-p2-${Date.now()}`, type: 'text', text: 'Full visual control over layouts, spacing, canvas elements, dynamic styles, and custom content templates.', x: 390, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
-
-{ id: `feat-sh3-${Date.now()}`, type: 'shape', x: 690, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
-{ id: `feat-d3-${Date.now()}`, type: 'text', text: 'Fully Responsive', x: 720, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
-{ id: `feat-p3-${Date.now()}`, type: 'text', text: 'Beautiful layout transitions adapted smoothly across all screen variants, devices, and modern viewpoints.', x: 720, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },      ]
-    }
-  },
-
-  footer: {
-    id: `s-${Date.now()}`,
-    type: "footer",
-    height: 180,
-    styles: { 
-      backgroundColor: "#ffffff", 
-      borderTop: "1px solid #e2e8f0"
     },
-    data: {
-      items: [
-        { 
-          id: `foot-brand-${Date.now()}`, 
-          type: 'text', 
-          text: 'COMPANY SYSTEM', 
-          x: 80, 
-          y: 40, 
-          width: 200, 
-          height: 30, 
-          styles: { fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '1px' } 
-        },
-        { 
-          id: `foot-sub-${Date.now()}`, 
-          type: 'text', 
-          text: 'Automated layouts and asset management platform tools.', 
-          x: 80, 
-          y: 80, 
-          width: 350, 
-          height: 40, 
-          styles: { fontSize: '13px', color: '#64748b', lineHeight: '1.4' } 
-        },
-        { 
-          id: `foot-link1-${Date.now()}`, 
-          type: 'button', 
-          text: 'Privacy Policy', 
-          x: 600, 
-          y: 40, 
-          width: 110, 
-          height: 30, 
-          action: { type: "page", payload: "privacy" },
-          styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } 
-        },
-        { 
-          id: `foot-link2-${Date.now()}`, 
-          type: 'button', 
-          text: 'Terms of Service', 
-          x: 750, 
-          y: 40, 
-          width: 130, 
-          height: 30, 
-          action: { type: "page", payload: "terms" },
-          styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } 
-        },
-        { 
-          id: `foot-line-${Date.now()}`, 
-          type: 'shape', 
-          x: 80, 
-          y: 130, 
-          width: 1080, 
-          height: 1, 
-          styles: { backgroundColor: '#e2e8f0' } 
-        },
-        { 
-          id: `foot-copy-${Date.now()}`, 
-          type: 'text', 
-          text: '© 2026 Platform Builder. All rights reserved.', 
-          x: 400, 
-          y: 145, 
-          width: 400, 
-          height: 25, 
-          styles: { fontSize: '12px', color: '#94a3b8' } 
-        }
-      ]
-    }
-  }
-};
 
-const baseTemplate = templates[type] ;
-const newSection = {
-  ...baseTemplate,
-  id: `s-${Date.now()}`, 
-  type: type            
-};
-    setState(prev => ({
-      ...prev,
-      pages: prev.pages.map(p => p.id === prev.activePageId 
-        ? { ...p, sections: [...p.sections, newSection] } 
-        : p
-      )
-    }));
-  }, [state, saveToHistory]); 
+    hero: {
+      id: generateUniqueId("s-hero"),
+      type: "hero",
+      height: 580, 
+      styles: { 
+        backgroundColor: "#f8fafc", 
+        backgroundImage: "linear-gradient(to bottom right, #f8fafc, #f1f5f9)"
+      },
+      data: {
+        items: [
+          { 
+            id: "h-tag", 
+            type: "text", 
+            text: "WELCOME TO OUR PLATFORM", 
+            x: 80, 
+            y: 140, 
+            width: 300, 
+            height: 25, 
+            styles: { fontSize: "12px", fontWeight: "700", color: "#2563eb", letterSpacing: "2px" } 
+          },
+          { 
+            id: "h-title", 
+            type: "text", 
+            text: "Build Your Vision & Share It With The World",
+            x: 80, 
+            y: 180, 
+            width: 550, 
+            height: 120, 
+            styles: { fontSize: "30px", fontWeight: "800", color: "#0f172a", lineHeight: "1.2" } 
+          },
+          { 
+            id: "h-desc", 
+            type: "text", 
+            text: "Discover creative tools, robust features, and custom layouts designed to bring your project online beautifully and effortlessly.",
+            x: 80, 
+            y: 310, 
+            width: 500, 
+            height: 60, 
+            styles: { fontSize: "16px", color: "#475569", lineHeight: "1.6" } 
+          },
+          { 
+            id: "h-btn1", 
+            type: "button", 
+            text: "Get Started",
+            x: 80, 
+            y: 400, 
+            width: 160, 
+            height: 50, 
+            action: { type: "url", payload: "#" },
+            styles: { backgroundColor: "#2563eb", color: "#ffffff", borderRadius: "6px", fontWeight: "600", fontSize: "15px", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)" } 
+          },
+          { 
+            id: "h-btn2", 
+            type: "button", 
+            text: "Learn More",
+            x: 260, 
+            y: 400, 
+            width: 140, 
+            height: 50, 
+            action: { type: "url", payload: "#" },
+            styles: { backgroundColor: "#ffffff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "6px", fontWeight: "600", fontSize: "15px" } 
+          },
+          {
+            id: "h-img-bg",
+            type: "shape",
+            x: 600,
+            y: 150,
+            width: 340,
+            height: 300,
+            styles: { backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }
+          },
+          {
+            id: "h-img-placeholder",
+            type: "text",
+            text: "Your Visual Asset Here",
+            x: 680,
+            y: 270,
+            width: 340,
+            height: 40,
+            styles: { fontSize: "16px", color: "#94a3b8", fontWeight: "500", textAlign: "center" }
+          }
+        ]
+      }
+    },
+
+    'feature-grid': {
+      id: generateUniqueId("s-feat"),
+      type: "feature-grid",
+      height: 460,
+      styles: { backgroundColor: "#ffffff" },
+      data: {
+        items: [
+          { id: "feat-t", type: 'text', text: 'Core Platform Functional', x: 350, y: 40, width: 400, height: 40, styles: { fontSize: '28px', fontWeight: '800', textAlign: 'center', color: '#0f172a' } },
+          { id: "feat-sub", type: 'text', text: 'Engineered for scalability, standard layout patterns, and modern performance.', x: 300, y: 90, width: 500, height: 25, styles: { fontSize: '15px', textAlign: 'center', color: '#64748b' } },
+          { id: "feat-sh1", type: 'shape', x: 30, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+          { id: "feat-d1", type: 'text', text: 'Fast & Secure', x: 60, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+          { id: "feat-p1", type: 'text', text: 'Optimized performance guaranteeing high speed, modern secure frameworks, and lightweight elements.', x: 60, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
+          { id: "feat-sh2", type: 'shape', x: 360, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+          { id: "feat-d2", type: 'text', text: 'Easy Customization', x: 390, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+          { id: "feat-p2", type: 'text', text: 'Full visual control over layouts, spacing, canvas elements, dynamic styles, and custom content templates.', x: 390, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } },
+          { id: "feat-sh3", type: 'shape', x: 690, y: 160, width: 300, height: 230, styles: { backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' } },
+          { id: "feat-d3", type: 'text', text: 'Fully Responsive', x: 720, y: 195, width: 250, height: 30, styles: { fontSize: '18px', fontWeight: '700', color: '#1e293b' } },
+          { id: "feat-p3", type: 'text', text: 'Beautiful layout transitions adapted smoothly across all screen variants, devices, and modern viewpoints.', x: 720, y: 240, width: 250, height: 80, styles: { fontSize: '14px', color: '#64748b', lineHeight: '1.5' } }
+        ]
+      }
+    },
+
+    footer: {
+      id: generateUniqueId("s-foot"),
+      type: "footer",
+      height: 180,
+      styles: { backgroundColor: "#ffffff", borderTop: "1px solid #e2e8f0" },
+      data: {
+        items: [
+          { id: "foot-brand", type: 'text', text: 'COMPANY SYSTEM', x: 80, y: 40, width: 200, height: 30, styles: { fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '1px' } },
+          { id: "foot-sub", type: 'text', text: 'Automated layouts and asset management platform tools.', x: 80, y: 80, width: 350, height: 40, styles: { fontSize: '13px', color: '#64748b', lineHeight: '1.4' } },
+          { id: "foot-link1", type: 'button', text: 'Privacy Policy', x: 600, y: 40, width: 110, height: 30, action: { type: "page", payload: "privacy" }, styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } },
+          { id: "foot-link2", type: 'button', text: 'Terms of Service', x: 750, y: 40, width: 130, height: 30, action: { type: "page", payload: "terms" }, styles: { backgroundColor: "transparent", fontSize: '14px', color: '#475569', textAlign: 'right' } },
+          { id: "foot-line", type: 'shape', x: 80, y: 130, width: 1080, height: 1, styles: { backgroundColor: '#e2e8f0' } },
+          { id: "foot-copy", type: 'text', text: '© 2026 Platform Builder. All rights reserved.', x: 400, y: 145, width: 400, height: 25, styles: { fontSize: '12px', color: '#94a3b8' } }
+        ]
+      }
+    }
+  };
+
+  const baseTemplate = templates[type];
+  if (!baseTemplate) return;
+
+  // توليد سكشن آي دي فريد تماماً لكل عملية ضغط جديدة
+  const newSectionId = generateUniqueId(`s-${type}`);
+
+  const newSection = {
+    ...baseTemplate,
+    id: newSectionId, 
+    type: type,
+    data: {
+      ...baseTemplate.data,
+      // 🔥 الحل السحري: توليد ID فريد لكل عنصر بشكل مستقل بناءً على الـ index لمنع تكرار الميلي ثانية
+      items: (baseTemplate.data?.items || []).map((item, index) => ({
+        ...item,
+        id: generateUniqueId(`e-${type}-${item.id || index}`, index),
+        parentSectionId: newSectionId 
+      }))
+    }
+  };
+
+  setState(prev => ({
+    ...prev,
+    pages: prev.pages.map(p => p.id === prev.activePageId 
+      ? { ...p, sections: [...p.sections, newSection] } 
+      : p
+    )
+  }));
+
+}, [setState, saveToHistory, state]);
+
+
 
 const clearCanvas = useCallback(() => {
   setState(prev => {

@@ -30,7 +30,7 @@ const DEFAULT_VALUES = {
   borderRadius: 0,
   borderColor: "#cbd5e1",
   borderStyle: "solid",
-  shadowColor: "transparent",
+  shadowColor: "000000",
   filterBlur: 0,
   filterBrightness: 100,
   filterContrast: 100,
@@ -48,7 +48,14 @@ const DEFAULT_VALUES = {
   objectFit: "cover",
   backgroundColor: "#ffffff",
   minHeight: 100,
-  linkUrl: ""
+  linkUrl: "",
+  labelFontSize: 12,      
+  labelColor: "#4f46e5",   
+hoverBg: "transparent",
+hoverColor: "#ffffff",
+  hoverScale: "none",
+  transitionSpeed: 0.2,
+  
 };
 
 const FIELD_ICONS = {
@@ -76,7 +83,13 @@ const FIELD_ICONS = {
   objectFit: <Maximize2 size={15} />,
   backgroundColor: <Paintbrush size={16} />,
   minHeight: <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}><Maximize2 size={16} /></span>,
-  linkUrl: <Link size={16} style={{ color: '#2563eb' }} />
+  linkUrl: <Link size={16} style={{ color: '#2563eb' }} />,
+  name: <span style={{ fontWeight: 'bold', fontSize: '11px', color: '#16a34a' }}>[ID]</span>, 
+  inputType: <Type size={15} style={{ color: '#2563eb' }} />,
+  placeholder: <span style={{ fontStyle: 'italic', fontSize: '11px', color: '#64748b' }}>"Abc"</span>,
+  constraints: <Sliders size={15} style={{ color: '#ea580c' }} />,
+  labelFontSize: <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#4f46e5' }}>L-Aa</span>, 
+  labelColor: <Palette size={15} style={{ color: '#4f46e5' }} />
 };
 
 const getFallbackIcon = (fieldName) => {
@@ -100,7 +113,28 @@ export const PROPERTY_CONTROLS = {
     { section: "Filters", label: "Brightness", field: "filterBrightness", type: "range", min: 0, max: 200 },
     { section: "Filters", label: "Contrast", field: "filterContrast", type: "range", min: 0, max: 200 },
     { section: "Filters", label: "Grayscale", field: "filterGrayscale", type: "range", min: 0, max: 100 },
+{ section: "Hover Styles", label: "Hover Background", field: "hoverBg", type: "advanced-color" },
+{ section: "Hover Styles", label: "Hover Text Color", field: "hoverColor", type: "advanced-color" },
+{ section: "Hover Styles", label: "Hover Scale Effect", field: "hoverScale", type: "select", options: ["none", "1.02", "1.05", "1.1"] },
+{ section: "Hover Styles", label: "Transition Speed", field: "transitionSpeed", type: "number", unit: "s", placeholder: "e.g., 0.2" },
+{ section: "Effects", label: "Shadow Mode", field: "shadowMode", type: "select", options: ["none", "Drop", "Glow", "Echo", "Glitch"] },
+    
+    { section: "Effects", label: "Shadow Blur", field: "shadowBlur", type: "range", min: 0, max: 20 },
+    
+    { section: "Effects", label: "Glitch Effect", field: "glitchStyle", type: "select", options: ["none", "RGB Split", "Cyberpunk", "Vintage"] },
   ],
+input: [
+    { section: "Field Base", label: "Field Key (Name)", field: "name", type: "text", placeholder: "e.g., username, email" },
+    { section: "Field Base", label: "Placeholder text", field: "placeholder", type: "text", placeholder: "e.g., Enter your email..." },
+    { section: "Field Base", label: "Field Type", field: "inputType", type: "select", options: ["text", "email", "password", "number", "tel"] },
+    
+{ section: "Label Typography", label: "Label Size", field: "labelFontSize", type: "number", unit: "px" },
+{ section: "Label Typography", label: "Label Color", field: "labelColor", type: "advanced-color",icon: "Palette" },
+   
+    { section: "Field Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
+    { section: "Field Typography", label: "Font Color", field: "color", type: "advanced-color" },
+],  
+  
   text: [
     { section: "Typography", label: "Text Content", field: "text", type: "text" },
     { section: "Typography", label: "Font Size", field: "fontSize", type: "number", unit: "px" },
@@ -121,6 +155,7 @@ export const PROPERTY_CONTROLS = {
     { section: "Typography", label: "Font Color", field: "color", type: "advanced-color", isTextStyle: true },
     { section: "Typography", label: "Font Weight", field: "fontWeight", type: "select", options: ["normal", "bold", "500", "700"], isTextStyle: true },
     { section: "Typography", label: "Align", field: "textAlign", type: "alignment-toggle", isTextStyle: true },
+    
   ],
   image: [
     { section: "Image Settings", label: "Image URL", field: "src", type: "text" },
@@ -129,7 +164,6 @@ export const PROPERTY_CONTROLS = {
   shape: [
     { section: "Style", label: "Background Color", field: "backgroundColor", type: "advanced-color" },
   ],
-  // 🔥 [تم الإصلاح هنا]: إزالة الخيار isTextStyle لحفظ القيم مباشرة في كائن styles القياسي للرابط
   link: [
     { section: "Action", label: "Link URL", field: "linkUrl", type: "text", placeholder: "https://google.com" },
     { section: "Typography", label: "Link Text", field: "text", type: "text" },
@@ -141,12 +175,30 @@ export const PROPERTY_CONTROLS = {
     { field: 'backgroundColor', label: 'Background Color', type: 'advanced-color', section: 'Appearance' },
     { field: 'minHeight', label: 'Min Height', type: 'number', unit: 'px', section: 'Layout' },
   ],
+  animations: [
+    { section: "Animation", label: "Entry Animation", field: "entryAnimation", type: "select", options: ["none", "Rise", "Pan", "Fade", "Zoom In"] },
+    
+    // يظهر فقط عند اختيار Pan (المسح)
+    { section: "Animation", label: "Direction", field: "panDirection", type: "alignment-toggle", options: ["up", "down", "left", "right"] },
+    
+    { section: "Animation", label: "Duration", field: "animationDuration", type: "number", unit: "s", placeholder: "e.g., 0.5" },
+    { section: "Animation", label: "Delay", field: "animationDelay", type: "number", unit: "s", placeholder: "0" },
+  ],
+  positioning: [
+    { section: "Position", label: "Arrange (Layering)", field: "zIndex", type: "select", options: ["To Front", "Bring Forward", "Send Backward", "To Back"] },
+    
+    // هذه ليست قيمة واحدة، بل أزرار تقوم بتشغيل دالة للتأثير على x, y
+    { section: "Position", label: "Align to Canvas", field: "canvasAlignment", type: "canvas-align-toggle" }, // سنصمم نوع إدخال جديد
+  ],
 };
 
 const ControlledNumberInput = ({ initialValue, config, onPropertyChange }) => {
   const [localVal, setLocalVal] = useState(initialValue);
 
   useEffect(() => {
+    if (config.field === 'labelFontSize') {
+      console.log("⭐ [1. Input Received initialValue]:", initialValue);
+    }
     setLocalVal(initialValue);
   }, [initialValue]);
 
@@ -154,6 +206,9 @@ const ControlledNumberInput = ({ initialValue, config, onPropertyChange }) => {
     const valStr = e.target.value;
     setLocalVal(valStr);
     if (valStr !== "") {
+      if (config.field === 'labelFontSize') {
+        console.log("⭐ [2. Input Triggered handleChange] -> sending Number:", Number(valStr));
+      }
       onPropertyChange(config, Number(valStr));
     }
   };
@@ -168,7 +223,6 @@ const ControlledNumberInput = ({ initialValue, config, onPropertyChange }) => {
     />
   );
 };
-
 const ControlledRangeInput = ({ initialValue, config, onPropertyChange, isDense }) => {
   const [localVal, setLocalVal] = useState(initialValue);
 
@@ -254,6 +308,22 @@ const AdvancedColorPicker = ({ value, config, onPropertyChange }) => {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <input type="color" value={solidColor} onChange={(e) => updateSolid(e.target.value)} style={styles.colorPicker} />
           <input type="text" value={solidColor} onChange={(e) => updateSolid(e.target.value)} style={{ ...styles.input, width: "80px" }} />
+       <button
+      onClick={() => {
+        setSolidColor("transparent");
+        onPropertyChange(config, "transparent");
+      }}
+      style={{
+        padding: "6px",
+        border: "1px solid #cbd5e1",
+        borderRadius: "6px",
+        cursor: "pointer",
+        background: "#fff",
+        fontSize: "12px"
+      }}
+    >
+      Transparent
+    </button>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -317,7 +387,7 @@ export default function RightPanel({ store }) {
     return [...(PROPERTY_CONTROLS[itemType] || []), ...PROPERTY_CONTROLS.common];
   }, [itemType]);
 
-  useEffect(() => {
+useEffect(() => {
     if (!selectedId || !selectedItem || allControls.length === 0) return;
 
     const initialLocals = {};
@@ -334,13 +404,19 @@ export default function RightPanel({ store }) {
       if (rawValue === undefined) {
         rawValue = selectedItem[ctrl.field] !== undefined ? selectedItem[ctrl.field] : DEFAULT_VALUES[ctrl.field];
       }
+
+      if (ctrl.field === 'labelFontSize' && typeof rawValue === 'string') {
+        rawValue = parseFloat(rawValue.replace('px', '')) || DEFAULT_VALUES.labelFontSize;
+      }
+      
       initialLocals[ctrl.field] = rawValue;
     });
 
     setLocalValues(initialLocals);
     setShowMore(false);
     setOpenPropertyField(null);
-  }, [selectedId, allControls]); 
+  }, [selectedId, allControls]);
+
 
   const handleCloseToolbar = useCallback(() => {
     setState((prev) => ({ ...prev, selectedElementIds: [], activeElementId: null }));
@@ -387,7 +463,10 @@ export default function RightPanel({ store }) {
     updateItem(state.activePageId, selectedItem.sectionId, selectedId, { action: { type, payload } });
   };
 
-  const handlePropertyChange = (config, incomingValue) => {
+const handlePropertyChange = (config, incomingValue) => {
+  if (config.field === 'transitionSpeed') {
+  incomingValue = parseFloat(incomingValue) || 0.2;
+}
     if (!selectedItem) return;
 
     setLocalValues(prev => ({ ...prev, [config.field]: incomingValue }));
@@ -397,6 +476,18 @@ export default function RightPanel({ store }) {
     if (config.field === 'linkUrl') {
       updatePayload = { action: { ...selectedItem.action, url: incomingValue } };
     } 
+    else if (config.field === 'labelFontSize') {
+      const currentStyles = { ...selectedItem.styles };
+      currentStyles['labelFontSize'] = config.unit ? `${incomingValue}${config.unit}` : `${incomingValue}px`;
+      
+      
+      updatePayload = { styles: currentStyles };
+    }
+    else if (config.field === 'labelColor') {
+      const currentStyles = { ...selectedItem.styles };
+      currentStyles['labelColor'] = incomingValue;
+      updatePayload = { styles: currentStyles };
+    }
     else if (config.isTextStyle) {
       const currentTextStyles = { ...selectedItem.textStyles };
       currentTextStyles[config.field] = incomingValue;
@@ -406,7 +497,7 @@ export default function RightPanel({ store }) {
       }
       updatePayload = { textStyles: currentTextStyles };
     } 
-    else if (!['text', 'src'].includes(config.field)) {
+    else if (!['text', 'src', 'name', 'placeholder', 'inputType', 'labelFontSize', 'labelColor'].includes(config.field)) {
       const currentStyles = { ...selectedItem.styles };
       currentStyles[config.field] = incomingValue;
 
@@ -458,14 +549,13 @@ export default function RightPanel({ store }) {
       debouncedUpdate(state.activePageId, selectedItem.sectionId, selectedId, updatePayload);
     }
   };
-
   const handleResetProperty = (config, e) => {
     e.stopPropagation();
     const fallbackVal = DEFAULT_VALUES[config.field] !== undefined ? DEFAULT_VALUES[config.field] : "";
     handlePropertyChange(config, fallbackVal);
   };
 
-  const renderControl = (config, isDense = false) => {
+const renderControl = (config, isDense = false) => {
     const rawValue = localValues[config.field];
     let value;
 
@@ -483,10 +573,10 @@ export default function RightPanel({ store }) {
     }
 
     switch (config.type) {
-      case "number":
+case "number":
         return (
           <ControlledNumberInput 
-            key={`${selectedId}-${config.field}`}
+            key={`${selectedId}-${config.field}-${value}`}
             initialValue={value} 
             config={config} 
             onPropertyChange={handlePropertyChange} 
@@ -495,7 +585,7 @@ export default function RightPanel({ store }) {
       case "range":
         return (
           <ControlledRangeInput 
-            key={`${selectedId}-${config.field}`}
+            key={`${selectedId}-${config.field}-${value}`}
             initialValue={value} 
             config={config} 
             isDense={isDense}
@@ -512,10 +602,11 @@ export default function RightPanel({ store }) {
             placeholder={config.placeholder || config.label}
           />
         );
-      case "color":
-        const safeColor = (value === "transparent" || !value) ? "#000000" : value;
+case "color":
+        const safeColor = (typeof value === "string" && value.startsWith("#")) ? value : "#000000";
         return (
           <input
+            key={`${selectedId}-${config.field}-${safeColor}`}
             type="color"
             value={safeColor}
             onChange={(e) => handlePropertyChange(config, e.target.value)}
@@ -523,14 +614,23 @@ export default function RightPanel({ store }) {
           />
         );
       case "advanced-color":
-        const safeAdvancedColor = (value === "transparent" || !value) ? "#ffffff" : value;
+        let safeAdvancedColor = value;
+       if (!value) {
+  safeAdvancedColor = "#ffffff";
+}
+         else if (typeof value === "string" && !value.includes("gradient") && !value.startsWith("#")) {
+          safeAdvancedColor = "#ffffff";
+        }
         return (
           <AdvancedColorPicker 
+            key={`${selectedId}-${config.field}-${safeAdvancedColor}`}
             value={safeAdvancedColor} 
             config={config} 
             onPropertyChange={handlePropertyChange} 
           />
         );
+
+
       case "alignment-toggle":
         return (
           <div style={styles.alignToggleGroup}>
@@ -564,7 +664,6 @@ export default function RightPanel({ store }) {
 
       <div style={styles.itemBadge}>{selectedItem.type}</div>
       
-      {/* سطر الـ closeBtn المكتمل */}
       <button onClick={(e) => { e.stopPropagation(); handleCloseToolbar(); }} style={styles.closeBtn} title="Close Panel">
         <X size={15} />
       </button>
@@ -655,6 +754,24 @@ export default function RightPanel({ store }) {
         </>
       )}
 
+      {itemType === 'section' && (
+        <>
+          <div style={styles.divider} />
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748b" }}>Section Name:</span>
+            <input 
+              type="text" 
+              style={{ ...styles.input, width: "120px" }} 
+              placeholder="e.g., Hero, Services..." 
+              value={selectedItem.name || ""} 
+              onChange={(e) => {
+                updateSection(state.activePageId, selectedId, { name: e.target.value });
+              }} 
+            />
+          </div>
+        </>
+      )}
+
       {['button', 'link'].includes(itemType) && (
         <>
           <div style={styles.divider} />
@@ -684,12 +801,29 @@ export default function RightPanel({ store }) {
             )}
 
             {selectedItem.action?.type === 'scroll' && (
-              <select style={{ ...styles.input, width: "85px" }} value={selectedItem.action?.payload || ""} onChange={(e) => handleActionChange('scroll', e.target.value)}>
+              <select style={{ ...styles.input, width: "110px" }} value={selectedItem.action?.payload || ""} onChange={(e) => handleActionChange('scroll', e.target.value)}>
                 <option value="">Section..</option>
-                {currentSections.map((sec, idx) => (
-                  <option key={sec.id} value={sec.id}>{idx + 1}. {sec.type}</option>
-                ))}
+                {currentSections
+                  .filter(sec => sec.type !== 'ghost-section')
+                  .map((sec, idx) => {
+                    const sectionDisplayName = sec.name ? sec.name : `Section ${idx + 1} (${sec.type})`;
+                    return (
+                      <option key={sec.id} value={sec.id}>
+                        {idx + 1}. {sectionDisplayName}
+                      </option>
+                    );
+                  })}
               </select>
+            )}
+
+            {selectedItem.action?.type === 'email' && (
+              <input 
+                type="email" 
+                style={{ ...styles.input, width: "130px" }} 
+                placeholder="mail@example.com" 
+                value={selectedItem.action?.payload || ""} 
+                onChange={(e) => handleActionChange('email', e.target.value)} 
+              />
             )}
           </div>
         </>
@@ -698,7 +832,6 @@ export default function RightPanel({ store }) {
   );
 }
 
-// كائن الستايل المرجعي لتشغيل الواجهة بكفاءة
 const styles = {
   floatingToolbar: { display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", padding: "6px 12px", borderRadius: "30px", boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04)", border: "1px solid #cbd5e1", width: "fit-content", maxWidth: "95vw", overflow: "visible", pointerEvents: "auto", zIndex: 999, position: "relative", height: "46px" },
   itemBadge: { background: "#e2e8f0", color: "#334155", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", whiteSpace: "nowrap" },
@@ -710,14 +843,14 @@ const styles = {
   divider: { width: "1px", height: "20px", backgroundColor: "#cbd5e1", margin: "0 4px" },
   closeBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center" },
   moreBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #cbd5e1", cursor: "pointer", color: "#475569", transition: "all 0.15s ease" },
-  dropdownMenu: { position: "absolute", top: "calc(100% + 8px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", zIndex: 1001, minWidth: "240px" },
-  dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" },
+  dropdownMenu: { position: "absolute", top: "calc(100% + 8px)", right: "0px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", zIndex: 1001, minWidth: "260px", maxHeight: "380px", overflowY: "auto", scrollbarWidth: "thin" },
+  dropdownItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "2px 0" },
   subLabel: { fontSize: "12px", fontWeight: "500", color: "#475569", display: "flex", alignItems: "center", gap: "6px" },
   resetBtn: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center" },
   resetBtnInline: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", padding: "4px" },
   controlWrapper: { display: "flex", alignItems: "center", gap: "6px" },
   alignToggleGroup: { display: "flex", border: "1px solid #cbd5e1", borderRadius: "6px", overflow: "hidden" },
-  alignBtn: { border: "none", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyValue: "center", cursor: "pointer", color: "#475569" },
+  alignBtn: { border: "none", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#475569" },
   advColorContainer: { display: "flex", flexDirection: "column", gap: "8px", minWidth: "180px" },
   tabHeader: { display: "flex", borderBottom: "1px solid #f1f5f9", paddingBottom: "4px" },
   tabBtn: { border: "none", padding: "4px 8px", fontSize: "11px", cursor: "pointer", borderRadius: "4px", color: "#334155" },

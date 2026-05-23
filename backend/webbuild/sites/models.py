@@ -7,7 +7,7 @@ def get_default_content():
         {
             "id": "1",
             "type": "HeroSection",
-            "data": {"title": "عنوانك هنا", "subtitle": "وصف قصير لمشروعك", "buttonText": "ابدأ الآن"}
+            "data": {"title": "Title", "subtitle": "A brief description", "buttonText": "Start now"}
         }
     ]
 
@@ -28,9 +28,20 @@ class Website(models.Model):
 class UserSite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    data = models.JSONField() # هذا هو المحتوى الذي لا يراه الأدمن في الفرونت اند
+    data = models.JSONField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+    
+    
+    
+class FormSubmission(models.Model):
+    section_id = models.CharField(max_length=255)
+    # حقل JSON مرن يستقبل أي عدد من المدخلات (اسم، إيميل، نص، إلخ) دون التقيد بعدد حقول ثابت
+    submission_data = models.JSONField() 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Submission for Section {self.section_id} at {self.created_at}"
