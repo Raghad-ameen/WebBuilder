@@ -108,7 +108,6 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const [canvasColor, setCanvasColor] = useState('#ffffff');
   const [targets, setTargets] = useState([]); 
   const validTargets = targets.filter(Boolean);
-//nbn
   const [interactionMode, setInteractionMode] = useState("select"); 
 
   const activePage = state.pages.find(p => p.id === activePageId);
