@@ -484,205 +484,198 @@ const handleItemAction = (item) => {
         // إذا كنا في وضع المعاينة (Preview) وكان العنصر مستهدفاً ولم يتم النقر على الزر بعد -> نخفيه تماماً
         const shouldHideInPreview = state.isPreviewMode && isTargetElement && !isCurrentlyTriggered;
 
+        // دمج شرط الإخفاء الديناميكي مع الستايلات الأصلية للعنصر
+        const baseStyles = item.styles || {};
+        const finalStyles = {
+          ...baseStyles,
+          display: shouldHideInPreview ? "none" : ((baseStyles.display === "none" ? "block" : baseStyles.display) || "block"),
+        };
+
+        // 🌟 الحل السحري: توليد كود ستايل مخصص (Dynamic Style Tag) لكل عنصر ليعمل الهوفر برمجياً على مستوى المتصفح (Native CSS) وبسرعة خارقة
+        const uniqueClassName = `hover-el-${item.id}`;
+        const transitionSpeed = baseStyles.transitionSpeed ? `${baseStyles.transitionSpeed}s` : '0.2s';
+        
+        // نقوم بصياغة تأثير الهوفر فقط إذا كنا في وضع المعاينة
+        const dynamicHoverStyles = state.isPreviewMode ? `
+          .${uniqueClassName} {
+            transition: all ${transitionSpeed} ease !important;
+          }
+          .${uniqueClassName}:hover {
+            ${baseStyles.hoverBg ? `background-color: ${baseStyles.hoverBg} !important;` : ''}
+            ${baseStyles.hoverColor ? `color: ${baseStyles.hoverColor} !important;` : ''}
+            ${baseStyles.hoverScale && baseStyles.hoverScale !== 'none' ? `transform: scale(${baseStyles.hoverScale}) !important;` : ''}
+          }
+        ` : '';
+
         return (
           <React.Fragment key={item.id}>
-            {/* 🌟 1. تغليف العنصر بالـ HoverWrapper لتتبع حركة الماوس */}
-            <HoverWrapper item={item} isPreviewMode={state.isPreviewMode}>
-              {({ isHovered, computedStyle }) => {
-                
-                // 🌟 2. دمج الستايلات الأساسية وخصائص الهوفر القادمة من الـ RightPanel ديناميكياً
-                const baseStyles = item.styles || {};
-                const finalStyles = {
-                  ...baseStyles,
-                  
-                  // تبديل الخلفية واللون فوراً إذا وقف الماوس وكان هناك قيمة معدلة بالـ RightPanel
-                  backgroundColor: isHovered && baseStyles.hoverBg ? baseStyles.hoverBg : baseStyles.backgroundColor,
-                  color: isHovered && baseStyles.hoverColor ? baseStyles.hoverColor : baseStyles.color,
-                  
-                  // تطبيق خاصية التكبير/التصغير (Scale)
-                  transform: isHovered && baseStyles.hoverScale && baseStyles.hoverScale !== 'none'
-                    ? `scale(${baseStyles.hoverScale})`
-                    : baseStyles.transform || 'none',
+            {/* 🌟 حقن الـ Style Tag المباشر هنا ليعمل المتصفح به تلقائياً دون الحاجة لـ HoverWrapper ودون أي Re-render أثناء الـ Resize */}
+            {state.isPreviewMode && <style dangerouslySetInnerHTML={{ __html: dynamicHoverStyles }} />}
+
+            <div
+              ref={(el) => (itemRefs.current[item.id] = el)}
+              id={item.id}
+              className={`canvas-element ${isSelected ? 'selected' : ''} ${uniqueClassName}`}
+              onMouseDown={(e) => {
+                if (state.isPreviewMode) return;
+                setInteractionMode("move");
+                const isCtrl = e.ctrlKey || e.metaKey;
+                if (item.isEditing) return;
+
+                if (isCtrl) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     
-                  // تطبيق سرعة التحول التفاعلي المحفوظة (أو جعلها 0.2s كقيمة افتراضية مريحة للعلم)
-                  transition: baseStyles.transitionSpeed 
-                    ? `all ${baseStyles.transitionSpeed}s ease` 
-                    : 'all 0.2s ease',
+                    const currentSelected = Array.isArray(state.selectedElementIds) ? state.selectedElementIds.map(String) : [];
+                    const targetId = String(item.id);
+                    let newSelection;
 
-                  display: shouldHideInPreview ? "none" : ((baseStyles.display === "none" ? "block" : baseStyles.display) || "block"),
-                };
+                    if (currentSelected.includes(targetId)) {
+                        newSelection = currentSelected.filter(id => id !== targetId);
+                    } else {
+                        newSelection = [...currentSelected, targetId];
+                    }
 
-                // 🌟 3. تمرير الـ finalStyles المعدلة إلى كائن الـ item ليتأثر بها كل مكوّن داخلي
-                const updatedItem = { ...item, styles: finalStyles };
+                    store.selectItems(newSelection);
+                    store.setState(prev => ({ ...prev, selectionGroupMode: newSelection.length > 1 }));
+                    return;
+                }
 
-                return (
-                  <div
-                    ref={(el) => (itemRefs.current[item.id] = el)}
-                    id={item.id}
-                    className={`canvas-element ${isSelected ? 'selected' : ''}`}
-                    onMouseDown={(e) => {
-                      if (state.isPreviewMode) return;
-                      setInteractionMode("move");
-                      const isCtrl = e.ctrlKey || e.metaKey;
-                      if (item.isEditing) return;
+                if (!e.ctrlKey && !e.metaKey) {
+                  e.stopPropagation();
+                }
 
-                      if (isCtrl) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          
-                          const currentSelected = Array.isArray(state.selectedElementIds) ? state.selectedElementIds.map(String) : [];
-                          const targetId = String(item.id);
-                          let newSelection;
-
-                          if (currentSelected.includes(targetId)) {
-                              newSelection = currentSelected.filter(id => id !== targetId);
-                          } else {
-                              newSelection = [...currentSelected, targetId];
-                          }
-
-                          store.selectItems(newSelection);
-                          store.setState(prev => ({ ...prev, selectionGroupMode: newSelection.length > 1 }));
-                          return;
-                      }
-
-                      if (!e.ctrlKey && !e.metaKey) {
-                        e.stopPropagation();
-                      }
-
-                      store.setState(prev => ({ ...prev, selectedSectionId: null }));
-                      store.selectItems([String(item.id)]);
-                    }}
-                    onMouseUp={() => {
-                        if (!state.isPreviewMode) setInteractionMode("select");
-                    }}
-                    style={{
-                      position: "absolute", 
-                      left: `${item.x}px`,     
-                      top: `${item.y}px`,
-                      width: `${item.width}px`, 
-                      height: `${item.height}px`,
-                      zIndex: resolvedZIndex,
-                      margin: isMobileOrTablet ? "15px auto" : "0", 
-                      
-                      textAlign: item.type === 'button' ? 'center' : undefined,
-                      lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
-                      cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
-                      overflow: "visible",
-                      
-                      pointerEvents: "auto",
-                      willChange: "left, top, width, height",
-                      backfaceVisibility: 'hidden',
-                      perspective: 1000,
-                      WebkitFontSmoothing: 'antialiased',
-                      boxShadow: "none",
-                      ...finalStyles, // 🌟 تطبيق الـ Styles الشاملة بالهوفر هنا
-                    }}
-                  >
-
-                    {isSelected && !item.isEditing && !state.isPreviewMode && (
-                      <div
-                        className={`trash-button-class`}
-                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                        onClick={(e) => { e.stopPropagation(); deleteElement(item.id); }}
-                        style={{
-                          position: "absolute",
-                          top: "-40px", 
-                          right: "0px",
-                          width: "28px",
-                          height: "28px",
-                          backgroundColor: "#ef4444",
-                          borderRadius: "50%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          zIndex: 2147483647, 
-                          pointerEvents: "auto",
-                          boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                          border: "2px solid white",
-                        }}
-                      >
-                        <Trash2 size={14} color="white" strokeWidth={3} />
-                      </div>
-                    )}
-
-                    {item.type === "text" && (
-                      <TextElement
-                        item={updatedItem}
-                        state={state}
-                        store={store}
-                        section={section}
-                        isMobile={isMobile}
-                        cleanFilter={cleanFilter}
-                      />
-                    )}
-
-                    {item.type === "image" && (
-                      <ImageElement
-                        item={updatedItem}
-                        state={state}
-                        isSelected={isSelected}
-                        cleanFilter={cleanFilter}
-                        updateItem={updateItem}
-                        activePageId={activePageId}
-                        section={section}
-                      />
-                    )}
-
-                    {item.type === "shape" && (
-                      <ShapeElement
-                        item={updatedItem}
-                        state={state}
-                        cleanFilter={cleanFilter}
-                      />
-                    )}
-
-                    {item.type === "button" && (
-                      <ButtonElement
-                        item={updatedItem}
-                        state={state}
-                        isSelected={isSelected}
-                        cleanFilter={cleanFilter}
-                        store={store}
-                        section={section}
-                        isFormVisible={isFormVisible}
-                        handleSubmitForm={handleSubmitForm}
-                        handleItemAction={handleItemAction}
-                      />
-                    )}
-
-                    {item.type === "link" && (
-                      <LinkElement
-                        item={updatedItem}
-                        store={store}
-                        state={state}
-                        isSelected={isSelected}
-                        cleanFilter={cleanFilter}
-                        updateItem={updateItem}
-                        activePageId={activePageId}
-                        section={section}
-                        isFormVisible={isFormVisible}
-                        handleSubmitForm={handleSubmitForm}
-                        handleItemAction={handleItemAction}
-                        handleDoubleClick={handleDoubleClick}
-                      />
-                    )}
-
-                    {item.type === "input" && (
-                      <InputElement
-                        item={updatedItem}
-                        state={state}
-                        cleanFilter={cleanFilter}
-                      />
-                    )}
-                  </div>
-                );
+                store.setState(prev => ({ ...prev, selectedSectionId: null }));
+                store.selectItems([String(item.id)]);
               }}
-            </HoverWrapper>
+              onMouseUp={() => {
+                  if (!state.isPreviewMode) setInteractionMode("select");
+              }}
+              style={{
+                position: "absolute", 
+                left: `${item.x}px`,     
+                top: `${item.y}px`,
+                width: `${item.width}px`, 
+                height: `${item.height}px`,
+                zIndex: resolvedZIndex,
+                margin: isMobileOrTablet ? "15px auto" : "0", 
+                
+                textAlign: item.type === 'button' ? 'center' : undefined,
+                lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
+                cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
+                overflow: "visible",
+                
+                pointerEvents: "auto",
+                willChange: "left, top, width, height",
+                backfaceVisibility: 'hidden',
+                perspective: 1000,
+                WebkitFontSmoothing: 'antialiased',
+                boxShadow: "none",
+                ...finalStyles, // تطبيق الستايلات الأساسية المدمجة
+              }}
+            >
+
+              {isSelected && !item.isEditing && !state.isPreviewMode && (
+                <div
+                  className={`trash-button-class`}
+                  onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                  onClick={(e) => { e.stopPropagation(); deleteElement(item.id); }}
+                  style={{
+                    position: "absolute",
+                    top: "-40px", 
+                    right: "0px",
+                    width: "28px",
+                    height: "28px",
+                    backgroundColor: "#ef4444",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    zIndex: 2147483647, 
+                    pointerEvents: "auto",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                    border: "2px solid white",
+                  }}
+                >
+                  <Trash2 size={14} color="white" strokeWidth={3} />
+                </div>
+              )}
+
+              {/* 🌟 نمرر الـ item الأصلي بستايلاته المدمجة دون تعديل الـ State، والمتصفح سيتكفل بالباقي */}
+              {item.type === "text" && (
+                <TextElement
+                  item={item}
+                  state={state}
+                  store={store}
+                  section={section}
+                  isMobile={isMobile}
+                  cleanFilter={cleanFilter}
+                />
+              )}
+
+              {item.type === "image" && (
+                <ImageElement
+                  item={item}
+                  state={state}
+                  isSelected={isSelected}
+                  cleanFilter={cleanFilter}
+                  updateItem={updateItem}
+                  activePageId={activePageId}
+                  section={section}
+                />
+              )}
+
+              {item.type === "shape" && (
+                <ShapeElement
+                  item={item}
+                  state={state}
+                  cleanFilter={cleanFilter}
+                />
+              )}
+
+              {item.type === "button" && (
+                <ButtonElement
+                  item={item}
+                  state={state}
+                  isSelected={isSelected}
+                  cleanFilter={cleanFilter}
+                  store={store}
+                  section={section}
+                  isFormVisible={isFormVisible}
+                  handleSubmitForm={handleSubmitForm}
+                  handleItemAction={handleItemAction}
+                />
+              )}
+
+              {item.type === "link" && (
+                <LinkElement
+                  item={item}
+                  store={store}
+                  state={state}
+                  isSelected={isSelected}
+                  cleanFilter={cleanFilter}
+                  updateItem={updateItem}
+                  activePageId={activePageId}
+                  section={section}
+                  isFormVisible={isFormVisible}
+                  handleSubmitForm={handleSubmitForm}
+                  handleItemAction={handleItemAction}
+                  handleDoubleClick={handleDoubleClick}
+                />
+              )}
+
+              {item.type === "input" && (
+                <InputElement
+                  item={item}
+                  state={state}
+                  cleanFilter={cleanFilter}
+                />
+              )}
+            </div>
           </React.Fragment>
         );
       })}
-
       {validTargets.length > 0 && !state.isPreviewMode && !isSelecting && (
         <Moveable
           target={validTargets.length === 1 ? validTargets[0] : validTargets}
