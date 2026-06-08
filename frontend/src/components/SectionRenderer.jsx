@@ -113,7 +113,11 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
 const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 
 const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
+  console.log("🎯 handleSubmitForm has been triggered! isPreviewMode:", state.isPreviewMode, "Action:", action);
+  
   if (!state.isPreviewMode) return;
+
+  // 1. معالجة أكشن ربط العناصر (إن وُجد)
   if (action?.type === 'link_element' && Array.isArray(action?.payload)) {
     setVisibleLinkedElements(prev => {
       const updated = { ...prev };
@@ -122,65 +126,80 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
       });
       return updated;
     });
-    return; // نوقف التنفيذ هنا لكي لا يذهب لكود إرسال الفورم
+    return; // نوقف التنفيذ لكي لا يذهب لكود إرسال الفورم
   }
 
-  // 1. جلب العنصر الذي تم النقر عليه لمعرفة مكانه
+  // 2. جلب العنصر الذي تم النقر عليه لمعرفة مكانه في الساحة
   const clickedItem = section.data?.items?.find(item => item.id === clickedItemId);
 
-  // 2. 🌟 الشرط السحري: إذا كان الزر المكبوس خارجي (لا ينتمي للبوب أب) والأكشن تبعه submit_form، نفتح الفورم فقط ونمنع الإرسال!
-  if (action?.isPopupForm && !clickedItem?.belongsToPopup) {
+  // 3. الشرط السحري للـ Popup القديم: إذا كان الزر خارجياً والأكشن submit_form، نفتح الفورم فقط ونمنع الإرسال
+  if (action?.type === 'submit_form' && action?.isPopupForm && !clickedItem?.belongsToPopup) {
     store.setState(prev => ({
       ...prev,
       isFormOpen: true,
       activeFormSectionId: sectionId
     }));
-    return; // نوقف التنفيذ هنا تماماً لكي لا يرسل الزر الخارجي أي بيانات
+    return; // نوقف التنفيذ هنا تماماً
   }
 
-  // بقية الكود الأصلي الخاص بكِ للإرسال الفعلي (يعمل فقط عندما يضغط على الزر الداخلي)
+  // 4. تحديد ما إذا كانت العملية تابعة لـ Popup أم إرسال عادي/صامت
   let finalIsPopup = isPopup;
-  const hasPopupFields = section.data?.items?.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
-  const hasNormalFields = section.data?.items?.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
   
-  if (action?.isPopupForm || (hasPopupFields && !hasNormalFields)) {
-    finalIsPopup = true;
+  // إذا كان الأكشن الجديد هو submit الصامت، نلغي حالة الـ Popup تماماً
+  if (action?.type === 'submit') {
+    finalIsPopup = false;
+  } else {
+    // المنطق القديم الخاص بـ submit_form
+    const hasPopupFields = section.data?.items?.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
+    const hasNormalFields = section.data?.items?.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
+    
+    if (action?.isPopupForm || (hasPopupFields && !hasNormalFields)) {
+      finalIsPopup = true;
+    }
   }
   
+  // 5. فلترة وجلب حقول الإدخال بناءً على نوع الأكشن
   const formFields = section.data.items.filter(item => {
     if (item.type !== 'input') return false;
-   if (finalIsPopup) {
-  return item.type === "input";
-}
     
-    else {
+    // إذا كان الأكشن صامتاً، نجمع كل الحقول العادية بالريدر التي لا تنتمي لبوب أب
+    if (action?.type === 'submit') {
+      return !item.belongsToPopup;
+    }
+    
+    // المنطق القديم للفورم المنبثقة
+    if (finalIsPopup) {
+      return item.type === "input";
+    } else {
       return !item.belongsToPopup && !item.action?.isPopupForm;
     }
   });
 
-
+  // 6. تجميع قيم الحقول الحالية من الـ DOM
   const structuredSubmissionData = formFields.map(field => {
-  const inputEl = document.getElementById(`input-${field.id}`);
+    const inputEl = document.getElementById(`input-${field.id}`);
+    return {
+      field_id: field.id,
+      field_key: field.name || field.label || `field_${field.id}`,
+      value: inputEl ? inputEl.value : "",
+      input_type: field.inputType || "text",
+      data_type: field.dataType || "Any"
+    };
+  });
 
+  console.log("🚀 Sending Data to Backend:", structuredSubmissionData);
 
-  return {
-    field_id: field.id,
-    field_key: field.name || field.label || `field_${field.id}`,
-    value: inputEl ? inputEl.value : "",
-    input_type: field.inputType || "text",
-    data_type: field.dataType || "Any"
-  };
-});
-
+  // 7. إرسال البيانات الفعلي عبر الـ API
   try {
-
     const response = await axios.post('http://127.0.0.1:8000/api/forms/submit/', {
       section_id: sectionId,
       is_popup: finalIsPopup,
       submission_data: structuredSubmissionData 
     });
 
-   if (response.status === 201 || response.status === 200) {
+    if (response.status === 201 || response.status === 200) {
+      console.log("✅ Data Saved Successfully in Django!", response.data);
+
       if (finalIsPopup) {
         setShowPopupSuccessModal(true);
         setShowSuccessModal(false);
@@ -189,26 +208,25 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
           setIsFormVisible(false); 
         }
         store.setState((prev) => ({ ...prev, activeFormSectionId: null, isFormOpen: false }));
-
       } else {
+        // للأكشن الصامت والمودال العادي
         setShowSuccessModal(true);
         setShowPopupSuccessModal(false);
       }
       
+      // تفريغ الحقول بعد الإرسال الناجح
       formFields.forEach(field => {
         const inputEl = document.getElementById(`input-${field.id}`);
         if (inputEl) inputEl.value = "";
       });
     }
   } catch (error) {
-  console.log(error.response);
-}
+    console.error("❌ فشل الإرسال للباكيند. تفاصيل الخطأ:", error.response?.data || error.message);
+  }
 };
 
-const handleItemAction = (item) => {
-   const [visibleLinkedElements, setVisibleLinkedElements] = useState({});
 
-  const handleItemAction = (item) => {
+const handleItemAction = (item) => {
     if (!state.isPreviewMode) return;
     const { action } = item;
     if (!action || !action.type) return;
@@ -218,13 +236,13 @@ const handleItemAction = (item) => {
         handleSubmitForm(section.id, action);
         break;
       
-      // 🌟 الأكشن الجديد: التحكم بإخفاء وإظهار العناصر المربوطة ديناميكياً
+      // 🌟 الأكشن الجديد: يعمل بشكل سليم لأنه يستدعي الـ SetState المعرفة في الأعلى خارج الدالة
       case 'link_element':
         if (Array.isArray(action.payload)) {
           setVisibleLinkedElements(prev => {
             const updated = { ...prev };
             action.payload.forEach(targetId => {
-              updated[targetId] = !updated[targetId]; // عمل Toggle للحالة (إظهار / إخفاء)
+              updated[targetId] = !updated[targetId]; // Toggle الحالة (إظهار / إخفاء)
             });
             return updated;
           });
@@ -241,6 +259,7 @@ const handleItemAction = (item) => {
           }));
         }
         break;
+
       case 'url':
         if (action.payload) {
           let targetUrl = action.payload;
@@ -250,15 +269,18 @@ const handleItemAction = (item) => {
           window.open(targetUrl, '_blank');
         }
         break;
+
       case 'scroll':
         if (action.payload) {
           const targetSection = document.getElementById(action.payload);
           targetSection?.scrollIntoView({ behavior: 'smooth' });
         }
         break;
+
       case 'popup': 
-         store.setState(prev => ({ ...prev, activePopupId: action.payload }));
+        store.setState(prev => ({ ...prev, activePopupId: action.payload }));
         break;
+
       case 'email': 
         if (action.payload) {
           window.location.href = `mailto:${action.payload}`;
@@ -269,8 +291,6 @@ const handleItemAction = (item) => {
         console.log("Unknown action type:", action.type);
     }
   };
-  };
-
   const isSectionSelected = state.selectedSectionId === section.id;
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
@@ -636,7 +656,7 @@ const handleItemAction = (item) => {
         );
       })}
 
-      
+
       {validTargets.length > 0 && !state.isPreviewMode && !isSelecting && (
         <Moveable
           target={validTargets.length === 1 ? validTargets[0] : validTargets}

@@ -1390,7 +1390,8 @@ if (!selectedItem) return null;
   <option value="url">URL</option>
   <option value="scroll">Move to section</option>
   <option value="email">Email</option>
-  <option value="submit_form">Submit Form</option>
+  <option value="submit_form">Form</option>
+  <option value="submit">Submit Data</option>
   <option value="link_element">Link to an element</option>
 </select>
 
