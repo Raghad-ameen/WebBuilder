@@ -1391,6 +1391,7 @@ if (!selectedItem) return null;
   <option value="scroll">Move to section</option>
   <option value="email">Email</option>
   <option value="submit_form">Submit Form</option>
+  <option value="link_element">Link to an element</option>
 </select>
 
 
@@ -1462,6 +1463,49 @@ if (!selectedItem) return null;
               />
 
             )}
+
+            {selectedItem.action?.type === 'link_element' && (
+  <div className="mt-4 p-3 bg-slate-50 border rounded-lg">
+    <label className="block text-xs font-semibold text-slate-600 mb-2">
+      Select Target Elements to Trigger:
+    </label>
+    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+      {state.pages
+        .find(p => p.id === state.activePageId)?.sections
+        .find(s => s.id === selectedItem.sectionId)?.data?.items
+        ?.filter(item => item.id !== selectedItem.id) // استبعاد الزر نفسه
+        ?.map(item => {
+          // التحقق إذا كان العنصر محدداً مسبقاً في الـ payload
+          const targetIds = Array.isArray(selectedItem.action?.payload) ? selectedItem.action.payload : [];
+          const isChecked = targetIds.includes(item.id);
+
+          return (
+            <label key={item.id} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded">
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={(e) => {
+                  let updatedPayload = [...targetIds];
+                  if (e.target.checked) {
+                    updatedPayload.push(item.id);
+                  } else {
+                    updatedPayload = updatedPayload.filter(id => id !== item.id);
+                  }
+                  // حفظ مصفوفة الـ IDs داخل الـ payload الخاص بالأكشن
+                  handleActionChange('link_element', updatedPayload);
+                }}
+                className="rounded text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="capitalize font-medium">[{item.type}]</span>
+              <span className="text-slate-400 truncate max-w-30">
+                {item.text || item.label || item.id.substring(0, 8)}
+              </span>
+            </label>
+          );
+        })}
+    </div>
+  </div>
+)}
           </div>
 
         </>

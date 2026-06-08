@@ -50,6 +50,21 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const hueRotateFilter = section.styles?.hueRotate ? `hue-rotate(${section.styles.hueRotate}deg)` : "";
   const invertFilter = section.styles?.invert ? `invert(${section.styles.invert}%)` : "";
 
+// 🌟 لتتبع حالة العناصر المربوطة بالأزرار (مخفية أو مظهرة) في وضع المعاينة
+  const [visibleLinkedElements, setVisibleLinkedElements] = useState({});
+
+  // استخراج كافة الـ IDs المربوطة بأي زر يملك أكشن link_element في هذا السكشن
+  const allLinkedTargetIds = useMemo(() => {
+    const targets = [];
+    section.data?.items?.forEach(item => {
+      if (item.action?.type === 'link_element' && Array.isArray(item.action?.payload)) {
+        targets.push(...item.action.payload);
+      }
+    });
+    return targets;
+  }, [section.data?.items]);
+
+
   const cleanFilter = useMemo(() => {
     return [
       blurFilter,
@@ -99,6 +114,16 @@ const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 
 const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
   if (!state.isPreviewMode) return;
+  if (action?.type === 'link_element' && Array.isArray(action?.payload)) {
+    setVisibleLinkedElements(prev => {
+      const updated = { ...prev };
+      action.payload.forEach(targetId => {
+        updated[targetId] = !updated[targetId]; // عكس الحالة الحالية (Toggle)
+      });
+      return updated;
+    });
+    return; // نوقف التنفيذ هنا لكي لا يذهب لكود إرسال الفورم
+  }
 
   // 1. جلب العنصر الذي تم النقر عليه لمعرفة مكانه
   const clickedItem = section.data?.items?.find(item => item.id === clickedItemId);
@@ -181,6 +206,9 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
 };
 
 const handleItemAction = (item) => {
+   const [visibleLinkedElements, setVisibleLinkedElements] = useState({});
+
+  const handleItemAction = (item) => {
     if (!state.isPreviewMode) return;
     const { action } = item;
     if (!action || !action.type) return;
@@ -189,6 +217,20 @@ const handleItemAction = (item) => {
       case 'submit_form':
         handleSubmitForm(section.id, action);
         break;
+      
+      // 🌟 الأكشن الجديد: التحكم بإخفاء وإظهار العناصر المربوطة ديناميكياً
+      case 'link_element':
+        if (Array.isArray(action.payload)) {
+          setVisibleLinkedElements(prev => {
+            const updated = { ...prev };
+            action.payload.forEach(targetId => {
+              updated[targetId] = !updated[targetId]; // عمل Toggle للحالة (إظهار / إخفاء)
+            });
+            return updated;
+          });
+        }
+        break;
+
       case 'page':
         if (action.payload) {
           store.setState(prev => ({
@@ -223,36 +265,10 @@ const handleItemAction = (item) => {
         }
         break;
 
-
-        case 'input': {
-        // 🌟 تحديد نوع الـ input بناءً على الـ dataType المخزن في العنصر ليتأقلم تلقائياً
-        let htmlInputType = "text";
-        const currentDataType = item.dataType?.toLowerCase() || "";
-
-        if (currentDataType === 'date') {
-          htmlInputType = "date";
-        } else if (currentDataType === 'email') {
-          htmlInputType = "email";
-        } else if (currentDataType === 'phone' || currentDataType === 'number') {
-          htmlInputType = "number";
-        } else if (currentDataType === 'password') {
-          htmlInputType = "password";
-        }
-
-        return (
-          <InputElement
-            styles={item.styles}
-            placeholder={item.placeholder}
-            label={item.label}
-            value={item.value}
-            type={htmlInputType} 
-            id={`input-${item.id}`}
-          />
-        );
-      }
       default:
         console.log("Unknown action type:", action.type);
     }
+  };
   };
 
   const isSectionSelected = state.selectedSectionId === section.id;
@@ -275,18 +291,6 @@ const handleItemAction = (item) => {
 
 
 
-
-// 🌟 كود ديباجينج لكشف سبب اختفاء الفورم المصممة مسبقاً
-  console.log("=== DEBUG FORM RENDERING ===");
-  console.log("1. Is Preview Mode?", state.isPreviewMode);
-  console.log("2. Store isFormOpen?", state.isFormOpen);
-  console.log("3. Active Form Section ID:", state.activeFormSectionId);
-  console.log("4. Current Section ID:", section.id);
-  console.log("5. Computed isFormVisible:", isFormVisible);
-  
-  const debugPopupItems = section.data?.items?.filter(item => item.belongsToPopup) || [];
-  console.log("6. Number of elements having belongsToPopup:", debugPopupItems.length);
-  console.log("=================================");
 
 
 
@@ -441,7 +445,7 @@ const handleItemAction = (item) => {
         </div>
       )}
 
-      {(section.data?.items || []).map((item, index) => {
+{(section.data?.items || []).map((item, index) => {
         const isSelected = state.selectedElementIds.includes(item.id);
         const isMobileOrTablet = typeof window !== "undefined" && window.innerWidth < 1024;
         
@@ -452,6 +456,19 @@ const handleItemAction = (item) => {
           return item.styles.filter.replace(/NaN%/g, "100%");
         };
         const cleanFilter = getCleanFilter();
+
+        // 🌟 الخطوة 3: حساب نظام الربط التلقائي والإخفاء في المعاينة
+        const isTargetElement = allLinkedTargetIds.includes(item.id);
+        const isCurrentlyTriggered = visibleLinkedElements[item.id];
+
+        // إذا كنا في وضع المعاينة (Preview) وكان العنصر مستهدفاً ولم يتم النقر على الزر بعد -> نخفيه تماماً
+        const shouldHideInPreview = state.isPreviewMode && isTargetElement && !isCurrentlyTriggered;
+
+        // دمج شرط الإخفاء الديناميكي مع الستايلات الأصلية للعنصر
+        const finalStyles = {
+          ...(item.styles || {}),
+          display: shouldHideInPreview ? "none" : ((item.styles?.display === "none" ? "block" : item.styles?.display) || "block"),
+        };
 
         return (
           <React.Fragment key={item.id}>
@@ -503,8 +520,6 @@ const handleItemAction = (item) => {
                 zIndex: resolvedZIndex,
                 margin: isMobileOrTablet ? "15px auto" : "0", 
                 
-                display: "block",
-                
                 textAlign: item.type === 'button' ? 'center' : undefined,
                 lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
                 cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
@@ -516,7 +531,7 @@ const handleItemAction = (item) => {
                 perspective: 1000,
                 WebkitFontSmoothing: 'antialiased',
                 boxShadow: "none",
-                ...(item.styles || {}), 
+                ...finalStyles, // 👈 🌟 تم تبديل item.styles بـ finalStyles ليتم الإخفاء والإظهار هنا فوراً
               }}
             >
 
@@ -621,6 +636,7 @@ const handleItemAction = (item) => {
         );
       })}
 
+      
       {validTargets.length > 0 && !state.isPreviewMode && !isSelecting && (
         <Moveable
           target={validTargets.length === 1 ? validTargets[0] : validTargets}
