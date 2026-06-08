@@ -97,19 +97,23 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   };
 const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 
-const handleSubmitForm = async (sectionId, action, isPopup = false) => {
+const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
   if (!state.isPreviewMode) return;
 
+  // 1. جلب العنصر الذي تم النقر عليه لمعرفة مكانه
+  const clickedItem = section.data?.items?.find(item => item.id === clickedItemId);
 
-  if (action?.isPopupForm && !state.isFormOpen) {
+  // 2. 🌟 الشرط السحري: إذا كان الزر المكبوس خارجي (لا ينتمي للبوب أب) والأكشن تبعه submit_form، نفتح الفورم فقط ونمنع الإرسال!
+  if (action?.isPopupForm && !clickedItem?.belongsToPopup) {
     store.setState(prev => ({
       ...prev,
       isFormOpen: true,
       activeFormSectionId: sectionId
     }));
-    return; 
+    return; // نوقف التنفيذ هنا تماماً لكي لا يرسل الزر الخارجي أي بيانات
   }
 
+  // بقية الكود الأصلي الخاص بكِ للإرسال الفعلي (يعمل فقط عندما يضغط على الزر الداخلي)
   let finalIsPopup = isPopup;
   const hasPopupFields = section.data?.items?.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
   const hasNormalFields = section.data?.items?.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
@@ -117,6 +121,7 @@ const handleSubmitForm = async (sectionId, action, isPopup = false) => {
   if (action?.isPopupForm || (hasPopupFields && !hasNormalFields)) {
     finalIsPopup = true;
   }
+  
   const formFields = section.data.items.filter(item => {
     if (item.type !== 'input') return false;
    if (finalIsPopup) {
