@@ -526,7 +526,8 @@ export default function RightPanel({ store }) {
 
   const { state, updateItem, previewUpdateItem, updateSection, injectFormTemplate, setState } = store;
 
-
+// أضيفي هذا السطر مع بقية الـ States في أعلى المكون
+const [activeSection, setActiveSection] = useState("normal"); // 'normal' أو 'hover'
   const toolbarRef = useRef(null);
 
   const dropdownRef = useRef(null);
@@ -593,59 +594,41 @@ export default function RightPanel({ store }) {
   }, [itemType]);
 
 
-  useEffect(() => {
-
+useEffect(() => {
     if (!selectedId || !selectedItem || allControls.length === 0) return;
 
-
     const initialLocals = {};
-
     allControls.forEach(ctrl => {
-
       let rawValue;
-
       if (ctrl.field === 'linkUrl') {
-
         rawValue = selectedItem.action?.url;
-
       } else if (ctrl.isTextStyle) {
-
         rawValue = selectedItem.textStyles?.[ctrl.field];
-
       } else {
-
         rawValue = selectedItem.styles?.[ctrl.field];
-
       }
-
 
       if (rawValue === undefined) {
-
         rawValue = selectedItem[ctrl.field] !== undefined ? selectedItem[ctrl.field] : DEFAULT_VALUES[ctrl.field];
-
       }
-
 
       if (ctrl.field === 'labelFontSize' && typeof rawValue === 'string') {
-
         rawValue = parseFloat(rawValue.replace('px', '')) || DEFAULT_VALUES.labelFontSize;
-
       }
 
-
       initialLocals[ctrl.field] = rawValue;
-
     });
 
-
     setLocalValues(initialLocals);
-
     setShowMore(false);
-
     setOpenPropertyField(null);
+
+    // 🌟 السطر المطلوب هنا بالضبط لتصفير حالة الهوفر عند تغيير العنصر المختار
+    setActiveSection("normal");
 
   }, [selectedItem?.id]);
 
+  
 
   const handleCloseToolbar = useCallback(() => {
 

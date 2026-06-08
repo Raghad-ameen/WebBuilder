@@ -477,185 +477,211 @@ const handleItemAction = (item) => {
         };
         const cleanFilter = getCleanFilter();
 
-        // 🌟 الخطوة 3: حساب نظام الربط التلقائي والإخفاء في المعاينة
+        // حساب نظام الربط التلقائي والإخفاء في المعاينة
         const isTargetElement = allLinkedTargetIds.includes(item.id);
         const isCurrentlyTriggered = visibleLinkedElements[item.id];
 
         // إذا كنا في وضع المعاينة (Preview) وكان العنصر مستهدفاً ولم يتم النقر على الزر بعد -> نخفيه تماماً
         const shouldHideInPreview = state.isPreviewMode && isTargetElement && !isCurrentlyTriggered;
 
-        // دمج شرط الإخفاء الديناميكي مع الستايلات الأصلية للعنصر
-        const finalStyles = {
-          ...(item.styles || {}),
-          display: shouldHideInPreview ? "none" : ((item.styles?.display === "none" ? "block" : item.styles?.display) || "block"),
-        };
-
         return (
           <React.Fragment key={item.id}>
-            <div
-              ref={(el) => (itemRefs.current[item.id] = el)}
-              id={item.id}
-              className={`canvas-element ${isSelected ? 'selected' : ''}`}
-              onMouseDown={(e) => {
-                if (state.isPreviewMode) return;
-                setInteractionMode("move");
-                const isCtrl = e.ctrlKey || e.metaKey;
-                if (item.isEditing) return;
-
-                if (isCtrl) {
-                    e.preventDefault();
-                    e.stopPropagation();
+            {/* 🌟 1. تغليف العنصر بالـ HoverWrapper لتتبع حركة الماوس */}
+            <HoverWrapper item={item} isPreviewMode={state.isPreviewMode}>
+              {({ isHovered, computedStyle }) => {
+                
+                // 🌟 2. دمج الستايلات الأساسية وخصائص الهوفر القادمة من الـ RightPanel ديناميكياً
+                const baseStyles = item.styles || {};
+                const finalStyles = {
+                  ...baseStyles,
+                  
+                  // تبديل الخلفية واللون فوراً إذا وقف الماوس وكان هناك قيمة معدلة بالـ RightPanel
+                  backgroundColor: isHovered && baseStyles.hoverBg ? baseStyles.hoverBg : baseStyles.backgroundColor,
+                  color: isHovered && baseStyles.hoverColor ? baseStyles.hoverColor : baseStyles.color,
+                  
+                  // تطبيق خاصية التكبير/التصغير (Scale)
+                  transform: isHovered && baseStyles.hoverScale && baseStyles.hoverScale !== 'none'
+                    ? `scale(${baseStyles.hoverScale})`
+                    : baseStyles.transform || 'none',
                     
-                    const currentSelected = Array.isArray(state.selectedElementIds) ? state.selectedElementIds.map(String) : [];
-                    const targetId = String(item.id);
-                    let newSelection;
+                  // تطبيق سرعة التحول التفاعلي المحفوظة (أو جعلها 0.2s كقيمة افتراضية مريحة للعلم)
+                  transition: baseStyles.transitionSpeed 
+                    ? `all ${baseStyles.transitionSpeed}s ease` 
+                    : 'all 0.2s ease',
 
-                    if (currentSelected.includes(targetId)) {
-                        newSelection = currentSelected.filter(id => id !== targetId);
-                    } else {
-                        newSelection = [...currentSelected, targetId];
-                    }
+                  display: shouldHideInPreview ? "none" : ((baseStyles.display === "none" ? "block" : baseStyles.display) || "block"),
+                };
 
-                    store.selectItems(newSelection);
-                    store.setState(prev => ({ ...prev, selectionGroupMode: newSelection.length > 1 }));
-                    return;
-                }
+                // 🌟 3. تمرير الـ finalStyles المعدلة إلى كائن الـ item ليتأثر بها كل مكوّن داخلي
+                const updatedItem = { ...item, styles: finalStyles };
 
-                if (!e.ctrlKey && !e.metaKey) {
-                  e.stopPropagation();
-                }
+                return (
+                  <div
+                    ref={(el) => (itemRefs.current[item.id] = el)}
+                    id={item.id}
+                    className={`canvas-element ${isSelected ? 'selected' : ''}`}
+                    onMouseDown={(e) => {
+                      if (state.isPreviewMode) return;
+                      setInteractionMode("move");
+                      const isCtrl = e.ctrlKey || e.metaKey;
+                      if (item.isEditing) return;
 
-                store.setState(prev => ({ ...prev, selectedSectionId: null }));
-                store.selectItems([String(item.id)]);
+                      if (isCtrl) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          
+                          const currentSelected = Array.isArray(state.selectedElementIds) ? state.selectedElementIds.map(String) : [];
+                          const targetId = String(item.id);
+                          let newSelection;
+
+                          if (currentSelected.includes(targetId)) {
+                              newSelection = currentSelected.filter(id => id !== targetId);
+                          } else {
+                              newSelection = [...currentSelected, targetId];
+                          }
+
+                          store.selectItems(newSelection);
+                          store.setState(prev => ({ ...prev, selectionGroupMode: newSelection.length > 1 }));
+                          return;
+                      }
+
+                      if (!e.ctrlKey && !e.metaKey) {
+                        e.stopPropagation();
+                      }
+
+                      store.setState(prev => ({ ...prev, selectedSectionId: null }));
+                      store.selectItems([String(item.id)]);
+                    }}
+                    onMouseUp={() => {
+                        if (!state.isPreviewMode) setInteractionMode("select");
+                    }}
+                    style={{
+                      position: "absolute", 
+                      left: `${item.x}px`,     
+                      top: `${item.y}px`,
+                      width: `${item.width}px`, 
+                      height: `${item.height}px`,
+                      zIndex: resolvedZIndex,
+                      margin: isMobileOrTablet ? "15px auto" : "0", 
+                      
+                      textAlign: item.type === 'button' ? 'center' : undefined,
+                      lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
+                      cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
+                      overflow: "visible",
+                      
+                      pointerEvents: "auto",
+                      willChange: "left, top, width, height",
+                      backfaceVisibility: 'hidden',
+                      perspective: 1000,
+                      WebkitFontSmoothing: 'antialiased',
+                      boxShadow: "none",
+                      ...finalStyles, // 🌟 تطبيق الـ Styles الشاملة بالهوفر هنا
+                    }}
+                  >
+
+                    {isSelected && !item.isEditing && !state.isPreviewMode && (
+                      <div
+                        className={`trash-button-class`}
+                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onClick={(e) => { e.stopPropagation(); deleteElement(item.id); }}
+                        style={{
+                          position: "absolute",
+                          top: "-40px", 
+                          right: "0px",
+                          width: "28px",
+                          height: "28px",
+                          backgroundColor: "#ef4444",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          zIndex: 2147483647, 
+                          pointerEvents: "auto",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                          border: "2px solid white",
+                        }}
+                      >
+                        <Trash2 size={14} color="white" strokeWidth={3} />
+                      </div>
+                    )}
+
+                    {item.type === "text" && (
+                      <TextElement
+                        item={updatedItem}
+                        state={state}
+                        store={store}
+                        section={section}
+                        isMobile={isMobile}
+                        cleanFilter={cleanFilter}
+                      />
+                    )}
+
+                    {item.type === "image" && (
+                      <ImageElement
+                        item={updatedItem}
+                        state={state}
+                        isSelected={isSelected}
+                        cleanFilter={cleanFilter}
+                        updateItem={updateItem}
+                        activePageId={activePageId}
+                        section={section}
+                      />
+                    )}
+
+                    {item.type === "shape" && (
+                      <ShapeElement
+                        item={updatedItem}
+                        state={state}
+                        cleanFilter={cleanFilter}
+                      />
+                    )}
+
+                    {item.type === "button" && (
+                      <ButtonElement
+                        item={updatedItem}
+                        state={state}
+                        isSelected={isSelected}
+                        cleanFilter={cleanFilter}
+                        store={store}
+                        section={section}
+                        isFormVisible={isFormVisible}
+                        handleSubmitForm={handleSubmitForm}
+                        handleItemAction={handleItemAction}
+                      />
+                    )}
+
+                    {item.type === "link" && (
+                      <LinkElement
+                        item={updatedItem}
+                        store={store}
+                        state={state}
+                        isSelected={isSelected}
+                        cleanFilter={cleanFilter}
+                        updateItem={updateItem}
+                        activePageId={activePageId}
+                        section={section}
+                        isFormVisible={isFormVisible}
+                        handleSubmitForm={handleSubmitForm}
+                        handleItemAction={handleItemAction}
+                        handleDoubleClick={handleDoubleClick}
+                      />
+                    )}
+
+                    {item.type === "input" && (
+                      <InputElement
+                        item={updatedItem}
+                        state={state}
+                        cleanFilter={cleanFilter}
+                      />
+                    )}
+                  </div>
+                );
               }}
-              onMouseUp={() => {
-                  if (!state.isPreviewMode) setInteractionMode("select");
-              }}
-              style={{
-                position: "absolute", 
-                left: `${item.x}px`,     
-                top: `${item.y}px`,
-                width: `${item.width}px`, 
-                height: `${item.height}px`,
-                zIndex: resolvedZIndex,
-                margin: isMobileOrTablet ? "15px auto" : "0", 
-                
-                textAlign: item.type === 'button' ? 'center' : undefined,
-                lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
-                cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
-                overflow: "visible",
-                
-                pointerEvents: "auto",
-                willChange: "left, top, width, height",
-                backfaceVisibility: 'hidden',
-                perspective: 1000,
-                WebkitFontSmoothing: 'antialiased',
-                boxShadow: "none",
-                ...finalStyles, // 👈 🌟 تم تبديل item.styles بـ finalStyles ليتم الإخفاء والإظهار هنا فوراً
-              }}
-            >
-
-              {isSelected && !item.isEditing && !state.isPreviewMode && (
-                <div
-                  className={`trash-button-class`}
-                  onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  onClick={(e) => { e.stopPropagation(); deleteElement(item.id); }}
-                  style={{
-                    position: "absolute",
-                    top: "-40px", 
-                    right: "0px",
-                    width: "28px",
-                    height: "28px",
-                    backgroundColor: "#ef4444",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    zIndex: 2147483647, 
-                    pointerEvents: "auto",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                    border: "2px solid white",
-                  }}
-                >
-                  <Trash2 size={14} color="white" strokeWidth={3} />
-                </div>
-              )}
-
-              {item.type === "text" && (
-                <TextElement
-                  item={item}
-                  state={state}
-                  store={store}
-                  section={section}
-                  isMobile={isMobile}
-                  cleanFilter={cleanFilter}
-                />
-              )}
-
-              {item.type === "image" && (
-                <ImageElement
-                  item={item}
-                  state={state}
-                  isSelected={isSelected}
-                  cleanFilter={cleanFilter}
-                  updateItem={updateItem}
-                  activePageId={activePageId}
-                  section={section}
-                />
-              )}
-
-              {item.type === "shape" && (
-                <ShapeElement
-                  item={item}
-                  state={state}
-                  cleanFilter={cleanFilter}
-                />
-              )}
-
-              {item.type === "button" && (
-                <ButtonElement
-                  item={item}
-                  state={state}
-                  isSelected={isSelected}
-                  cleanFilter={cleanFilter}
-                  store={store}
-                  section={section}
-                  isFormVisible={isFormVisible}
-                  handleSubmitForm={handleSubmitForm}
-                  handleItemAction={handleItemAction}
-                />
-              )}
-
-              {item.type === "link" && (
-                <LinkElement
-                  item={item}
-                  store={store}
-                  state={state}
-                  isSelected={isSelected}
-                  cleanFilter={cleanFilter}
-                  updateItem={updateItem}
-                  activePageId={activePageId}
-                  section={section}
-                  isFormVisible={isFormVisible}
-                  handleSubmitForm={handleSubmitForm}
-                  handleItemAction={handleItemAction}
-                  handleDoubleClick={handleDoubleClick}
-                />
-              )}
-
-              {item.type === "input" && (
-                <InputElement
-                  item={item}
-                  state={state}
-                  cleanFilter={cleanFilter}
-                />
-              )}
-            </div>
+            </HoverWrapper>
           </React.Fragment>
         );
       })}
-
 
       {validTargets.length > 0 && !state.isPreviewMode && !isSelecting && (
         <Moveable
