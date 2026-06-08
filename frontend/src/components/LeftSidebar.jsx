@@ -84,7 +84,7 @@ export default function LeftSidebar({ store }) {
     });
   };
 
-  const handleElementClick = (type) => {
+const handleElementClick = (type) => {
     const currentPage = state.pages.find((p) => p.id === state.activePageId);
     if (!currentPage) {
       addPage("Main Page");
@@ -99,36 +99,54 @@ export default function LeftSidebar({ store }) {
         text: "Click here to visit",
         styles: { color: "#2563eb", textDecoration: "underline" }
       });
-    } else {
+    } 
+    else if (type === "table") {
+      addItemAtPosition(type, 150, 150, targetSectionId, {
+        forceAdd: true,
+        headers: ["المادة", "الكمية", "السعر"],
+        rows: [
+          ["منتج أ", "10", "$50"],
+          ["منتج ب", "5", "$25"],
+          ["منتج ج", "8", "$40"]
+        ]
+      });
+    } 
+    else if (type === "chart") {
+      addItemAtPosition(type, 150, 150, targetSectionId, {
+        forceAdd: true,
+        data: [
+          { name: "سبتمبر", uv: 400 },
+          { name: "أكتوبر", uv: 700 },
+          { name: "نوفمبر", uv: 500 }
+        ]
+      });
+    } 
+    else if (type === "animation") {
+      addItemAtPosition(type, 150, 150, targetSectionId, {
+        forceAdd: true,
+        animationJson: null, 
+        styles: { width: "150px", height: "150px" }
+      });
+    } 
+    else if (type === "form-group") {
+      addItemAtPosition(type, 150, 150, targetSectionId, {
+        forceAdd: true,
+        fields: ["الاسم الكامل", "البريد الإلكتروني", "نص الرسالة"]
+      });
+    } 
+    else {
       addItemAtPosition(type, 150, 150, targetSectionId, { forceAdd: true });
     }
   };
-const handleStartDrag = (e, type) => {
+  
+  const handleStartDrag = (e, type) => {
   setState((prev) => ({
     ...prev,
     isDraggingNow: true,
     draggingType: type,
-    draggingShapeData: null // تنظيف كائن الأشكال عند سحب نص أو زر
+    draggingShapeData: null
   }));
 };
-
-  // useEffect(() => {
-  //   const handleGlobalMouseUp = () => {
-  //     if (state.isDraggingNow) {
-  //       setState(prev => ({
-  //         ...prev,
-  //         isDraggingNow: false,
-  //         draggingType: null,
-  //         draggingShapeData: null
-  //       }));
-  //     }
-  //   };
-
-  //   window.addEventListener("mouseup", handleGlobalMouseUp);
-  //   return () => {
-  //     window.removeEventListener("mouseup", handleGlobalMouseUp);
-  //   };
-  // }, [state.isDraggingNow, setState]);
 
   const setActiveTab = (tab) => {
     useState_activeTab(tab);
@@ -153,6 +171,22 @@ const handleStartDrag = (e, type) => {
           <Plus size={20} />
           <span style={styles.stripLabel}>Sections</span>
         </button>
+        {/* 🛠️ أضيفي هذه الأزرار داخل حاوية الـ iconStrip تحت زر الـ Sections مباشرة */}
+<button 
+  style={{ ...styles.stripBtn, color: activeTab === 'data-visual' && isDrawerOpen ? '#4f46e5' : '#475569' }} 
+  onClick={() => handleTabClick('data-visual')}
+>
+  <Grid2X2 size={20} /> {/* أو أيقونة BarChart3 إذا حبيتي تستوردينها */}
+  <span style={styles.stripLabel}>Data</span>
+</button>
+
+<button 
+  style={{ ...styles.stripBtn, color: activeTab === 'advanced' && isDrawerOpen ? '#4f46e5' : '#475569' }} 
+  onClick={() => handleTabClick('advanced')}
+>
+  <Star size={20} />
+  <span style={styles.stripLabel}>Graphics</span>
+</button>
       </div>
 
       <div style={{ ...styles.drawer, width: isDrawerOpen ? "300px" : "0px", borderRight: isDrawerOpen ? "1px solid #e2e8f0" : "none" }}>
@@ -164,6 +198,8 @@ const handleStartDrag = (e, type) => {
                 {activeTab === 'elements' && "Basic Elements"}
                 {activeTab === 'shapes' && "Shape Library"}
                 {activeTab === 'sections' && "Smart Sections"}
+                {activeTab === 'data-visual' && "Charts & Tables"}
+  {activeTab === 'advanced' && "Animations & Forms"}
               </h3>
               <button onClick={() => setIsDrawerOpen(false)} style={styles.closeDrawerBtn}>
                 <X size={16} />
@@ -272,6 +308,58 @@ const handleStartDrag = (e, type) => {
                 </div>
               </section>
             )}
+            {/* 🛠️ أولاً: محتوى تبويب البيانات (Charts & Tables) */}
+{activeTab === 'data-visual' && (
+  <section style={styles.section}>
+    <div style={styles.grid}>
+      {/* كرت الرسم البياني */}
+      <button
+        style={styles.elementBtn}
+        onClick={() => handleElementClick("chart")}
+        onMouseDown={(e) => handleStartDrag(e, "chart")}
+      >
+        <span style={{ fontSize: "20px" }}>📊</span>
+        <span style={styles.label}>Bar Chart</span>
+      </button>
+
+      {/* كرت الجدول الإحصائي */}
+      <button
+        style={styles.elementBtn}
+        onClick={() => handleElementClick("table")}
+        onMouseDown={(e) => handleStartDrag(e, "table")}
+      >
+        <span style={{ fontSize: "20px" }}>📅</span>
+        <span style={styles.label}>Data Table</span>
+      </button>
+    </div>
+  </section>
+)}
+
+{/* 🛠️ ثانياً: محتوى تبويب الجرافيكس المتقدم (Animations & Advanced Forms) */}
+{activeTab === 'advanced' && (
+  <section style={styles.section}>
+    <div style={styles.grid}>
+      {/* كرت الأنميشن المتحرك */}
+      <button
+        style={styles.elementBtn}
+        onClick={() => handleElementClick("animation")}
+        onMouseDown={(e) => handleStartDrag(e, "animation")}
+      >
+        <span style={{ fontSize: "20px" }}>✨</span>
+        <span style={styles.label}>Lottie Animation</span>
+      </button>
+
+      <button
+        style={styles.elementBtn}
+        onClick={() => handleElementClick("form-group")}
+        onMouseDown={(e) => handleStartDrag(e, "form-group")}
+      >
+        <span style={{ fontSize: "20px" }}>📝</span>
+        <span style={styles.label}>Contact Form</span>
+      </button>
+    </div>
+  </section>
+)}
           </div>
         )}
 

@@ -39,7 +39,6 @@ class UserSite(models.Model):
     
 class FormSubmission(models.Model):
     section_id = models.CharField(max_length=255)
-    # حقل JSON مرن يستقبل أي عدد من المدخلات (اسم، إيميل، نص، إلخ) دون التقيد بعدد حقول ثابت
     submission_data = models.JSONField() 
     created_at = models.DateTimeField(auto_now_add=True)
 

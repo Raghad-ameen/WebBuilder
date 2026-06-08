@@ -1,3 +1,4 @@
+import re
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from .models import Website, UserSite,FormSubmission
@@ -92,35 +93,66 @@ class FormSubmissionView(APIView):
     authentication_classes = []  
 
     def post(self, request):
+        print("REQUEST DATA:", request.data)
         section_id = request.data.get('section_id')
-        submission_data = request.data.get('submission_data')
+        is_popup = request.data.get('is_popup', False)
+        submission_data = request.data.get('submission_data') 
         
         if not section_id or not submission_data:
             return Response({"error": "Missing required data"}, status=status.HTTP_400_BAD_REQUEST)
         
+        if isinstance(submission_data, list):
+            for field in submission_data:
+                field_key = field.get('field_key', 'Unknown Field')
+                value = str(field.get('value', '')).strip()
+                data_type = field.get('data_type', 'Any')
+
+                print(f"[فحص الباكيند] الحقل: {field_key} | القيمة: {value} | النوع المستهدف: {data_type}")
+
+                if data_type == "Email" and value:
+                    email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+                    if not re.match(email_regex, value):
+                        return Response(
+                            {"error": f"الرجاء إدخال بريد إلكتروني صحيح في حقل '{field_key}'"}, 
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                elif data_type == "Phone" and value:
+                    phone_regex = r"^\+?[0-9]{7,15}$"
+                    if not re.match(phone_regex, value):
+                        return Response(
+                            {"error": f"الرجاء إدخال رقم هاتف صحيح في حقل '{field_key}'"}, 
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                elif data_type == "Number" and value:
+                    if not value.replace('.', '', 1).isdigit():
+                        return Response(
+                            {"error": f"يجب أن يحتوي حقل '{field_key}' على أرقام فقط"}, 
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                elif data_type == "URL" and value:
+                    url_regex = r"^https?://[^\s/$.?#].[^\s]*$"
+                    if not re.match(url_regex, value):
+                        return Response(
+                            {"error": f"الرجاء إدخال رابط إلكتروني (URL) صحيح في حقل '{field_key}'"}, 
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                elif data_type == "Password" and value:
+                    if len(value) < 6:
+                        return Response(
+                            {"error": f"كلمة المرور في حقل '{field_key}' قصيرة جداً، يجب ألا تقل عن 6 خانات"}, 
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
         submission = FormSubmission.objects.create(
             section_id=section_id,
-            submission_data=submission_data
+            submission_data=submission_data  
         )
         
         return Response({
-            "message": "Form submitted successfully", 
-            "id": submission.id
-        }, status=status.HTTP_201_CREATED)
-        permission_classes = [AllowAny]
-    def post(self, request):
-        section_id = request.data.get('section_id')
-        submission_data = request.data.get('submission_data')
-        
-        if not section_id or not submission_data:
-            return Response({"error": "Missing required data"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        submission = FormSubmission.objects.create(
-            section_id=section_id,
-            submission_data=submission_data
-        )
-        
-        return Response({
-            "message": "Form submitted successfully", 
+            "message": "Form submitted and validated successfully", 
             "id": submission.id
         }, status=status.HTTP_201_CREATED)

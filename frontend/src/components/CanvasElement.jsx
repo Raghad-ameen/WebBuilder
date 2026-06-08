@@ -29,7 +29,7 @@ export default function CanvasElement({ store, children, width, scale }) {
         justifyContent: 'center', 
         alignItems: 'flex-start',
         position: 'relative',
-        height: `${estimatedHeight * scale}px`, // حساب ديناميكي دقيق للارتفاع بناءً على حجم السكيل الجديد
+        height: `${estimatedHeight * scale}px`, 
         overflow: 'visible'
       }}
     >

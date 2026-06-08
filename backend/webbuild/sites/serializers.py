@@ -8,13 +8,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # إضافة معلومات إضافية داخل التوكن
         token['is_staff'] = user.is_staff
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        # إضافة معلومات إضافية في الاستجابة (Response) لسهولة الوصول في React
         data['is_staff'] = self.user.is_staff
         data['username'] = self.user.username
         return data
@@ -49,7 +47,6 @@ class UserSiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Website
-        # نحدد الحقول التي نريد إرسالها لفرونت اند الأدمن
         fields = [
             'id', 
             'name', 
