@@ -3,14 +3,12 @@ import React from "react";
 export default function LinkElement({
   item,
   state,
-   store, 
+  store, 
   isSelected,
   cleanFilter,
-  hoverStyles,
   updateItem,
   activePageId,
   section,
-  setIsFormVisible,
   handleSubmitForm,
   handleItemAction,
   handleDoubleClick
@@ -35,9 +33,6 @@ export default function LinkElement({
   return (
     <a
       href="#"
-      target="_blank"
-      rel="noopener noreferrer"
-
       contentEditable={isSelected && !state.isPreviewMode}
       suppressContentEditableWarning
 
@@ -49,31 +44,35 @@ export default function LinkElement({
         });
       }}
 
-onClick={(e) => {
-  if (!state.isPreviewMode) {
-    if (!e.ctrlKey) e.preventDefault();
-    return;
-  }
+      onClick={(e) => {
+        // إذا كنا في وضع التصميم (Editor)، نمنع اللينك تماماً من أي حركة أو نقل
+        if (!state.isPreviewMode) {
+          if (!e.ctrlKey) e.preventDefault();
+          return;
+        }
 
-if (item.action?.type === "submit_form") {
-  e.preventDefault();
+        // 🌟 منع اللينك من إضافة '#' للرابط وعمل Scroll لأعلى الصفحة
+        e.preventDefault(); 
+        e.stopPropagation();
 
-  store.setState(prev => ({
-    ...prev,
-    activeFormSectionId: section.id
-  }));
+        console.log("🎯 Link clicked! Action Type:", item.action?.type);
 
-  return;
-}
+        // 1. دعم أكشن الـ Submit (سواء فورم البوب أب أو الإرسال الصامت الجديد)
+        if (item.action?.type === "submit_form" || item.action?.type === "submit") {
+          if (typeof handleSubmitForm === "function") {
+            // نمرر الـ item.id كمعامل رابع لمعرفة مكان الضغطة
+            handleSubmitForm(section.id, item.action, false, item.id);
+          }
+        } 
+        // 2. دعم بقية الأكوام (مثل الانتقال، السكرول، الروابط الخارجية، أو الـ link_element التوجيهي)
+        else if (item.action?.type && item.action?.type !== "none") {
+          if (typeof handleItemAction === "function") {
+            handleItemAction(item);
+          }
+        }
+      }}
 
-
-if (item.action?.type && item.action?.type !== "url") {
-    e.preventDefault();
-    handleItemAction(item);
-  }
-}}
-
-style={{
+      style={{
         width: "100%",
         height: "100%",
         display: "flex",
@@ -85,6 +84,7 @@ style={{
 
         pointerEvents: "auto",
         outline: "none",
+        textDecoration: itemDecoration || "none", // دعم خط اللينك السفلي إن وجد
 
         filter: cleanFilter,
 
