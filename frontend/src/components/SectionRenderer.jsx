@@ -24,11 +24,10 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const [isFormOpen, setIsFormOpen] = useState(false);
   const isActive = state.activeSectionId === section.id;
   
-// 🌟 الفورم تظهر دائماً في وضع الـ Editor لتصميمها بحرية، وتختفي في المعاينة حتى يضغط العميل على الزر
-  const isFormVisible = !state.isPreviewMode 
-    ? true 
-    : (state.isFormOpen && state.activeFormSectionId === section.id);  
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+const isFormVisible = !state.isPreviewMode 
+    ? isFormOpen
+    : (state.isFormOpen && state.activeFormSectionId === section.id);
+      const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const sectionRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
@@ -50,10 +49,8 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
   const hueRotateFilter = section.styles?.hueRotate ? `hue-rotate(${section.styles.hueRotate}deg)` : "";
   const invertFilter = section.styles?.invert ? `invert(${section.styles.invert}%)` : "";
 
-// 🌟 لتتبع حالة العناصر المربوطة بالأزرار (مخفية أو مظهرة) في وضع المعاينة
   const [visibleLinkedElements, setVisibleLinkedElements] = useState({});
 
-  // استخراج كافة الـ IDs المربوطة بأي زر يملك أكشن link_element في هذا السكشن
   const allLinkedTargetIds = useMemo(() => {
     const targets = [];
     section.data?.items?.forEach(item => {
@@ -113,43 +110,36 @@ export default function SectionRenderer({ section, selectedElementIds = [], onSe
 const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 
 const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
-  console.log("🎯 handleSubmitForm has been triggered! isPreviewMode:", state.isPreviewMode, "Action:", action);
   
   if (!state.isPreviewMode) return;
 
-  // 1. معالجة أكشن ربط العناصر (إن وُجد)
   if (action?.type === 'link_element' && Array.isArray(action?.payload)) {
     setVisibleLinkedElements(prev => {
       const updated = { ...prev };
       action.payload.forEach(targetId => {
-        updated[targetId] = !updated[targetId]; // عكس الحالة الحالية (Toggle)
+        updated[targetId] = !updated[targetId];
       });
       return updated;
     });
-    return; // نوقف التنفيذ لكي لا يذهب لكود إرسال الفورم
+    return; 
   }
 
-  // 2. جلب العنصر الذي تم النقر عليه لمعرفة مكانه في الساحة
   const clickedItem = section.data?.items?.find(item => item.id === clickedItemId);
 
-  // 3. الشرط السحري للـ Popup القديم: إذا كان الزر خارجياً والأكشن submit_form، نفتح الفورم فقط ونمنع الإرسال
   if (action?.type === 'submit_form' && action?.isPopupForm && !clickedItem?.belongsToPopup) {
     store.setState(prev => ({
       ...prev,
       isFormOpen: true,
       activeFormSectionId: sectionId
     }));
-    return; // نوقف التنفيذ هنا تماماً
+    return;
   }
 
-  // 4. تحديد ما إذا كانت العملية تابعة لـ Popup أم إرسال عادي/صامت
   let finalIsPopup = isPopup;
   
-  // إذا كان الأكشن الجديد هو submit الصامت، نلغي حالة الـ Popup تماماً
   if (action?.type === 'submit') {
     finalIsPopup = false;
   } else {
-    // المنطق القديم الخاص بـ submit_form
     const hasPopupFields = section.data?.items?.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
     const hasNormalFields = section.data?.items?.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
     
@@ -158,16 +148,13 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     }
   }
   
-  // 5. فلترة وجلب حقول الإدخال بناءً على نوع الأكشن
   const formFields = section.data.items.filter(item => {
     if (item.type !== 'input') return false;
     
-    // إذا كان الأكشن صامتاً، نجمع كل الحقول العادية بالريدر التي لا تنتمي لبوب أب
     if (action?.type === 'submit') {
       return !item.belongsToPopup;
     }
     
-    // المنطق القديم للفورم المنبثقة
     if (finalIsPopup) {
       return item.type === "input";
     } else {
@@ -175,7 +162,6 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     }
   });
 
-  // 6. تجميع قيم الحقول الحالية من الـ DOM
   const structuredSubmissionData = formFields.map(field => {
     const inputEl = document.getElementById(`input-${field.id}`);
     return {
@@ -189,7 +175,6 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
 
   console.log("🚀 Sending Data to Backend:", structuredSubmissionData);
 
-  // 7. إرسال البيانات الفعلي عبر الـ API
   try {
     const response = await axios.post('http://127.0.0.1:8000/api/forms/submit/', {
       section_id: sectionId,
@@ -197,52 +182,73 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
       submission_data: structuredSubmissionData 
     });
 
-    if (response.status === 201 || response.status === 200) {
-      console.log("✅ Data Saved Successfully in Django!", response.data);
+if (response.status === 201 || response.status === 200) {
+     console.log("✅ Data Saved Successfully in Django!", response.data);
+
+      setVisibleLinkedElements(prev => {
+        const cleared = { ...prev };
+        if (Array.isArray(allLinkedTargetIds)) {
+          allLinkedTargetIds.forEach(targetId => { cleared[targetId] = false; });
+        }
+        return cleared;
+      });
+      setIsFormOpen(false);
+      store.setState((prev) => ({ 
+        ...prev, 
+        activeFormSectionId: null, 
+        isFormOpen: false,
+        selectedElementIds: [] 
+      }));
 
       if (finalIsPopup) {
         setShowPopupSuccessModal(true);
         setShowSuccessModal(false);
-        
-        if (typeof setIsFormVisible === "function") {
-          setIsFormVisible(false); 
-        }
-        store.setState((prev) => ({ ...prev, activeFormSectionId: null, isFormOpen: false }));
       } else {
-        // للأكشن الصامت والمودال العادي
         setShowSuccessModal(true);
         setShowPopupSuccessModal(false);
-      }
-      
-      // تفريغ الحقول بعد الإرسال الناجح
+      }      
       formFields.forEach(field => {
         const inputEl = document.getElementById(`input-${field.id}`);
         if (inputEl) inputEl.value = "";
       });
-    }
+    }  
+
+    
   } catch (error) {
     console.error("❌ فشل الإرسال للباكيند. تفاصيل الخطأ:", error.response?.data || error.message);
   }
 };
-
-
 const handleItemAction = (item) => {
+    console.log("Button clicked", item);
+
     if (!state.isPreviewMode) return;
     const { action } = item;
     if (!action || !action.type) return;
 
     switch (action.type) {
+
+case 'CLOSE_POPUP':
+        console.log("🎯 تم الضغط على زر إغلاق الفورم الرمادي (X)");
+        
+        setVisibleLinkedElements(prev => {
+          const cleared = { ...prev };
+          if (Array.isArray(allLinkedTargetIds)) {
+            allLinkedTargetIds.forEach(targetId => { cleared[targetId] = false; });
+          }
+          return cleared;
+        });
+
+        setIsFormOpen(false);
       case 'submit_form':
         handleSubmitForm(section.id, action);
         break;
       
-      // 🌟 الأكشن الجديد: يعمل بشكل سليم لأنه يستدعي الـ SetState المعرفة في الأعلى خارج الدالة
       case 'link_element':
         if (Array.isArray(action.payload)) {
           setVisibleLinkedElements(prev => {
             const updated = { ...prev };
             action.payload.forEach(targetId => {
-              updated[targetId] = !updated[targetId]; // Toggle الحالة (إظهار / إخفاء)
+              updated[targetId] = !updated[targetId];
             });
             return updated;
           });
@@ -291,6 +297,8 @@ const handleItemAction = (item) => {
         console.log("Unknown action type:", action.type);
     }
   };
+
+
   const isSectionSelected = state.selectedSectionId === section.id;
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
@@ -308,11 +316,12 @@ const handleItemAction = (item) => {
     }
   }, [selectedElementIds, state.selectedSectionId, section.id, state.isPreviewMode]);
 
-
-
-
-
-
+useEffect(() => {
+  if (state.isPreviewMode) {
+    setIsFormOpen(false);
+    setVisibleLinkedElements({});
+  }
+}, [state.isPreviewMode]);
 
   return (
     <div
@@ -477,25 +486,19 @@ const handleItemAction = (item) => {
         };
         const cleanFilter = getCleanFilter();
 
-        // حساب نظام الربط التلقائي والإخفاء في المعاينة
         const isTargetElement = allLinkedTargetIds.includes(item.id);
-        const isCurrentlyTriggered = visibleLinkedElements[item.id];
-
-        // إذا كنا في وضع المعاينة (Preview) وكان العنصر مستهدفاً ولم يتم النقر على الزر بعد -> نخفيه تماماً
-        const shouldHideInPreview = state.isPreviewMode && isTargetElement && !isCurrentlyTriggered;
-
-        // دمج شرط الإخفاء الديناميكي مع الستايلات الأصلية للعنصر
+        const isCurrentlyTriggered = !!visibleLinkedElements[item.id];
+        
+const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurrentlyTriggered || Object.keys(visibleLinkedElements).length === 0);
         const baseStyles = item.styles || {};
         const finalStyles = {
           ...baseStyles,
           display: shouldHideInPreview ? "none" : ((baseStyles.display === "none" ? "block" : baseStyles.display) || "block"),
         };
 
-        // 🌟 الحل السحري: توليد كود ستايل مخصص (Dynamic Style Tag) لكل عنصر ليعمل الهوفر برمجياً على مستوى المتصفح (Native CSS) وبسرعة خارقة
         const uniqueClassName = `hover-el-${item.id}`;
         const transitionSpeed = baseStyles.transitionSpeed ? `${baseStyles.transitionSpeed}s` : '0.2s';
         
-        // نقوم بصياغة تأثير الهوفر فقط إذا كنا في وضع المعاينة
         const dynamicHoverStyles = state.isPreviewMode ? `
           .${uniqueClassName} {
             transition: all ${transitionSpeed} ease !important;
@@ -571,7 +574,7 @@ const handleItemAction = (item) => {
                 perspective: 1000,
                 WebkitFontSmoothing: 'antialiased',
                 boxShadow: "none",
-                ...finalStyles, // تطبيق الستايلات الأساسية المدمجة
+                ...finalStyles,
               }}
             >
 

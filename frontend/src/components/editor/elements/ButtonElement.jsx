@@ -44,10 +44,8 @@ onClick={(e) => {
             if (state.isPreviewMode) {
               console.log("🎯 Button clicked! Action Type:", item.action?.type);
 
-              // 🌟 دعم الأكشن الجديد submit إلى جانب submit_form القديم
               if (item.action?.type === "submit_form" || item.action?.type === "submit") {
                 if (typeof handleSubmitForm === "function") {
-                  // نمرر الـ item.id والـ action بالكامل لكي تفهم الدالة طبيعة الإرسال
                   handleSubmitForm(section.id, item.action, false, item.id);
                 }
               } 

@@ -69,7 +69,6 @@ export default function InputElement({
             min={item.min}
             max={item.max}
 
-            // 🌟 تعديل ذكي: إذا كان الحقل تاريخ أو وقت، يفضل عدم إجبار المتصفح على قيمة افتراضية نصية فارغة تسبب ارتباكاً للمتصفح
             defaultValue={["date", "time"].includes(item.inputType) ? undefined : ""}
 
             placeholder={
@@ -86,7 +85,6 @@ export default function InputElement({
               margin: 0,
               padding: "0 10px",
 
-              // 🌟 إضافة مهمة جداً: لضمان إظهار أيقونة الـ Date Picker الافتراضية للمتصفح وعدم إخفائها
               appearance: item.inputType === "date" || item.inputType === "time" ? "auto" : "none",
               WebkitAppearance: item.inputType === "date" || item.inputType === "time" ? "auto" : "none",
 

@@ -91,7 +91,6 @@ export default function EditorLayout({ store, onSave }) {
       <div style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%", position: "relative" }}>
         <LeftSidebar store={store} />
 
-        {/* 🛠️ التعديل هنا: حاوية البانل وأدوات التلوين أصبحت عائمة وثابتة فوق المحتوى تماماً */}
         <div style={{ 
           position: "absolute", 
           top: "16px", 
@@ -102,7 +101,7 @@ export default function EditorLayout({ store, onSave }) {
           flexDirection: "column", 
           alignItems: "center", 
           gap: "10px", 
-          pointerEvents: "none" // لكي لا تحجب الضغطات عن العناصر خلفها إلا عند الضغط على الأزرار نفسها
+          pointerEvents: "none"
         }}>
           <div style={{ pointerEvents: "auto" }}>
             <RightPanel store={store} />
@@ -115,12 +114,29 @@ export default function EditorLayout({ store, onSave }) {
             }}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#475569", cursor: "pointer", border: "1px solid #cbd5e1" }}>
                 <Palette size={16} />
-                <input 
-                  type="color" 
-                  value={state.canvasStyles?.backgroundColor || "#ffffff"} 
-                  onChange={(e) => store.updateCanvasStyles({ backgroundColor: e.target.value })} 
-                  style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer", width: "100%", height: "100%" }}
-                />
+             <input 
+  type="color" 
+  value={activePage?.canvasStyles?.backgroundColor || state.canvasStyles?.backgroundColor || "#ffffff"} 
+  onChange={(e) => {
+    if (activePage && typeof store.updatePage === 'function') {
+      // إذا كان لديكِ دالة تحديث صفحة عامة بالستور مرري لها التعديل هكذا
+      store.updatePage(activePage.id, {
+        canvasStyles: { ...activePage.canvasStyles, backgroundColor: e.target.value }
+      });
+    } else if (typeof store.setState === 'function') {
+      // 🌟 الحل المباشر والآمن: تحديث الـ state الحية مباشرة في الستور
+      store.setState(prev => ({
+        ...prev,
+        pages: prev.pages.map(p => 
+          p.id === activePage.id 
+            ? { ...p, canvasStyles: { ...p.canvasStyles, backgroundColor: e.target.value } }
+            : p
+        )
+      }));
+    }
+  }} 
+  style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer", width: "100%", height: "100%" }}
+/>
               </div>
 
               {selectedIds.length > 1 && <div style={{ width: "1px", height: "20px", backgroundColor: "#cbd5e1" }} />}
@@ -137,11 +153,10 @@ export default function EditorLayout({ store, onSave }) {
           )}
         </div>
 
-        {/* منطقة المحتوى القابلة للتمرير (الكانفاس) */}
         <main style={{ 
           flex: 1, 
           backgroundColor: "#edeef0", 
-          padding: '80px 24px 120px 24px', // تم زيادة البادينج العلوي لكي لا يختفي الكانفاس تحت البانل الثابتة عند البداية
+          padding: '80px 24px 120px 24px',
           display: "flex", 
           flexDirection: "column", 
           alignItems: "center",
@@ -156,12 +171,13 @@ export default function EditorLayout({ store, onSave }) {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "24px", width: "100%" }}> 
               <CanvasElement store={store} width={`${canvasWidth}px`} scale={dynamicScale}>
                 <div
-                  id="canvas-content"
-                  className="main-canvas-area"
-                  style={{
-                    width: "100%", 
-                    backgroundColor: state.canvasStyles?.backgroundColor || "#ffffff", 
-                    minHeight: state.canvasHeight || "750px", 
+                 id="canvas-content"
+  className="main-canvas-area"
+  style={{
+    width: "100%", 
+    // ✅ يقرأ من كائن الصفحة النشطة الحالي ليعرض لونها الخاص بها فقط
+    backgroundColor: activePage?.canvasStyles?.backgroundColor || state.canvasStyles?.backgroundColor || "#ffffff", 
+    minHeight: state.canvasHeight || "750px",
                     position: "relative", margin: "0 auto", overflow: "visible", 
                     display: "flex", flexDirection: "column", gap: "0px", borderRadius: "4px", 
                     boxShadow: "0 12px 40px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.01)"

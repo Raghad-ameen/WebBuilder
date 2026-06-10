@@ -10,7 +10,6 @@ const SocialIconSVG = ({ type }) => {
   };
 
   return (
-    // 💡 تم تصغير حجم أزرار السوشيال ميديا من w-10 h-10 إلى w-8 h-8
     <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 hover:bg-white/10 transition-all">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {icons[type]}
@@ -20,7 +19,6 @@ const SocialIconSVG = ({ type }) => {
 };
 
 const FooterColumn = ({ title, links }) => (
-  // 💡 تم تصغير الفراغات بين نصوص القوائم من space-y-6 إلى space-y-3
   <div className="space-y-3">
     <h4 className="text-white font-bold tracking-tight text-sm uppercase opacity-80">{title}</h4>
     <ul className="space-y-2">
@@ -48,15 +46,12 @@ export const Footer = () => {
   ];
 
   return (
-    // 💡 تم تقليص الحشو العلوي والسفلي للفوتر (من pt-24 pb-12 إلى pt-12 pb-6)
     <footer className="bg-[#0a0026] pt-12 pb-6 px-6 md:px-12 border-t border-white/5 font-sans">
       <div className="max-w-7xl mx-auto">
         
-        {/* 💡 تم تصغير الفراغات العشوائية بين أجزاء الجريد من gap-12 إلى gap-8 وبأسطر أقل تباعداً */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-10">
           <div className="col-span-1 lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2">
-              {/* تصغير حاوية الشعار */}
              <div className="w-11 h-11 flex items-center justify-center"> 
 
          <p className=' text-white text-2xl'  style={{fontFamily:'fantasy'}}>
@@ -66,7 +61,6 @@ export const Footer = () => {
           StructPeak
         </span>
             </div>
-            {/* تصغير حجم نص الوصف من text-lg إلى text-xs */}
             <p className="text-white/40 text-xs leading-relaxed max-w-xs font-medium">
               Building the future of the web, one block at a time.
             </p>
@@ -81,7 +75,6 @@ export const Footer = () => {
           <FooterColumn title="Support" links={supportLinks} />
         </div>
 
-        {/* أسفل الفوتر النحيف */}
         <div className="pt-6 border-t border-white/5 text-center">
           <p className="text-white/20 text-xs font-medium">
             © 2026 StructPeak Inc. All rights reserved.

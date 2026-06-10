@@ -526,8 +526,7 @@ export default function RightPanel({ store }) {
 
   const { state, updateItem, previewUpdateItem, updateSection, injectFormTemplate, setState } = store;
 
-// أضيفي هذا السطر مع بقية الـ States في أعلى المكون
-const [activeSection, setActiveSection] = useState("normal"); // 'normal' أو 'hover'
+const [activeSection, setActiveSection] = useState("normal");
   const toolbarRef = useRef(null);
 
   const dropdownRef = useRef(null);
@@ -623,7 +622,6 @@ useEffect(() => {
     setShowMore(false);
     setOpenPropertyField(null);
 
-    // 🌟 السطر المطلوب هنا بالضبط لتصفير حالة الهوفر عند تغيير العنصر المختار
     setActiveSection("normal");
 
   }, [selectedItem?.id]);
@@ -707,7 +705,6 @@ if (type === 'submit_form') {
       const activePageId = state.activePageId || "";
       const currentSectionId = selectedItem.sectionId;
 
-      // 1. تحديث أكشن الزر الحالي ليفتح بوب أب
       updateItem(activePageId, currentSectionId, selectedId, { 
         action: { 
           type: 'submit_form', 
@@ -716,14 +713,12 @@ if (type === 'submit_form') {
         } 
       });
 
-      // 2. إجبار الـ Store على فتح بوب أب التصميم
       store.setState(prev => ({
         ...prev,
         isFormOpen: true,
         activeFormSectionId: currentSectionId
       }));
 
-      // 3. 🌟 التعديل السحري: إذا كان السكشن فارغاً من عناصر الـ Popup، نقوم بحقن القالب الجاهز فوراً!
       const currentSection = state.pages
         .find(p => p.id === activePageId)?.sections
         .find(s => s.id === currentSectionId);
@@ -731,11 +726,10 @@ if (type === 'submit_form') {
       const hasPopupItems = currentSection?.data?.items?.some(item => item.belongsToPopup);
 
       if (!hasPopupItems && typeof store.injectFormTemplate === "function") {
-        // حقن قالب عناصر الفورم (حقول مجهزة بـ belongsToPopup: true) داخل السكشن الحالي
         store.injectFormTemplate(currentSectionId);
       }
       return;
-    }    // لبقية الأكشنز الطبيعية
+    }   
     updateItem(activePageId, selectedItem.sectionId, selectedId, { 
       action: { type, payload } 
     });
@@ -1125,15 +1119,12 @@ if (type === 'submit_form') {
 
 if (!selectedItem) return null;
 
-// جلب حقول السكشن الحالي لبناء خيارات الـ Dropdown للربط
-// 🌟 استخراج السكاشن بشكل صحيح من الصفحة النشطة الحالية
   const currentPage = state.pages?.find(p => p.id === state.activePageId);
   const currentSectionData = currentPage?.sections?.find(s => s.id === selectedItem.sectionId);
   
-  // تجميع كافة الحقول (inputs) الموجودة داخل هذا السكشن لربطها بالزر
   const selectableElementsOptions = currentSectionData?.data?.items
     ? currentSectionData.data.items
-        .filter(item => item.id !== selectedId && item.type === 'input') // استبعاد الزر نفسه وجلب الحقول فقط
+        .filter(item => item.id !== selectedId && item.type === 'input')
         .map(item => ({
           id: item.id,
           name: item.label || item.placeholder || item.name || `Field (${item.id.slice(-4)})`
@@ -1457,9 +1448,8 @@ if (!selectedItem) return null;
       {state.pages
         .find(p => p.id === state.activePageId)?.sections
         .find(s => s.id === selectedItem.sectionId)?.data?.items
-        ?.filter(item => item.id !== selectedItem.id) // استبعاد الزر نفسه
+        ?.filter(item => item.id !== selectedItem.id) 
         ?.map(item => {
-          // التحقق إذا كان العنصر محدداً مسبقاً في الـ payload
           const targetIds = Array.isArray(selectedItem.action?.payload) ? selectedItem.action.payload : [];
           const isChecked = targetIds.includes(item.id);
 
@@ -1475,7 +1465,6 @@ if (!selectedItem) return null;
                   } else {
                     updatedPayload = updatedPayload.filter(id => id !== item.id);
                   }
-                  // حفظ مصفوفة الـ IDs داخل الـ payload الخاص بالأكشن
                   handleActionChange('link_element', updatedPayload);
                 }}
                 className="rounded text-indigo-600 focus:ring-indigo-500"

@@ -2,10 +2,13 @@ import React from "react";
 
 export default function SectionWrapper({ section, isSelected, onSelect, children }) {
   
-  const handleSectionClick = (e) => {
+ const handleSectionClick = (e) => {
     if (e.target === e.currentTarget) {
       e.stopPropagation();
-      onSelect(section.id);
+      // ✅ فحص آمن: لا يتم استدعاء الدالة إلا إذا كانت ممررة بالفعل كـ function
+      if (typeof onSelect === "function") {
+        onSelect(section.id);
+      }
     }
   };
 

@@ -45,26 +45,21 @@ export default function LinkElement({
       }}
 
       onClick={(e) => {
-        // إذا كنا في وضع التصميم (Editor)، نمنع اللينك تماماً من أي حركة أو نقل
         if (!state.isPreviewMode) {
           if (!e.ctrlKey) e.preventDefault();
           return;
         }
 
-        // 🌟 منع اللينك من إضافة '#' للرابط وعمل Scroll لأعلى الصفحة
         e.preventDefault(); 
         e.stopPropagation();
 
         console.log("🎯 Link clicked! Action Type:", item.action?.type);
 
-        // 1. دعم أكشن الـ Submit (سواء فورم البوب أب أو الإرسال الصامت الجديد)
         if (item.action?.type === "submit_form" || item.action?.type === "submit") {
           if (typeof handleSubmitForm === "function") {
-            // نمرر الـ item.id كمعامل رابع لمعرفة مكان الضغطة
             handleSubmitForm(section.id, item.action, false, item.id);
           }
         } 
-        // 2. دعم بقية الأكوام (مثل الانتقال، السكرول، الروابط الخارجية، أو الـ link_element التوجيهي)
         else if (item.action?.type && item.action?.type !== "none") {
           if (typeof handleItemAction === "function") {
             handleItemAction(item);
@@ -84,7 +79,7 @@ export default function LinkElement({
 
         pointerEvents: "auto",
         outline: "none",
-        textDecoration: itemDecoration || "none", // دعم خط اللينك السفلي إن وجد
+        textDecoration: itemDecoration || "none", 
 
         filter: cleanFilter,
 

@@ -8,13 +8,10 @@ export default function HoverWrapper({
   const [isHovered, setIsHovered] = useState(false);
 
   const hoverStyles = useMemo(() => {
-    // 1. في وضع المعاينة الفعلي (Live Preview): نعتمد على حركة الماوس
     if (isPreviewMode) {
       return isHovered ? (item.hoverStyles || {}) : {};
     }
 
-    // 2. داخل الـ Editor: إذا قام المصمم بفتح الـ Hover Tab وكان العنصر هو النشط حالياً
-    // نبحث في خصائص الـ item للتأكد هل نمرر ستايل الهوفر فوراً أم لا
     if (item.isEditingHoverMode) {
       return item.hoverStyles || {};
     }

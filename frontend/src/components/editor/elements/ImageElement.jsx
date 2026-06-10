@@ -16,7 +16,6 @@ export default function ImageElement({
       isPreviewMode={state.isPreviewMode}
     >
       {({ computedStyle }) => {
-        // فصل الـ transform (مثل الـ Scale) لكي نطبقه بسلاسة
         const { transform, ...otherHoverStyles } = computedStyle || {};
 
         return (
@@ -32,13 +31,12 @@ export default function ImageElement({
               alignItems: "center",
               justifyContent: "center",
 
-              // الخلفية والحدود الذكية اعتماداً على وجود الصورة
               backgroundColor: item.src
                 ? "transparent"
                 : item.styles?.backgroundColor || "#f8fafc",
 
               border: item.src
-                ? item.styles?.border || "none" // السماح بظهور حدود المستخدم إذا وجدت صورة
+                ? item.styles?.border || "none"
                 : "1px dashed #cbd5e1",
 
               borderRadius: item.styles?.borderRadius || "8px",
@@ -46,10 +44,8 @@ export default function ImageElement({
               filter: cleanFilter,
               boxShadow: item.styles?.boxShadow || "none",
 
-              // تطبيق قناع الانتقال (Transition) ليكون الـ Hover ناعماً جداً
               transition: `all ${item.styles?.transitionSpeed || 0.2}s ease`,
               
-              // تطبيق تأثيرات الـ Hover القادمة من الـ Wrapper على الحاوية
               ...otherHoverStyles,
               transform: transform || item.styles?.transform || "none"
             }}
@@ -62,10 +58,9 @@ export default function ImageElement({
                   width: "100%",
                   height: "100%",
                   objectFit: item.styles?.objectFit || "cover",
-                  pointerEvents: "none", // تضمن أن الـ Hover يلتقطه الـ div الخارجي دائماً
+                  pointerEvents: "none",
                   display: "block",
                   
-                  // لجعل الصورة نفسها تتأثر بالـ transition إذا تغيرت الفلاتر أو الأبعاد
                   transition: `inherit` 
                 }}
               />
@@ -103,7 +98,6 @@ export default function ImageElement({
                   cursor: "pointer",
                   gap: "8px",
                   color: item.styles?.color || "#64748b",
-                  // يضمن تلوين النص والأيقونة عند الـ hover الافتراضي للمنشئ
                   transition: "inherit" 
                 }}
               >

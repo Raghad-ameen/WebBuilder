@@ -5,7 +5,6 @@ import {
   Laptop, Tablet, Smartphone, Type, Sliders, Plus, CheckCircle, Loader2, Image as ImageIcon
 } from 'lucide-react';
 
-// --- Shared Mock Components ---
 const MockTopBar = ({ activeDevice, onDeviceChange, isSaving, showSuccess }) => (
   <div className="bg-white border-b border-slate-200 p-3 flex justify-between items-center px-6">
     <div className="flex gap-2 text-indigo-600 font-black text-sm uppercase italic">SP <span className="text-slate-400 font-medium">StructPeak</span></div>
@@ -20,9 +19,8 @@ const MockTopBar = ({ activeDevice, onDeviceChange, isSaving, showSuccess }) => 
   </div>
 );
 
-// --- 1. Add Section Preview ---
 const AddSectionPreview = () => (
-  <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-[400px] mb-20">
+  <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-100 mb-20">
     <MockTopBar activeDevice="laptop" />
     <div className="flex flex-1 overflow-hidden">
       <div className="w-20 bg-white border-r border-slate-100 flex flex-col items-center py-8 gap-6">
@@ -42,9 +40,8 @@ const AddSectionPreview = () => (
   </div>
 );
 
-// --- 2. Visual Styling Preview ---
 const VisualStylingPreview = () => (
-  <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-[400px] mb-20">
+  <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-100 mb-20">
     <MockTopBar activeDevice="laptop" />
     <div className="flex flex-1 overflow-hidden">
       <div className="flex-1 p-10 flex items-center justify-center relative">
@@ -77,7 +74,6 @@ const VisualStylingPreview = () => (
   </div>
 );
 
-// --- 3. Responsive Views Preview ---
 const ResponsivePreview = () => {
   const [view, setView] = useState('laptop');
   const widths = { laptop: '100%', tablet: '60%', mobile: '35%' };
@@ -91,7 +87,7 @@ const ResponsivePreview = () => {
   }, []);
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-[400px] mb-20">
+    <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-100 mb-20">
       <MockTopBar activeDevice={view} />
       <div className="flex-1 p-6 flex items-center justify-center bg-slate-300/50">
         <motion.div animate={{ width: widths[view] }} transition={{ type: 'spring', stiffness: 100, damping: 20 }} className="h-full bg-white rounded-2xl shadow-2xl border border-white flex flex-col p-4 overflow-hidden">
@@ -109,7 +105,6 @@ const ResponsivePreview = () => {
   );
 };
 
-// --- 4. Save & Success Process (Updated with Content) ---
 const SaveProcessPreview = () => {
   const [status, setStatus] = useState('idle');
 
@@ -123,7 +118,7 @@ const SaveProcessPreview = () => {
   }, []);
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-[400px]">
+    <div className="w-full max-w-5xl mx-auto bg-slate-200 rounded-3xl shadow-xl overflow-hidden border border-slate-300 flex flex-col h-100">
       <MockTopBar isSaving={status === 'saving'} showSuccess={status === 'success'} activeDevice="laptop" />
       <div className="flex-1 flex items-center justify-center relative bg-slate-50">
         

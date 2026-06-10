@@ -1868,8 +1868,31 @@ export function useEditorStore(initialState) {
 
   }, [saveToHistory, swapItemZIndices]);
 
+const updatePageStyles = useCallback((pageId, styles) => {
+    setState(prev => {
+      // 1. فحص ما إذا كانت مصفوفة الصفحات موجودة
+      if (!prev.pages) return prev;
+
+      // 2. تحديث الصفحة المطلوبة فقط داخل مصفوفة الصفحات
+      return {
+        ...prev,
+        pages: prev.pages.map(page =>
+          page.id === pageId
+            ? {
+                ...page,
+                canvasStyles: {
+                  ...(page.canvasStyles || {}),
+                  ...styles
+                }
+              }
+            : page
+        )
+      };
+    });
+  }, []);
 
 
+  
   return {
 
     state,

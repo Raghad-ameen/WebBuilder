@@ -38,9 +38,6 @@
     display: block;
 }
 
-/* .is-blank-layer { 
-    pointer-events: auto !important; 
-} */
 
 .moveable-target {
     will-change: transform, width, height;
@@ -64,14 +61,12 @@
     z-index: 999999 !important;
         position: absolute !important;
 }
-/* تحويل خطوط إطار العنصر المختار إلى مقطعة */
 .moveable-line {
-    background: transparent !important; /* إخفاء اللون الخلفي الافتراضي */
-    border-top: 1px dashed #4f46e5 !important; /* جعل الخط العلوي مقطعاً */
-    border-left: 1px dashed #4f46e5 !important; /* جعل الخط الجانبي مقطعاً */
+    background: transparent !important; 
+    border-top: 1px dashed #4f46e5 !important; 
+    border-left: 1px dashed #4f46e5 !important;
 }
 
-/* في بعض نسخ Moveable، الخطوط ترسم كـ SVG أو DIV بلون خلفية */
 .moveable-control-box .moveable-line {
     height: 1px !important;
     background-position: top !important;
@@ -80,7 +75,6 @@
     background-color: transparent !important;
 }
 
-/* للخطوط الرأسية */
 .moveable-control-box .moveable-line.moveable-vertical {
     width: 1px !important;
     background-repeat: repeat-y !important;

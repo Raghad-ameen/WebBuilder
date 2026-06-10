@@ -1,4 +1,3 @@
-// src/utils/styleNormalizer.js
 
 export function normalizeStyleValue(field, value) {
 
@@ -18,7 +17,6 @@ export function normalizeStyleValue(field, value) {
     "filterGrayscale",
   ];
 
-  // تحويل px → number
   if (
     numberFields.includes(field) &&
     typeof value === "string"
@@ -26,7 +24,6 @@ export function normalizeStyleValue(field, value) {
     value = parseFloat(value.replace("px", ""));
   }
 
-  // منع NaN
   if (
     numberFields.includes(field) &&
     (isNaN(value) || value === null)
@@ -34,7 +31,6 @@ export function normalizeStyleValue(field, value) {
     value = 0;
   }
 
-  // إصلاح color picker
   if (
     field === "backgroundColor" &&
     value === "transparent"

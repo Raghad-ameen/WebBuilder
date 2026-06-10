@@ -38,28 +38,12 @@ html, body, #root {
 #canvas-wrapper, 
 .section-container, 
 [class*="section-"],
-/* .is-blank-layer {
-    background-color: transparent !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    outline: none !important;
-} */
 
 .section-container {
     margin: 0 !important;
     padding: 0 !important;
     position: relative;
 }
-
-/* [data-type="blank"], 
-.is-blank-canvas,
-div[class*="blank-canvas"] {
-    background-color: transparent !important;
-    height: 0px !important;
-    min-height: 0px !important;
-    display: none !important; 
-} */
 
 
 .counter {
