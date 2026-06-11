@@ -110,9 +110,9 @@ const isFormVisible = !state.isPreviewMode
 const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 
 const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
-  
   if (!state.isPreviewMode) return;
 
+  // 1. نظام إخفاء وإظهار العناصر المربوطة بـ link_element (كما هو لديكِ)
   if (action?.type === 'link_element' && Array.isArray(action?.payload)) {
     setVisibleLinkedElements(prev => {
       const updated = { ...prev };
@@ -124,7 +124,9 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     return; 
   }
 
-  const clickedItem = section.data?.items?.find(item => item.id === clickedItemId);
+  // جلب العناصر داخل السكشن
+  const sectionItems = section?.data?.items || [];
+  const clickedItem = sectionItems.find(item => item.id === clickedItemId);
 
   if (action?.type === 'submit_form' && action?.isPopupForm && !clickedItem?.belongsToPopup) {
     store.setState(prev => ({
@@ -136,32 +138,38 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
   }
 
   let finalIsPopup = isPopup;
-  
   if (action?.type === 'submit') {
     finalIsPopup = false;
   } else {
-    const hasPopupFields = section.data?.items?.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
-    const hasNormalFields = section.data?.items?.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
+    const hasPopupFields = sectionItems.some(item => item.belongsToPopup === true || item.action?.isPopupForm === true);
+    const hasNormalFields = sectionItems.some(item => item.type === 'input' && !item.belongsToPopup && !item.action?.isPopupForm);
     
     if (action?.isPopupForm || (hasPopupFields && !hasNormalFields)) {
       finalIsPopup = true;
     }
   }
-  
-  const formFields = section.data.items.filter(item => {
-    if (item.type !== 'input') return false;
-    
-    if (action?.type === 'submit') {
-      return !item.belongsToPopup;
-    }
-    
-    if (finalIsPopup) {
-      return item.type === "input";
-    } else {
-      return !item.belongsToPopup && !item.action?.isPopupForm;
-    }
-  });
 
+  // 🌟 2. السحر هنا: تصفية الحقول بناءً على علب الاختيار (Checkboxes) المخزنة في الـ payload
+  let formFields = [];
+  const hasSpecificBindings = action?.payload && Array.isArray(action.payload) && action.payload.length > 0;
+
+  if (hasSpecificBindings) {
+    // إذا قام المستخدم بتحديد حقول معينة بيده، نأخذ الحقول التي تطابق الـ IDs المحددة فقط
+    formFields = sectionItems.filter(item => item.type === 'input' && action.payload.includes(item.id));
+  } else {
+    // 🛡️ نظام حماية احتياطي: إذا لم يربط المستخدم أي حقل، نجمع كل حقول السكشن التلقائية لمنع الخطأ
+    formFields = sectionItems.filter(item => {
+      if (item.type !== 'input') return false;
+      if (action?.type === 'submit') return !item.belongsToPopup;
+      if (finalIsPopup) {
+        return item.type === "input";
+      } else {
+        return !item.belongsToPopup && !item.action?.isPopupForm;
+      }
+    });
+  }
+
+  // 3. بناء مصفوفة البيانات لإرسالها للباكيند
   const structuredSubmissionData = formFields.map(field => {
     const inputEl = document.getElementById(`input-${field.id}`);
     return {
@@ -173,7 +181,7 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     };
   });
 
-  console.log("🚀 Sending Data to Backend:", structuredSubmissionData);
+  console.log("🚀 Sending Custom Bound Form Data to Backend:", structuredSubmissionData);
 
   try {
     const response = await axios.post('http://127.0.0.1:8000/api/forms/submit/', {
@@ -182,8 +190,8 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
       submission_data: structuredSubmissionData 
     });
 
-if (response.status === 201 || response.status === 200) {
-     console.log("✅ Data Saved Successfully in Django!", response.data);
+    if (response.status === 201 || response.status === 200) {
+      console.log("✅ Data Saved Successfully in Django!", response.data);
 
       setVisibleLinkedElements(prev => {
         const cleared = { ...prev };
@@ -207,17 +215,19 @@ if (response.status === 201 || response.status === 200) {
         setShowSuccessModal(true);
         setShowPopupSuccessModal(false);
       }      
+      
+      // تفريغ الحقول التي تم إرسالها فقط
       formFields.forEach(field => {
         const inputEl = document.getElementById(`input-${field.id}`);
         if (inputEl) inputEl.value = "";
       });
     }  
-
-    
   } catch (error) {
     console.error("❌ فشل الإرسال للباكيند. تفاصيل الخطأ:", error.response?.data || error.message);
   }
 };
+
+
 const handleItemAction = (item) => {
     console.log("Button clicked", item);
 

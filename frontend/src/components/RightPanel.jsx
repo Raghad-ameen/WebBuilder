@@ -1439,7 +1439,7 @@ if (!selectedItem) return null;
 
             )}
 
-            {selectedItem.action?.type === 'link_element' && (
+{selectedItem.action?.type === 'link_element' && (
   <div className="mt-4 p-3 bg-slate-50 border rounded-lg">
     <label className="block text-xs font-semibold text-slate-600 mb-2">
       Select Target Elements to Trigger:
@@ -1479,7 +1479,93 @@ if (!selectedItem) return null;
     </div>
   </div>
 )}
-          </div>
+
+
+{selectedItem?.type === 'button' && 
+ (selectedItem.action?.type === 'submit_form' || selectedItem.action?.type === 'submit') && (
+  <div className="mt-2 text-left relative w-full">
+    
+    <details className="group relative w-full list-none">
+      <summary className="flex items-center justify-between w-full p-1.5 px-2 bg-white border border-slate-200 rounded-md cursor-pointer list-none select-none hover:bg-slate-50 text-[11px] text-slate-600 transition-colors shadow-sm focus:outline-none">
+        <div className="flex items-center gap-1.5 truncate">
+ 
+          <span className="font-medium truncate">
+            {Array.isArray(selectedItem.action?.payload) && selectedItem.action.payload.length > 0
+              ? `${selectedItem.action.payload.length} fields selected`
+              : "Link fields..."}
+          </span>
+        </div>
+        <span className="transition-transform duration-150 group-open:rotate-180 text-slate-400">
+          <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="12">
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
+        </span>
+      </summary>
+
+      <div className="absolute top-full left-0 w-full mt-1 p-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-44 overflow-y-auto space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+        {(() => {
+          const activePage = state.pages?.find(p => p.id === state.activePageId);
+          const currentSection = activePage?.sections?.find(s => 
+            s.data?.items?.some(i => i.id === selectedItem.id)
+          );
+          const itemsList = currentSection?.data?.items || [];
+          const inputFields = itemsList.filter(item => item.type === 'input' || item.type === 'textarea');
+
+          if (inputFields.length === 0) {
+            return <p className="text-[10px] text-slate-400 text-center py-2">No inputs found in section.</p>;
+          }
+
+          return inputFields.map((field, index) => {
+            const boundFieldIds = Array.isArray(selectedItem.action?.payload) ? selectedItem.action.payload : [];
+            const isChecked = boundFieldIds.includes(field.id);
+
+            const fieldTypeName = field.inputType === 'email' ? 'Email' : 
+                                  field.inputType === 'number' ? 'Number' : 
+                                  field.type === 'textarea' ? 'Message' : 'Text';
+            
+            const fieldDisplayName = field.placeholder || field.fieldName || `${fieldTypeName} Field ${index + 1}`;
+
+            return (
+              <label 
+                key={field.id} 
+                className={`flex items-center gap-2 p-1.5 rounded transition-colors cursor-pointer select-none text-left w-full
+                  ${isChecked 
+                    ? 'bg-indigo-50/60 text-indigo-900 hover:bg-indigo-50' 
+                    : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    let updatedPayload = [...boundFieldIds];
+                    if (e.target.checked) {
+                      updatedPayload.push(field.id);
+                    } else {
+                      updatedPayload = updatedPayload.filter(id => id !== field.id);
+                    }
+                    handleActionChange(selectedItem.action?.type, updatedPayload);
+                  }}
+                  className="w-3 h-3 rounded text-indigo-600 border-slate-300 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                />
+                <div className="flex flex-col min-w-0 truncate">
+                  <span className="text-[11px] font-medium truncate">
+                    {fieldDisplayName}
+                  </span>
+                  <span className="text-[9px] text-slate-400 font-normal scale-95 origin-left">
+                    {fieldTypeName}
+                  </span>
+                </div>
+              </label>
+            );
+          });
+        })()}
+      </div>
+    </details>
+  </div>
+)}
+
+ </div>
 
         </>
 
