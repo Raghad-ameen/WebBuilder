@@ -112,7 +112,6 @@ const [showPopupSuccessModal, setShowPopupSuccessModal] = useState(false);
 const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemId = null) => {
   if (!state.isPreviewMode) return;
 
-  // 1. نظام إخفاء وإظهار العناصر المربوطة بـ link_element (كما هو لديكِ)
   if (action?.type === 'link_element' && Array.isArray(action?.payload)) {
     setVisibleLinkedElements(prev => {
       const updated = { ...prev };
@@ -124,7 +123,6 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     return; 
   }
 
-  // جلب العناصر داخل السكشن
   const sectionItems = section?.data?.items || [];
   const clickedItem = sectionItems.find(item => item.id === clickedItemId);
 
@@ -149,15 +147,12 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     }
   }
 
-  // 🌟 2. السحر هنا: تصفية الحقول بناءً على علب الاختيار (Checkboxes) المخزنة في الـ payload
   let formFields = [];
   const hasSpecificBindings = action?.payload && Array.isArray(action.payload) && action.payload.length > 0;
 
   if (hasSpecificBindings) {
-    // إذا قام المستخدم بتحديد حقول معينة بيده، نأخذ الحقول التي تطابق الـ IDs المحددة فقط
     formFields = sectionItems.filter(item => item.type === 'input' && action.payload.includes(item.id));
   } else {
-    // 🛡️ نظام حماية احتياطي: إذا لم يربط المستخدم أي حقل، نجمع كل حقول السكشن التلقائية لمنع الخطأ
     formFields = sectionItems.filter(item => {
       if (item.type !== 'input') return false;
       if (action?.type === 'submit') return !item.belongsToPopup;
@@ -169,7 +164,6 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
     });
   }
 
-  // 3. بناء مصفوفة البيانات لإرسالها للباكيند
   const structuredSubmissionData = formFields.map(field => {
     const inputEl = document.getElementById(`input-${field.id}`);
     return {
@@ -216,7 +210,6 @@ const handleSubmitForm = async (sectionId, action, isPopup = false, clickedItemI
         setShowPopupSuccessModal(false);
       }      
       
-      // تفريغ الحقول التي تم إرسالها فقط
       formFields.forEach(field => {
         const inputEl = document.getElementById(`input-${field.id}`);
         if (inputEl) inputEl.value = "";
@@ -337,8 +330,8 @@ useEffect(() => {
     <div
       ref={sectionRef}
       id={section.id}
-      className={`section-container section-${section.id} ${isSectionSelected ? 'selected-section' : ''}`}
-      onMouseDown={(e) => {
+className={`section-container section-${section.id} ${isSectionSelected ? 'selected-section' : ''}`}
+onMouseDown={(e) => {
         if (section.isGhost || state.isPreviewMode) return;
 
         if (
@@ -442,33 +435,31 @@ useEffect(() => {
           draggingShapeData: null
         }));
       }}
-      style={{
+style={{
+        ...section.styles, 
         position: section.styles?.position ?? "relative",
         pointerEvents: section.isGhost ? "none" : "auto",
         left: section.styles?.left || 0,
         top: section.styles?.top || 0,
-        width: section.styles?.width || "100%",
+        
+        width: state.isPreviewMode ? "100%" : (section.styles?.width || "100%"),
+        
         height: section.isGhost
           ? "0px"
           : section.height
             ? `${section.height}px`
-            : (
-                section.type === 'footer'
-                  ? "120px"
-                  : section.type === 'feature-grid'
-                    ? "400px"
-                    : "500px"
-              ),
+            : (section.type === 'footer' ? "120px" : section.type === 'feature-grid' ? "400px" : "500px"),
         minHeight: section.isGhost ? "0px" : (section.type === 'footer' ? "80px" : "100px"),
         zIndex: section.isGhost ? 0 : allSections.length - sectionIndex,
-        overflow: section.isGhost ? "hidden" : (isSectionSelected ? "visible" : "hidden"),
+        overflow: "hidden",
         background: section.styles?.background || "transparent",
         backgroundColor: section.styles?.backgroundColor || "transparent",
-        ...section.styles,
         boxShadow: section.styles?.boxShadow,
         filter: section.styles?.filter,
-      }}
-    > 
+      }}      
+      
+      
+      > 
         
       {isSectionSelected && !state.isPreviewMode && !section.isGhost && (
         <div style={styles.sectionToolbar}>
@@ -483,8 +474,32 @@ useEffect(() => {
           </button>
         </div>
       )}
+<div style={state.isPreviewMode ? {
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        position: "relative",
+        height: "100%",
+        overflow: "visible"
+      } : {
+        position: "relative",
+        width: "100%",
+        height: "100%"
+      }}>
 
-{(section.data?.items || []).map((item, index) => {
+        <div 
+          style={state.isPreviewMode ? {
+            width: "1200px",
+            minWidth: "1200px",
+            position: "relative",
+            height: "100%",
+            flexShrink: 0,
+          } : {
+            display: "contents"
+          }}
+        >
+          
+          {(section.data?.items || []).map((item, index) => {
         const isSelected = state.selectedElementIds.includes(item.id);
         const isMobileOrTablet = typeof window !== "undefined" && window.innerWidth < 1024;
         
@@ -522,7 +537,6 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
 
         return (
           <React.Fragment key={item.id}>
-            {/* 🌟 حقن الـ Style Tag المباشر هنا ليعمل المتصفح به تلقائياً دون الحاجة لـ HoverWrapper ودون أي Re-render أثناء الـ Resize */}
             {state.isPreviewMode && <style dangerouslySetInnerHTML={{ __html: dynamicHoverStyles }} />}
 
             <div
@@ -564,19 +578,22 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
               onMouseUp={() => {
                   if (!state.isPreviewMode) setInteractionMode("select");
               }}
-              style={{
+style={{
                 position: "absolute", 
+                
                 left: `${item.x}px`,     
                 top: `${item.y}px`,
                 width: `${item.width}px`, 
                 height: `${item.height}px`,
+                
                 zIndex: resolvedZIndex,
                 margin: isMobileOrTablet ? "15px auto" : "0", 
                 
                 textAlign: item.type === 'button' ? 'center' : undefined,
                 lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
                 cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
-                overflow: "visible",
+                
+                overflow: "hidden", 
                 
                 pointerEvents: "auto",
                 willChange: "left, top, width, height",
@@ -585,8 +602,10 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
                 WebkitFontSmoothing: 'antialiased',
                 boxShadow: "none",
                 ...finalStyles,
-              }}
-            >
+              }}             
+             
+             
+             >
 
               {isSelected && !item.isEditing && !state.isPreviewMode && (
                 <div
@@ -615,7 +634,6 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
                 </div>
               )}
 
-              {/* 🌟 نمرر الـ item الأصلي بستايلاته المدمجة دون تعديل الـ State، والمتصفح سيتكفل بالباقي */}
               {item.type === "text" && (
                 <TextElement
                   item={item}
@@ -703,6 +721,12 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
           useResizeObserver={true}
           useMutationObserver={true}
           snappable={true}
+        bounds={{
+  left: 0,
+  top: 0,
+  right: sectionRef.current?.offsetWidth || 1200,
+  bottom: sectionRef.current?.offsetHeight || 9999
+}}
           snapThreshold={5}
           snapGap={true}
           snapElement={true}
@@ -720,32 +744,63 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
           isDisplaySnapDigit={false} 
           isDisplayInnerSnapDigit={false}
 
-          onDrag={({ target, left, top }) => {
+     onDrag={({ target, left, top }) => {
             if (target.classList.contains('section-container')) {
               target.style.top = `${top}px`;
             } else {
-              target.style.left = `${left}px`;
-              target.style.top = `${top}px`;
+              const sectionEl = target.closest('.section-container');
+              const parentHeight = sectionEl ? sectionEl.offsetHeight : (section.height || 500);
+
+              const width = target.offsetWidth;
+              const height = target.offsetHeight;
+
+              const boundedLeft = Math.max(0, Math.min(left, 1200 - width));
+              const boundedTop = Math.max(0, Math.min(top, parentHeight - height));
+              
+              target.style.left = `${boundedLeft}px`;
+              target.style.top = `${boundedTop}px`;
             }
           }}
-          onDragEnd={({ target, lastEvent }) => {
+         onDragEnd={({ target, lastEvent }) => {
             if (!lastEvent) return;
             if (target.classList.contains('section-container')) {
               updateSection(target.id, { styles: { ...section.styles, top: lastEvent.top } });
             } else {
-              updateItem(activePageId, section.id, target.id, { x: lastEvent.left, y: lastEvent.top });
+              const sectionEl = target.closest('.section-container');
+              const parentHeight = sectionEl ? sectionEl.offsetHeight : (section.height || 500);
+              const boundedX = Math.max(0, Math.min(lastEvent.left, 1200 - target.offsetWidth));
+              const boundedY = Math.max(0, Math.min(lastEvent.top, parentHeight - target.offsetHeight));
+
+              updateItem(activePageId, section.id, target.id, { x: boundedX, y: boundedY });
             }
           }}
-          onResize={({ target, width, height, drag }) => {
-            if (target.classList.contains('section-container')) {
-              target.style.height = `${height}px`;
-            } else {
-              target.style.width = `${width}px`;
-              target.style.height = `${height}px`;
-              target.style.left = `${drag.left}px`;
-              target.style.top = `${drag.top}px`;
-            }
-          }}
+      onResize={({ target, width, height, drag }) => {
+  const left = drag.beforeTranslate[0];
+  const top = drag.beforeTranslate[1];
+
+  const parentHeight =
+    target.parentElement?.offsetHeight || 9999;
+
+  const maxWidth = 1200 - left;
+  const maxHeight = parentHeight - top;
+
+  const boundedWidth = Math.max(
+    20,
+    Math.min(width, maxWidth)
+  );
+
+  const boundedHeight = Math.max(
+    20,
+    Math.min(height, maxHeight)
+  );
+
+  target.style.width = `${boundedWidth}px`;
+  target.style.height = `${boundedHeight}px`;
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+}}
+
+          
           onResizeEnd={({ target, lastEvent }) => {
             if (!lastEvent) return;
             if (target.classList.contains('section-container')) {
@@ -841,7 +896,8 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
           }}
         />
       )}
-
+</div>
+</div>
       {showSuccessModal && (
         <div style={modalStyles.overlay} className="modal-content-box">
           <div style={modalStyles.content}>

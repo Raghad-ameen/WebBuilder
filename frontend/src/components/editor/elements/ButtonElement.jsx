@@ -44,19 +44,12 @@ onClick={(e) => {
   if (state.isPreviewMode) {
     console.log("🎯 Button clicked! Action Type:", item.action?.type);
 
-    // 1. التحقق من أكينات الفورم
     if (item.action?.type === "submit_form" || item.action?.type === "submit" || item.actionType === "SubmitData") {
       
       if (typeof handleSubmitForm === "function") {
-        // 🌟 استدعاء الدالة بترتيبها الأصلي المتوقع:
-        // البارامتر الأول: section.id
-        // البارامتر الثاني: item.action (الذي يحتوي داخله على الـ payload والـ Checkboxes)
-        // البارامتر الثالث: false (قيمة الـ isPopup الافتراضية)
-        // البارامتر الرابع: item.id (المعرّف الفريد للزر المكبوس)
         handleSubmitForm(section.id, item.action, false, item.id);
       }
     } 
-    // 2. التحقق من الأكينات الأخرى (مثل الانتقال لروابط أو صفحات)
     else if (item.action?.type && item.action.type !== "none") {
       if (typeof handleItemAction === "function") {
         handleItemAction(item);

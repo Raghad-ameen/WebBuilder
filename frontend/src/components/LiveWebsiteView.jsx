@@ -9,7 +9,7 @@ export default function LiveWebsiteView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-const [liveState, setLiveState] = useState({
+  const [liveState, setLiveState] = useState({
     activePageId: "p1",
     pages: [],
     selectedSectionId: null,
@@ -19,11 +19,12 @@ const [liveState, setLiveState] = useState({
     isFormOpen: false,
     activeFormSectionId: null
   });
+
   useEffect(() => {
     const fetchSiteData = async () => {
       try {
         setLoading(true);
-const response = await axios.get(`http://127.0.0.1:8000/api/sites/${siteId}/`);
+        const response = await axios.get(`http://127.0.0.1:8000/api/sites/${siteId}/`);
         if (response.data) {
           const data = response.data;
           setSiteData(data);
@@ -65,39 +66,31 @@ const response = await axios.get(`http://127.0.0.1:8000/api/sites/${siteId}/`);
       }
     };
 
-  if (siteId) {
+    if (siteId) {
       fetchSiteData();
     }
   }, [siteId]);
 
-const mockStore = useMemo(() => ({
-  state: liveState,
+  const mockStore = useMemo(() => ({
+    state: liveState,
+    setState: (updater) => {
+      setLiveState(prev =>
+        typeof updater === "function"
+          ? updater(prev)
+          : updater
+      );
+    },
+    selectItems: () => {},
+    updateItem: () => {},
+    updateSection: () => {},
+    deleteSection: () => {},
+    deleteElement: () => {},
+    previewUpdateItem: () => {},
+    moveSectionUp: () => {},
+    moveSectionDown: () => {}
+  }), [liveState]);
 
-  setState: (updater) => {
-    setLiveState(prev =>
-      typeof updater === "function"
-        ? updater(prev)
-        : updater
-    );
-  },
-
-  selectItems: () => {},
-  updateItem: () => {},
-  updateSection: () => {},
-  deleteSection: () => {},
-  deleteElement: () => {},
-  previewUpdateItem: () => {},
-  moveSectionUp: () => {},
-  moveSectionDown: () => {}
-}), [liveState]);
-
-
-
-
-
-
-
-if (loading) {
+  if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", fontSize: "1.2rem", color: "#64748b" }}>
         Loading Your Website...
@@ -114,21 +107,59 @@ if (loading) {
     );
   }
 
+  // 💡 استخراج بيانات الصفحة النشطة حالياً والسكاشن
   const currentActivePage = liveState.pages.find(p => p.id === liveState.activePageId) || liveState.pages[0] || {};
   const sections = currentActivePage.sections || [];
 
-  return (
- <div style={{ width: "100%", minHeight: "100vh", backgroundColor: siteData.canvasStyles?.backgroundColor || "#ffffff" }}>
-      {sections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          selectedElementIds={[]}
-          onSelect={() => {}}
-          store={mockStore}
-          canvasScale={1}
-        />
-      ))}
+  // 🌟 هنا تم تعريف المتغير في المكان الصحيح تماماً قبل الـ return لمنع خطأ الـ ReferenceError
+  const pageStyles = currentActivePage?.styles || currentActivePage?.data?.styles || siteData?.canvasStyles || {};
+
+return (
+    <div 
+      className="live-preview-root-wrapper"
+      style={{ 
+        width: "100vw",          // إجبار العرض على أخذ كامل عرض شاشة المتصفح الفعلي
+        minHeight: "100vh",       // إجبار الارتفاع على أخذ كامل الارتفاع
+        margin: 0,
+        padding: 0,
+        boxSizing: "border-box",
+        
+        // تطبيق اللون والصورة على جذر المتصفح مباشرة لفك الحصار عن الكانفاس
+        backgroundColor: pageStyles.backgroundColor || "#ffffff", 
+        backgroundImage: pageStyles.backgroundImage ? `url(${pageStyles.backgroundImage})` : "none",
+        
+        // الخصائص الصارمة للتمدد الكامل على الشاشة
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed", // تجعل الصورة ممتدة وثابتة خلف السكاشن
+        overflowX: "hidden" 
+      }}
+    >
+      {/* الحاوية الداخلية للسكاشن (الكانفاس الحقيقي) */}
+      <div className="w-full mx-auto relative flex flex-col items-center justify-start">
+        {sections.map((section) => (
+          <div 
+            key={section.id} 
+            className="w-full relative"
+            style={{
+              backgroundColor: section.data?.styles?.backgroundColor || "transparent",
+              backgroundImage: section.data?.styles?.backgroundImage ? `url(${section.data.styles.backgroundImage})` : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              minHeight: section.data?.styles?.minHeight || "auto",
+            }}
+          >
+            <SectionRenderer
+              section={section}
+              selectedElementIds={[]}
+              onSelect={() => {}}
+              store={mockStore}
+              canvasScale={1}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
