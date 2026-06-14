@@ -442,6 +442,7 @@ style={{
         left: section.styles?.left || 0,
         top: section.styles?.top || 0,
         
+        // يمتد بكامل المتصفح ليملأ الخلفية البنية تلقائياً
         width: state.isPreviewMode ? "100%" : (section.styles?.width || "100%"),
         
         height: section.isGhost
@@ -451,7 +452,7 @@ style={{
             : (section.type === 'footer' ? "120px" : section.type === 'feature-grid' ? "400px" : "500px"),
         minHeight: section.isGhost ? "0px" : (section.type === 'footer' ? "80px" : "100px"),
         zIndex: section.isGhost ? 0 : allSections.length - sectionIndex,
-        overflow: "hidden",
+        overflow: "hidden", // يمنع ظهور أي شريط تمرير أفقي نهائياً
         background: section.styles?.background || "transparent",
         backgroundColor: section.styles?.backgroundColor || "transparent",
         boxShadow: section.styles?.boxShadow,
@@ -482,11 +483,13 @@ style={{
         height: "100%",
         overflow: "visible"
       } : {
+        // حماية الـ Editor: نترك الحاوية ممتدة طبيعياً كما كانت في مشروعكِ الأصلي ليظهر المحتوى فوراً
         position: "relative",
         width: "100%",
         height: "100%"
       }}>
 
+        {/* 🌟 الكانفاس الداخلي: يتميز بأبعاد ثابته في المعاينة فقط لحماية أبعاد المتصفح */}
         <div 
           style={state.isPreviewMode ? {
             width: "1200px",
@@ -495,10 +498,10 @@ style={{
             height: "100%",
             flexShrink: 0,
           } : {
+            // في وضع الـ Editor نجعله يختفي برمجياً (display: contents) أو نتركه طبيعياً لكي لا يتدخل في حسابات الـ Moveable الأصلية
             display: "contents"
           }}
         >
-          
           {(section.data?.items || []).map((item, index) => {
         const isSelected = state.selectedElementIds.includes(item.id);
         const isMobileOrTablet = typeof window !== "undefined" && window.innerWidth < 1024;
@@ -581,6 +584,7 @@ const shouldHideInPreview = state.isPreviewMode && isTargetElement && (!isCurren
 style={{
                 position: "absolute", 
                 
+                // 🌟 العودة للأصل المستقر بالبكسل تماماً كما هو في المحرر
                 left: `${item.x}px`,     
                 top: `${item.y}px`,
                 width: `${item.width}px`, 
@@ -593,6 +597,7 @@ style={{
                 lineHeight: item.type === 'button' ? `${item.height}px` : undefined,
                 cursor: state.isPreviewMode ? "default" : (item.isEditing ? "text" : "move"),
                 
+                // 🌟 حماية أبعاد محتوى الصورة داخلياً
                 overflow: "hidden", 
                 
                 pointerEvents: "auto",
@@ -721,12 +726,7 @@ style={{
           useResizeObserver={true}
           useMutationObserver={true}
           snappable={true}
-        bounds={{
-  left: 0,
-  top: 0,
-  right: sectionRef.current?.offsetWidth || 1200,
-  bottom: sectionRef.current?.offsetHeight || 9999
-}}
+          bounds={{ left: 0, right: 1200, top: 0, bottom: "infinite" }}
           snapThreshold={5}
           snapGap={true}
           snapElement={true}
@@ -744,15 +744,14 @@ style={{
           isDisplaySnapDigit={false} 
           isDisplayInnerSnapDigit={false}
 
-     onDrag={({ target, left, top }) => {
+       onDrag={({ target, left, top }) => {
             if (target.classList.contains('section-container')) {
               target.style.top = `${top}px`;
             } else {
-              const sectionEl = target.closest('.section-container');
-              const parentHeight = sectionEl ? sectionEl.offsetHeight : (section.height || 500);
-
+              // 🌟 جدار صارم: يمنع الخروج من اليسار (0) واليمين (1200 - العرض) والأعلى (0) والأسفل (ارتفاع السكشن)
               const width = target.offsetWidth;
               const height = target.offsetHeight;
+              const parentHeight = target.parentElement?.offsetHeight || 9999;
 
               const boundedLeft = Math.max(0, Math.min(left, 1200 - width));
               const boundedTop = Math.max(0, Math.min(top, parentHeight - height));
@@ -761,46 +760,42 @@ style={{
               target.style.top = `${boundedTop}px`;
             }
           }}
-         onDragEnd={({ target, lastEvent }) => {
+          onDragEnd={({ target, lastEvent }) => {
             if (!lastEvent) return;
             if (target.classList.contains('section-container')) {
               updateSection(target.id, { styles: { ...section.styles, top: lastEvent.top } });
             } else {
-              const sectionEl = target.closest('.section-container');
-              const parentHeight = sectionEl ? sectionEl.offsetHeight : (section.height || 500);
-              const boundedX = Math.max(0, Math.min(lastEvent.left, 1200 - target.offsetWidth));
-              const boundedY = Math.max(0, Math.min(lastEvent.top, parentHeight - target.offsetHeight));
-
-              updateItem(activePageId, section.id, target.id, { x: boundedX, y: boundedY });
+              updateItem(activePageId, section.id, target.id, { x: lastEvent.left, y: lastEvent.top });
             }
           }}
-      onResize={({ target, width, height, drag }) => {
-  const left = drag.beforeTranslate[0];
-  const top = drag.beforeTranslate[1];
+       onResize={({ target, width, height, drag }) => {
+            if (target.classList.contains('section-container')) {
+              target.style.height = `${height}px`;
+            } else {
+              const parentHeight = target.parentElement?.offsetHeight || 9999;
+              let boundedWidth = width;
+              let boundedHeight = height;
+              let boundedLeft = drag.left;
+              let boundedTop = drag.top;
 
-  const parentHeight =
-    target.parentElement?.offsetHeight || 9999;
+              // 🌟 جدار اليمين والأسفل الصارم أثناء التكبير
+              if (boundedLeft + boundedWidth > 1200) {
+                boundedWidth = 1200 - boundedLeft;
+              }
+              if (boundedTop + boundedHeight > parentHeight) {
+                boundedHeight = parentHeight - boundedTop;
+              }
+              
+              // جدار اليسار والأعلى
+              if (boundedLeft < 0) boundedLeft = 0;
+              if (boundedTop < 0) boundedTop = 0;
 
-  const maxWidth = 1200 - left;
-  const maxHeight = parentHeight - top;
-
-  const boundedWidth = Math.max(
-    20,
-    Math.min(width, maxWidth)
-  );
-
-  const boundedHeight = Math.max(
-    20,
-    Math.min(height, maxHeight)
-  );
-
-  target.style.width = `${boundedWidth}px`;
-  target.style.height = `${boundedHeight}px`;
-  target.style.left = `${left}px`;
-  target.style.top = `${top}px`;
-}}
-
-          
+              target.style.width = `${boundedWidth}px`;
+              target.style.height = `${boundedHeight}px`;
+              target.style.left = `${boundedLeft}px`;
+              target.style.top = `${boundedTop}px`;
+            }
+          }}
           onResizeEnd={({ target, lastEvent }) => {
             if (!lastEvent) return;
             if (target.classList.contains('section-container')) {
